@@ -4,17 +4,23 @@ document.addEventListener("DOMContentLoaded", function() {
     .then((data) => console.log(data));
 });
 
+const form = document.getElementById('file-form');
+form.addEventListener('submit', (event) => {
+  // ??
+  event.preventDefault();
 
-const fileInput = document.getElementById('file-input');
-const file = fileInput.files[0];
+  const fileInput = document.getElementById('file-input');
+  const file = fileInput.files[0];
 
-const reader = new FileReader();
-reader.onload = (event) => {
-  const fileContent = event.target.result;
-  Papa.parse(fileContent, {
-    complete: (results) => {
-      console.log(results.data);
-    }
-  });
-};
-reader.readAsText(file);
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const fileContent = event.target.result;
+    Papa.parse(fileContent, {
+      header: true,
+      complete: (results) => {
+        console.log(results.data);
+      }
+    });
+  };
+  reader.readAsText(file);
+});
