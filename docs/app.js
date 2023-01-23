@@ -4,15 +4,10 @@ document.addEventListener("DOMContentLoaded", function() {
     .then((data) => console.log(data));
 });
 
-const form = document.getElementById('file-form');
-form.addEventListener('submit', (event) => {
-  // ??
-  event.preventDefault();
-
-  const fileInput = document.getElementById('file-input');
-  const file = fileInput.files[0];
-
+const fileInputs = document.getElementById('file-form');
+fileInputs.onchange = () => {
   const reader = new FileReader();
+
   reader.onload = (event) => {
     const fileContent = event.target.result;
     Papa.parse(fileContent, {
@@ -22,5 +17,8 @@ form.addEventListener('submit', (event) => {
       }
     });
   };
-  reader.readAsText(file);
-});
+
+  for (let file of fileInputs.files) {
+    reader.readAsText(file)
+  }
+};
