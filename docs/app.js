@@ -1,3 +1,5 @@
+import { format, add, getHours, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
+
 document.addEventListener("DOMContentLoaded", function() {
     fetch('https://api.awattar.at/v1/marketdata?start=1561932000000')
         .then((response) => response.json())
@@ -17,13 +19,14 @@ document.addEventListener("DOMContentLoaded", function() {
             Papa.parse(fileContent, {
                 header: true,
                 complete: (results) => {
-                    d = results.data;
+                    var d = results.data;
+                    var netzbetreiber = selectBetreiber(d[0]);
                     console.log("length: " + d.length);
                     var i = 0;
-                    labels = []
-                    consumption = []
+                    var labels = []
+                    var consumption = []
                     while (i < d.length) {
-                        const {date, usage} = NetzNOE.processEntry(d[i]);
+                        const {date, usage} = netzbetreiber.processEntry(d[i]);
                         labels.push(date)
                         consumption.push(usage);
                         i++;
@@ -71,21 +74,46 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 
+class Tracker {
+
+    getSubTracker(start, end) {
+    }
+
+    getDateBegin() {
+    }
+
+    getDateEnd() {
+    }
+}
+
 
 class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
     descriptorTimestamp = "timestamp";
+    dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp) {
+    constructor(name, descriptorUsage, descriptorTimestamp, dateFormatString) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
+        this.dateFormatString = dateFormatString;
+    }
+
+    probe(entry) {
+        if (!(this.descriptorUsage in entry)) {
+            return false;
+        }
+        if (!(this.descriptorTimestamp in entry)) {
+            return false;
+        }
+        return true;
     }
 
     processEntry(entry) {
         var valueUsage = entry[this.descriptorUsage];
         var valueTimestamp = entry[this.descriptorTimestamp];
+        var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
 
         return {
             timestamp: valueTimestamp,
@@ -94,4 +122,13 @@ class Netzbetreiber {
     }
 };
 
-const NetzNOE = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt");
+const NetzNOE = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", "dd.MM.yy HH:mm");
+
+function selectBetreiber(sample) {
+    if (NetzNOE.probe(sample)) {
+        return NetzNOE;
+    }
+    console.log("Netzbetreiber fuer sample unbekannt: ", sample);
+    return null;
+}
+
