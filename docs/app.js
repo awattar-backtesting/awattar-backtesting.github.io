@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const fileInputs = document.getElementById('file-form');
 
+    const tracker = new Tracker();
+
     fileInputs.onchange = () => {
         console.log("fileInputs: " + fileInputs[0].files);
 
@@ -26,21 +28,21 @@ document.addEventListener("DOMContentLoaded", function() {
                     var labels = []
                     var consumption = []
                     while (i < d.length) {
-                        const {date, usage} = netzbetreiber.processEntry(d[i]);
-                        labels.push(date)
-                        consumption.push(usage);
+                        tracker.addEntry(netzbetreiber, d[i]);
                         i++;
                     }
+
+                    console.log("tracker: ", tracker);
 
                     var ctx = document.getElementById('awattarChart').getContext('2d');
 
                     var data = {
                         // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-                        labels: labels,
+                        labels: Array.from({length: 25}, (_, i) => i.toString()),
                         datasets: [{
-                            label: 'Electricity Usage',
+                            label: 'Verbrauch in kWh',
                             // data: [150, 200, 180, 220, 250, 230, 240],
-                            data: consumption,
+                            data: tracker['2023-01-01'],
                             fill: false,
                             borderColor: 'rgb(75, 192, 192)',
                             tension: 0.1
@@ -75,6 +77,30 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 class Tracker {
+    addEntry(netzbetreiber, entry) {
+        var res = netzbetreiber.processEntry(entry);
+        if (res === null) {
+            // skip
+            return;
+        }
+        console.log("res", res);
+        var hour = format(res.timestamp, "H");
+        var fullday = format(res.timestamp, "yyyy-MM-dd")
+        console.log("hour: ", hour);
+        console.log("fullday: ", fullday);
+
+        if (!(fullday in this)) {
+            Object.defineProperty(this, fullday, {
+                value: {},
+                writable: true
+            });
+        }
+        if (!(hour in this[fullday])) {
+            this[fullday][hour] = 0;
+            // Object.defineProperty(this.fullday, hour, 0);
+        }
+        this[fullday][hour] += res.usage;
+    }
 
     getSubTracker(start, end) {
     }
@@ -93,11 +119,12 @@ class Netzbetreiber {
     descriptorTimestamp = "timestamp";
     dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp, dateFormatString) {
+    constructor(name, descriptorUsage, descriptorTimestamp, dateFormatString, usageParser) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
         this.dateFormatString = dateFormatString;
+        this.usageParser = usageParser;
     }
 
     probe(entry) {
@@ -111,22 +138,41 @@ class Netzbetreiber {
     }
 
     processEntry(entry) {
+        console.log("entry: ", entry);
+        if (!this.probe(entry)) {
+            return null;
+        }
         var valueUsage = entry[this.descriptorUsage];
         var valueTimestamp = entry[this.descriptorTimestamp];
         var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
+        var parsedUsage = this.usageParser(valueUsage);
+
+        console.log("valueUsage: ", valueUsage);
+        console.log("valueTimestamp: ", valueTimestamp);
+        console.log("parsedTimestamp: ", parsedTimestamp);
+        console.log("parsedUsage: ", parsedUsage);
+        console.log("this.dateFormatString: ", this.dateFormatString);
 
         return {
-            timestamp: valueTimestamp,
-            usage: valueUsage,
+            timestamp: parsedTimestamp,
+            usage: parsedUsage,
         }
     }
 };
 
-const NetzNOE = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", "dd.MM.yy HH:mm");
+const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", "dd.MM.yyyy HH:mm", null);
+
+const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}));
 
 function selectBetreiber(sample) {
-    if (NetzNOE.probe(sample)) {
-        return NetzNOE;
+    if (NetzNOEEinspeiser.probe(sample)) {
+        console.log("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
+        return null;
+    }
+    if (NetzNOEVerbrauch.probe(sample)) {
+        return NetzNOEVerbrauch;
     }
     console.log("Netzbetreiber fuer sample unbekannt: ", sample);
     return null;
