@@ -1,19 +1,49 @@
 import { format, add, getHours, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
 
+class Tracker {
+    addEntry(netzbetreiber, entry) {
+        var res = netzbetreiber.processEntry(entry);
+        if (res === null) {
+            // skip
+            return;
+        }
+        var hour = format(res.timestamp, "H");
+        var fullday = format(res.timestamp, "yyyy-MM-dd")
+
+        if (!(fullday in this)) {
+            Object.defineProperty(this, fullday, {
+                value: {},
+                writable: true
+            });
+        }
+        if (!(hour in this[fullday])) {
+            this[fullday][hour] = 0;
+            // Object.defineProperty(this.fullday, hour, 0);
+        }
+        this[fullday][hour] += res.usage;
+    }
+
+    getSubTracker(start, end) {
+    }
+
+    getDateBegin() {
+    }
+
+    getDateEnd() {
+    }
+}
+
+
+const tracker = new Tracker();
+
 document.addEventListener("DOMContentLoaded", function() {
     fetch('https://api.awattar.at/v1/marketdata?start=1561932000000')
         .then((response) => response.json())
         .then((data) => console.log(data));
 
-    console.log("" + document.getElementById('submit'));
-
     const fileInputs = document.getElementById('file-form');
 
-    const tracker = new Tracker();
-
     fileInputs.onchange = () => {
-        console.log("fileInputs: " + fileInputs[0].files);
-
         const reader = new FileReader();
 
         reader.onload = (event) => {
@@ -23,7 +53,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 complete: (results) => {
                     var d = results.data;
                     var netzbetreiber = selectBetreiber(d[0]);
-                    console.log("length: " + d.length);
                     var i = 0;
                     var labels = []
                     var consumption = []
@@ -76,43 +105,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 });
 
-class Tracker {
-    addEntry(netzbetreiber, entry) {
-        var res = netzbetreiber.processEntry(entry);
-        if (res === null) {
-            // skip
-            return;
-        }
-        console.log("res", res);
-        var hour = format(res.timestamp, "H");
-        var fullday = format(res.timestamp, "yyyy-MM-dd")
-        console.log("hour: ", hour);
-        console.log("fullday: ", fullday);
-
-        if (!(fullday in this)) {
-            Object.defineProperty(this, fullday, {
-                value: {},
-                writable: true
-            });
-        }
-        if (!(hour in this[fullday])) {
-            this[fullday][hour] = 0;
-            // Object.defineProperty(this.fullday, hour, 0);
-        }
-        this[fullday][hour] += res.usage;
-    }
-
-    getSubTracker(start, end) {
-    }
-
-    getDateBegin() {
-    }
-
-    getDateEnd() {
-    }
-}
-
-
 class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
@@ -138,7 +130,6 @@ class Netzbetreiber {
     }
 
     processEntry(entry) {
-        console.log("entry: ", entry);
         if (!this.probe(entry)) {
             return null;
         }
@@ -146,12 +137,6 @@ class Netzbetreiber {
         var valueTimestamp = entry[this.descriptorTimestamp];
         var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
         var parsedUsage = this.usageParser(valueUsage);
-
-        console.log("valueUsage: ", valueUsage);
-        console.log("valueTimestamp: ", valueTimestamp);
-        console.log("parsedTimestamp: ", parsedTimestamp);
-        console.log("parsedUsage: ", parsedUsage);
-        console.log("this.dateFormatString: ", this.dateFormatString);
 
         return {
             timestamp: parsedTimestamp,
