@@ -1,13 +1,16 @@
 <html>
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
         <script src="app.js"></script>
     </head>
     <body>
-        <p>Hello World!</p>
+        <h3>aWATTar Backtesting</h3>
+        <p>Verbrauchsdaten vom Netzbetreiber uploaden:</p>
         <form id="file-form">
             <input type="file" id="file-input" name="file-input">
         </form>
-        <button id="submit">Parse</button>
+
+        <canvas id="awattarChart"></canvas>
     </body>
 </html>
