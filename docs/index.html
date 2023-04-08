@@ -1,5 +1,44 @@
+<!DOCTYPE html>
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+.collapsible {
+  background-color: #777;
+  color: white;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+.active, .collapsible:hover {
+  background-color: #555;
+}
+
+.collapsible:after {
+  content: '\002B';
+  color: white;
+  font-weight: bold;
+  float: right;
+  margin-left: 5px;
+}
+
+.active:after {
+  content: "\2212";
+}
+
+.content {
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+  background-color: #f1f1f1;
+}
+</style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
         <script type="module" src="app.js"></script>
@@ -15,22 +54,25 @@
 
         <p>Wenn dieses Tool n&uuml;tzlich war, verwende bitte meinen aWATTar Empfehlungscode: 3JJEWLKBE</p>
         <h3>Netzbetreiber Anleitungen</h3>
-        <h4>Netz N&Ouml;</h4>
-        <ol>
-            <li><p>Gehe auf <a href="https://smartmeter.netz-noe.at/">https://smartmeter.netz-noe.at</a></p></li>
-            <li><p>Einloggen</p></li>
-            <li><p>Tab <i>Verbrauch</i> ausw&auml;hlen</p></li>
-            <li><p>Richtigen Z&auml;hler ausw&auml;hlen unter <i>Vertragskonto</i></p></li>
-            <li><p>Tab <i>Jahr</i> ausw&auml;hlen</p></li>
-            <li><p>Dann unter <i>Download</i> die Variante <i>Als Tabelle Tages-/15min Werte (CSV)</i> herunterladen.</p> <img src="img/netznoe/download.jpg"></li>
-            <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
-        </ol>
+        <button class="collapsible">Netz N&Ouml;</button>
+        <div class="content">
+            <ol>
+                <li><p>Gehe auf <a href="https://smartmeter.netz-noe.at/">https://smartmeter.netz-noe.at</a></p></li>
+                <li><p>Einloggen</p></li>
+                <li><p>Tab <i>Verbrauch</i> ausw&auml;hlen</p></li>
+                <li><p>Richtigen Z&auml;hler ausw&auml;hlen unter <i>Vertragskonto</i>. Achtung, nicht den Einspeisepunkt w&auml;hlen.</p></li>
+                <li><p>Tab <i>Jahr</i> ausw&auml;hlen</p></li>
+                <li><p>Dann unter <i>Download</i> die Variante <i>Als Tabelle Tages-/15min Werte (CSV)</i> herunterladen.</p> <img src="img/netznoe/download.jpg"></li>
+                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
+            </ol>
+        </div>
 
         <h3>F.A.Q.</h3>
          <ul>
              <li><b><i>Es funktioniert nicht!</i></b> Bitte ein neues Issue hier &ouml;ffnen: <a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/issues">github.com/awattar-backtesting/awattar-backtesting.github.io/issues</a></li>
              <li><b><i>Mein Netzbetreiber wird noch nicht unterst&uuml;tzt</i></b> Bitte ebenfalls ein Issue er&ouml;ffnen und die Datei deines Netzbetreibers anh&auml;ngen. Oder am besten gleich ein PR :-)</li>
              <li><b><i>Was passiert mit die Daten die hier upgeloaded werden?</i></b> Gar nichts, weil alles im Browser passiert und somit auf deinem Computer bleibt.</li>
+             <li><b><i>Warum sieht diese Webseite so urig aus? Hast nix gscheids gelernt?</i></b> Jap. PRs sind gerne willkommen :-)</li>
          </ul> 
     </body>
 </html>

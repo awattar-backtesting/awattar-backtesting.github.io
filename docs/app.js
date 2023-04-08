@@ -37,6 +37,23 @@ class Tracker {
 const tracker = new Tracker();
 
 document.addEventListener("DOMContentLoaded", function() {
+    /* <Collapsible support> */
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+      coll[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.maxHeight){
+          content.style.maxHeight = null;
+        } else {
+          content.style.maxHeight = content.scrollHeight + "px";
+        }
+      });
+    }
+    /* </Collapsible support> */
+
     fetch('https://api.awattar.at/v1/marketdata?start=1561932000000')
         .then((response) => response.json())
         .then((data) => console.log(data));
