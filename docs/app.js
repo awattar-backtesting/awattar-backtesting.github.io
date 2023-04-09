@@ -111,13 +111,15 @@ var oldChart = null;
 prevBtn.addEventListener('click', e => {
 	dayIndex--;
 	if (dayIndex < 0) {
-		dayIndex = tracker.days.keys().length - 1;
+        var len = Array.from(tracker.days.keys()).length;
+		dayIndex = len - 1;
 	}
     displayDay(dayIndex);
 });
 nextBtn.addEventListener('click', e => {
 	dayIndex++;
-	if (dayIndex >= tracker.days.keys().length) {
+    var len = Array.from(tracker.days.keys()).length;
+	if (dayIndex >= len) {
         dayIndex = 0;
 	}
     displayDay(dayIndex);
