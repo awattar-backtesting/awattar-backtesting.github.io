@@ -2,6 +2,7 @@ import { format, add, getHours, parse } from "https://cdn.skypack.dev/date-fns@2
 
 class Tracker {
     data = {}
+    days = new Set();
     addEntry(netzbetreiber, entry) {
         var res = netzbetreiber.processEntry(entry);
         if (res === null) {
@@ -10,6 +11,7 @@ class Tracker {
         }
         var hour = format(res.timestamp, "H");
         var fullday = format(res.timestamp, "yyyyMMdd")
+        this.days.add(fullday);
 
         if (!(fullday in this.data)) {
             this.data[fullday] = {};
@@ -32,6 +34,7 @@ class Tracker {
                 // console.log("e[1].length: ", Object.keys(e[1]).length);
                 // console.log("removing this entry: ", e);
                 // console.log("removing this entry via: ", e[0]);
+                this.days.delete(e[0])
                 delete this.data[e[0]];
             }
         }
@@ -107,6 +110,23 @@ const nextBtn = document.getElementById('nextBtn');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
+var dayIndex = 0;
+var oldChart = null;
+
+prevBtn.addEventListener('click', e => {
+	dayIndex--;
+	if (dayIndex < 0) {
+		dayIndex = tracker.days.keys().length - 1;
+	}
+    displayDay(dayIndex);
+});
+nextBtn.addEventListener('click', e => {
+	dayIndex++;
+	if (dayIndex >= tracker.days.keys().length) {
+        dayIndex = 0;
+	}
+    displayDay(dayIndex);
+});
 
 document.addEventListener("DOMContentLoaded", function() {
     /* <Collapsible support> */
@@ -156,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function() {
 					prevBtn.style.visibility = 'visible';
                     graphDescr.style.visibility = 'visible';
 					nextBtn.style.visibility = 'visible';
-                    displayDay(tracker.getDateBegin())
+                    displayDay(dayIndex);
                 }
             });
         };
@@ -167,10 +187,14 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 });
 
-function displayDay(fullday) {
+function displayDay(index) {
+    var fullday = Array.from(tracker.days)[index];
     graphDescr.innerHTML = '' + format(parse(fullday, 'yyyyMMdd', new Date()), 'yyyy-MM-dd');
     console.log("tracker: ", tracker);
 
+    if (oldChart != null) {
+        oldChart.destroy();
+    }
     var ctx = document.getElementById('awattarChart').getContext('2d');
 
     console.log("awattar.data[fullday]: ", awattar.data[fullday]);
@@ -211,6 +235,7 @@ function displayDay(fullday) {
         data: data,
         options: options
     });
+    oldChart = myChart;
 }
 
 class Netzbetreiber {
