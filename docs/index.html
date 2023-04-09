@@ -76,7 +76,7 @@ h2 {
 }
 
 .spacer_right {
-        text-align: right;
+    text-align: right;
 	float: right;
 }
 
@@ -88,6 +88,22 @@ h2 {
   .container a {
     padding: .8em;
   }
+}
+.controls {
+	display: flex;
+	margin-top: 30px;
+	margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+}
+button {
+	background-color: #333;
+	color: #fff;
+	padding: 10px 20px;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	margin: 0 10px;
 }
 
 .collapsible {
@@ -138,6 +154,13 @@ h2 {
         </form>
 
         <canvas id="awattarChart"></canvas>
+
+		<div class="controls">
+			<button id="prevBtn">prev</button>
+            <p id="graphDescr">nothing</p>
+			<button id="nextBtn">next</button>
+		</div>
+
 
         <p>Wenn dieses Tool f&uuml;r deine Entscheidung n&uuml;tzlich war, verwende bitte meinen aWATTar Empfehlungscode: 3JJEWLKBE</p>
 

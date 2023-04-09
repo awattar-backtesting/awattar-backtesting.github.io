@@ -101,6 +101,13 @@ function storeAwattarCache(a) {
 const tracker = new Tracker();
 const awattar = loadAwattarCache();
 
+const prevBtn = document.getElementById('prevBtn');
+const graphDescr = document.getElementById('graphDescr');
+const nextBtn = document.getElementById('nextBtn');
+prevBtn.style.visibility = 'hidden';
+graphDescr.style.visibility = 'hidden';
+nextBtn.style.visibility = 'hidden';
+
 document.addEventListener("DOMContentLoaded", function() {
     /* <Collapsible support> */
     var coll = document.getElementsByClassName("collapsible");
@@ -146,6 +153,9 @@ document.addEventListener("DOMContentLoaded", function() {
                         console.log("final awattar", awattar);
                     })();
 
+					prevBtn.style.visibility = 'visible';
+                    graphDescr.style.visibility = 'visible';
+					nextBtn.style.visibility = 'visible';
                     displayDay(tracker.getDateBegin())
                 }
             });
@@ -158,7 +168,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function displayDay(fullday) {
-
+    graphDescr.innerHTML = '' + format(parse(fullday, 'yyyyMMdd', new Date()), 'yyyy-MM-dd');
     console.log("tracker: ", tracker);
 
     var ctx = document.getElementById('awattarChart').getContext('2d');
