@@ -166,16 +166,16 @@ document.addEventListener("DOMContentLoaded", function() {
                     tracker.postProcess();
 
                     (async () => {
-                        await Promise.all(entries);
-                        storeAwattarCache(awattar);
-                        console.log("final awattar", awattar);
+                        await Promise.all(entries).then(data => {
+                            storeAwattarCache(awattar);
+                            console.log("final awattar", awattar);
+                            prevBtn.style.visibility = 'visible';
+                            graphDescr.style.visibility = 'visible';
+                            nextBtn.style.visibility = 'visible';
+                            calculateCosts();
+                            displayDay(dayIndex);
+                        });
                     })();
-
-					prevBtn.style.visibility = 'visible';
-                    graphDescr.style.visibility = 'visible';
-					nextBtn.style.visibility = 'visible';
-                    calculateCosts();
-                    displayDay(dayIndex);
                 }
             });
         };
