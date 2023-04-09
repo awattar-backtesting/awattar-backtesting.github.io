@@ -41,10 +41,7 @@ class Awattar {
             console.log("cache hit for ", fullday);
             return;
         }
-        Object.defineProperty(this.data, "a" + fullday, {
-            value: "requesting",
-            writable: true
-        });
+        this.data["a" + fullday] = "requesting"
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -60,10 +57,7 @@ class Awattar {
         }
         var i = 0;
 
-        Object.defineProperty(this.data, "a" + fullday, {
-            value: [],
-            writable: true
-        });
+        this.data["a" + fullday] = []
         for (i = 0; i < data['data'].length; i++) {
             this.data["a" + fullday][i] = data['data'][i].marketprice / 10.0;
         }
@@ -85,12 +79,7 @@ function loadAwattarCache() {
 }
 
 function storeAwattarCache(a) {
-    var obj = Object.assign({}, a.data)
-    console.log("stringify for obj: ", obj);
-    console.log("stringify for obj: ", JSON.stringify(obj));
-    console.log("stringify for a.data: ", a.data);
-    console.log("stringify for a.data: ", JSON.stringify(a.data));
-    localStorage.setItem('awattarCache', JSON.stringify(obj));
+    localStorage.setItem('awattarCache', JSON.stringify(a.data));
 }
 
 
