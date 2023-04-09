@@ -8,7 +8,7 @@ class Tracker {
             return;
         }
         var hour = format(res.timestamp, "H");
-        var fullday = format(res.timestamp, "yyyy-MM-dd")
+        var fullday = format(res.timestamp, "yyyyMMdd")
 
         if (!(fullday in this)) {
             Object.defineProperty(this, fullday, {
@@ -37,16 +37,16 @@ class Awattar {
     data = {}
     first = true;
     async addDay(fullday) {
-        if (fullday in this.data) {
+        if ("a" + fullday in this.data) {
             console.log("cache hit for ", fullday);
             return;
         }
-        Object.defineProperty(this.data, fullday, {
+        Object.defineProperty(this.data, "a" + fullday, {
             value: "requesting",
             writable: true
         });
 
-        var date = parse(fullday, "yyyy-MM-dd", new Date());
+        var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
 
         if (this.first) {
@@ -60,12 +60,12 @@ class Awattar {
         }
         var i = 0;
 
-        Object.defineProperty(this.data, fullday, {
+        Object.defineProperty(this.data, "a" + fullday, {
             value: [],
             writable: true
         });
         for (i = 0; i < data['data'].length; i++) {
-            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
+            this.data["a" + fullday][i] = data['data'][i].marketprice / 10.0;
         }
         if (this.first) {
             console.log('addDay', this);
@@ -86,8 +86,10 @@ function loadAwattarCache() {
 
 function storeAwattarCache(a) {
     var obj = Object.assign({}, a.data)
-    console.log("stringify for: ", obj);
-    console.log("stringify for: ", JSON.stringify(obj));
+    console.log("stringify for obj: ", obj);
+    console.log("stringify for obj: ", JSON.stringify(obj));
+    console.log("stringify for a.data: ", a.data);
+    console.log("stringify for a.data: ", JSON.stringify(a.data));
     localStorage.setItem('awattarCache', JSON.stringify(obj));
 }
 
