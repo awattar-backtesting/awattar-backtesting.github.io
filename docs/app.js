@@ -18,9 +18,9 @@ class Tracker {
         }
         if (!(hour in this[fullday])) {
             this[fullday][hour] = 0;
-            // Object.defineProperty(this.fullday, hour, 0);
         }
         this[fullday][hour] += res.usage;
+        return awattar.addDay(fullday);
     }
 
     getSubTracker(start, end) {
@@ -33,8 +33,56 @@ class Tracker {
     }
 }
 
+class Awattar {
+    first = true;
+    async addDay(fullday) {
+        if (fullday in this) {
+            console.log("cache hit for ", fullday);
+            return;
+        }
+        var date = parse(fullday, "yyyy-MM-dd", new Date());
+        var unixStamp = date.getTime();
+
+        if (this.first) {
+            console.log("unixStamp: ", unixStamp);
+        }
+
+        const response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
+        const data = await response.json();
+        if (this.first) {
+            console.log("awattar data: ", data['data']);
+        }
+        Object.defineProperty(this, fullday, {
+            value: {},
+            writable: true
+        });
+        var i = 0;
+
+        for (i = 0; i < data['data'].length; i++) {
+            this[fullday][i] = data['data'][i].marketprice / 10.0;
+        }
+        if (this.first) {
+            console.log('addDay', this);
+        }
+        this.first = false;
+    }
+}
+
+function loadAwattarCache() {
+    var cache = localStorage.getItem('awattarCache');
+    if (cache === null) {
+        return new Awattar();
+    }
+    return JSON.parse(cache);
+}
+
+function storeAwattarCache(a) {
+    localStorage.setItem('awattarCache', JSON.stringify(a));
+}
+
 
 const tracker = new Tracker();
+const awattar = loadAwattarCache();
 
 document.addEventListener("DOMContentLoaded", function() {
     /* <Collapsible support> */
@@ -54,10 +102,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     /* </Collapsible support> */
 
-    fetch('https://api.awattar.at/v1/marketdata?start=1561932000000')
-        .then((response) => response.json())
-        .then((data) => console.log(data));
-
     const fileInputs = document.getElementById('file-form');
 
     fileInputs.onchange = () => {
@@ -71,12 +115,16 @@ document.addEventListener("DOMContentLoaded", function() {
                     var d = results.data;
                     var netzbetreiber = selectBetreiber(d[0]);
                     var i = 0;
-                    var labels = []
-                    var consumption = []
+                    var entries = [];
+
                     while (i < d.length) {
-                        tracker.addEntry(netzbetreiber, d[i]);
+                        entries.push(tracker.addEntry(netzbetreiber, d[i]));
                         i++;
                     }
+                    (async () => {
+                        await Promise.all(entries);
+                        storeAwattarCache(awattar);
+                    })();
 
                     console.log("tracker: ", tracker);
 
