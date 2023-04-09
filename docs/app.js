@@ -185,16 +185,17 @@ function displayDay(fullday) {
         ]
     };
 
-    // Define chart options
     var options = {
         scales: {
             y: {
                 beginAtZero: true
             }
+        },
+        interaction: {
+            mode: 'index'
         }
     };
 
-    // Create chart
     var myChart = new Chart(ctx, {
         type: 'line',
         data: data,
