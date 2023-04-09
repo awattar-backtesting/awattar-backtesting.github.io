@@ -207,6 +207,7 @@ function displayDay(index) {
                 data: tracker.data[fullday],
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
+                yAxisID: 'y1',
                 tension: 0.1
             },
             {
@@ -214,6 +215,7 @@ function displayDay(index) {
                 data: awattar.data[fullday],
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
+                yAxisID: 'y2',
                 tension: 0.1
             },
         ]
@@ -221,7 +223,27 @@ function displayDay(index) {
 
     var options = {
         scales: {
-            y: {
+            x: {
+                title: {
+                    text: 'Stunde',
+                    display: true,
+                    align: 'center',
+                }
+            },
+            y1: {
+                title: {
+                    display: true,
+                    text: 'kWh',
+                },
+                position: 'left',
+                beginAtZero: true
+            },
+            y2: {
+                title: {
+                    display: true,
+                    text: 'ct/kWh',
+                },
+                position: 'right',
                 beginAtZero: true
             }
         },
