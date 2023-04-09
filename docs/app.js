@@ -107,9 +107,11 @@ const awattar = loadAwattarCache();
 const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
 const nextBtn = document.getElementById('nextBtn');
+const costs = document.getElementById('costs');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
+costs.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
@@ -176,6 +178,7 @@ document.addEventListener("DOMContentLoaded", function() {
 					prevBtn.style.visibility = 'visible';
                     graphDescr.style.visibility = 'visible';
 					nextBtn.style.visibility = 'visible';
+                    calculateCosts();
                     displayDay(dayIndex);
                 }
             });
@@ -186,6 +189,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     };
 });
+
+function calculateCosts() {
+    costs.innerHTML += "<tbody>";
+    costs.innerHTML += "</tbody>";
+	costs.style.visibility = 'visible';
+}
 
 function displayDay(index) {
     var fullday = Array.from(tracker.days)[index];
