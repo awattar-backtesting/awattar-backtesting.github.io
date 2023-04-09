@@ -136,14 +136,24 @@ document.addEventListener("DOMContentLoaded", function() {
                     var data = {
                         // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
                         labels: Array.from({length: 25}, (_, i) => i.toString()),
-                        datasets: [{
-                            label: 'Verbrauch in kWh',
-                            // data: [150, 200, 180, 220, 250, 230, 240],
-                            data: tracker['20230101'],
-                            fill: false,
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1
-                        }]
+                        datasets: [
+                            {
+                                label: 'Verbrauch in kWh',
+                                // data: [150, 200, 180, 220, 250, 230, 240],
+                                data: tracker['20230101'],
+                                fill: false,
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'ct/kWh',
+                                // data: [150, 200, 180, 220, 250, 230, 240],
+                                data: awattar.data['20230101'],
+                                fill: false,
+                                borderColor: 'rgb(192, 75, 75)',
+                                tension: 0.1
+                            },
+                        ]
                     };
 
                     // Define chart options
