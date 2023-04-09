@@ -150,7 +150,11 @@ document.addEventListener("DOMContentLoaded", function() {
         const reader = new FileReader();
 
         reader.onload = (event) => {
-            const fileContent = event.target.result;
+            var fileContent = event.target.result;
+            console.log("fileContent: ", fileContent);
+			fileContent = stripIfNeeded(fileContent);
+            console.log("fileContent after strip: ", fileContent);
+
             Papa.parse(fileContent, {
                 header: true,
                 complete: (results) => {
@@ -311,12 +315,14 @@ class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
     descriptorTimestamp = "timestamp";
+    descriptorTimesub = "timesub";
     dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp, dateFormatString, usageParser) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
+        this.descriptorTimeSub = descriptorTimeSub;
         this.dateFormatString = dateFormatString;
         this.usageParser = usageParser;
     }
@@ -337,6 +343,9 @@ class Netzbetreiber {
         }
         var valueUsage = entry[this.descriptorUsage];
         var valueTimestamp = entry[this.descriptorTimestamp];
+        if (this.descriptorTimeSub !== null) {
+            valueTimestamp += " " + entry[this.descriptorTimeSub];
+        }
         var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
         var parsedUsage = this.usageParser(valueUsage);
 
@@ -347,9 +356,13 @@ class Netzbetreiber {
     }
 };
 
-const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", "dd.MM.yyyy HH:mm", null);
+const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null);
 
-const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", "dd.MM.yyyy HH:mm", (function (usage) {
+const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}));
+
+const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }));
 
@@ -358,6 +371,7 @@ function displayWarning(warning) {
     warningHolder.innerHTML = warning;
     warningHolder.style.visibility = 'visible';
 }
+
 function selectBetreiber(sample) {
     if (NetzNOEEinspeiser.probe(sample)) {
         displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
@@ -366,8 +380,28 @@ function selectBetreiber(sample) {
     if (NetzNOEVerbrauch.probe(sample)) {
         return NetzNOEVerbrauch;
     }
+    if (KaerntenNetz.probe(sample)) {
+        return KaerntenNetz;
+    }
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
     return null;
 }
 
+function stripIfNeeded(input) {
+    // Kaernten Netz
+	// > Kundennummer;XXXXXX
+	// > Kundenname;YYYYYYYY
+	// > ZP-Nummer;ATXXXXX00XXXX0000XX0XXX0XXXXXXXXX
+	// > Beginn;01.01.2020
+	// > Ende;29.03.2023
+	// > Energierichtung;Netzbezug
+    if (input.includes("Kundennummer") && input.includes("Kundenname")) {
+        if (!input.includes("Netzbezug")) {
+            displayWarning("Falsche Daten (Einspeisepunkt?). Bitte Bezug waehlen");
+            return null;
+        }
+        return input.split("\n").slice(8).join("\n")
+	}
+    return input;
+}
