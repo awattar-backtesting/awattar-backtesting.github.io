@@ -37,11 +37,11 @@ class Awattar {
     data = {}
     first = true;
     async addDay(fullday) {
-        if ("a" + fullday in this.data) {
+        if (fullday in this.data) {
             console.log("cache hit for ", fullday);
             return;
         }
-        this.data["a" + fullday] = "requesting"
+        this.data[fullday] = "requesting"
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -57,9 +57,9 @@ class Awattar {
         }
         var i = 0;
 
-        this.data["a" + fullday] = []
+        this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-            this.data["a" + fullday][i] = data['data'][i].marketprice / 10.0;
+            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
         }
         if (this.first) {
             console.log('addDay', this);
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         datasets: [{
                             label: 'Verbrauch in kWh',
                             // data: [150, 200, 180, 220, 250, 230, 240],
-                            data: tracker['2023-01-01'],
+                            data: tracker['20230101'],
                             fill: false,
                             borderColor: 'rgb(75, 192, 192)',
                             tension: 0.1
