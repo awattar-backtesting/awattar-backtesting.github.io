@@ -396,7 +396,7 @@ function stripIfNeeded(input) {
     // > Beginn;01.01.2020
     // > Ende;29.03.2023
     // > Energierichtung;Netzbezug
-    if (input.includes("Kundennummer") && input.includes("Kundenname")) {
+    if (input.includes("Kundennummer") && input.includes("Kundenname") && input.includes("ZP-Nummer") && input.includes("Energierichtung")) {
         if (!input.includes("Netzbezug")) {
             displayWarning("Falsche Daten (Einspeisepunkt?). Bitte Bezug waehlen");
             return null;
