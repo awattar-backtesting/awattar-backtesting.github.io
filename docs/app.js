@@ -1,6 +1,7 @@
 import { format, add, getHours, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
 
 class Tracker {
+    data = {}
     addEntry(netzbetreiber, entry) {
         var res = netzbetreiber.processEntry(entry);
         if (res === null) {
@@ -10,24 +11,37 @@ class Tracker {
         var hour = format(res.timestamp, "H");
         var fullday = format(res.timestamp, "yyyyMMdd")
 
-        if (!(fullday in this)) {
-            this[fullday] = {};
+        if (!(fullday in this.data)) {
+            this.data[fullday] = {};
         }
-        if (!(hour in this[fullday])) {
-            this[fullday][hour] = 0;
+        if (!(hour in this.data[fullday])) {
+            this.data[fullday][hour] = 0;
         }
-        this[fullday][hour] += res.usage;
+        this.data[fullday][hour] += res.usage;
         return awattar.addDay(fullday);
     }
 
-    getSubTracker(start, end) {
+    postProcess() {
+        /* remove incomplete entries */
+        var entries = Object.entries(this.data);
+        for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (Object.keys(e[1]).length < 22) {
+                // console.log("e: ", e);
+                // console.log("e[1]: ", e[1]);
+                // console.log("e[1].length: ", Object.keys(e[1]).length);
+                // console.log("removing this entry: ", e);
+                // console.log("removing this entry via: ", e[0]);
+                delete this.data[e[0]];
+            }
+        }
     }
 
     getDateBegin() {
-        console.log("entries: ", Object.entries(this));
-        var ret = Object.entries(this)[0][0]
+        // console.log("entries: ", Object.entries(this.data));
+        var ret = Object.entries(this.data)[0]
         console.log("ret: ", ret);
-        return ret;
+        return ret[0];
     }
 
     getDateEnd() {
@@ -39,7 +53,7 @@ class Awattar {
     first = true;
     async addDay(fullday) {
         if (fullday in this.data) {
-            console.log("cache hit for ", fullday);
+            // console.log("cache hit for ", fullday);
             return;
         }
         this.data[fullday] = "requesting"
@@ -124,6 +138,8 @@ document.addEventListener("DOMContentLoaded", function() {
                         entries.push(tracker.addEntry(netzbetreiber, d[i]));
                         i++;
                     }
+                    tracker.postProcess();
+
                     (async () => {
                         await Promise.all(entries);
                         storeAwattarCache(awattar);
@@ -147,13 +163,14 @@ function displayDay(fullday) {
 
     var ctx = document.getElementById('awattarChart').getContext('2d');
 
+    console.log("awattar.data[fullday]: ", awattar.data[fullday]);
     var data = {
         // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
         labels: Array.from({length: 25}, (_, i) => i.toString()),
         datasets: [
             {
                 label: 'Verbrauch in kWh',
-                data: tracker[fullday],
+                data: tracker.data[fullday],
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
