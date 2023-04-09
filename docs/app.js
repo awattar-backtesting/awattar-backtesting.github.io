@@ -37,10 +37,15 @@ class Awattar {
     data = {}
     first = true;
     async addDay(fullday) {
-        if (fullday in this) {
+        if (fullday in this.data) {
             console.log("cache hit for ", fullday);
             return;
         }
+        Object.defineProperty(this.data, fullday, {
+            value: "requesting",
+            writable: true
+        });
+
         var date = parse(fullday, "yyyy-MM-dd", new Date());
         var unixStamp = date.getTime();
 
@@ -55,12 +60,10 @@ class Awattar {
         }
         var i = 0;
 
-        if (!(fullday in this.data)) {
-            Object.defineProperty(this.data, fullday, {
-                value: {},
-                writable: true
-            });
-        }
+        Object.defineProperty(this.data, fullday, {
+            value: [],
+            writable: true
+        });
         for (i = 0; i < data['data'].length; i++) {
             this.data[fullday][i] = data['data'][i].marketprice / 10.0;
         }
