@@ -98,11 +98,13 @@ const graphDescr = document.getElementById('graphDescr');
 const nextBtn = document.getElementById('nextBtn');
 const costs = document.getElementById('costs');
 const costslbl = document.getElementById('costslbl');
+const warningholder = document.getElementById('warningHolder');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
 costs.style.visibility = 'hidden';
 costslbl.style.visibility = 'hidden';
+warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
@@ -335,15 +337,21 @@ const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh
     return parseFloat(usage.replace(",", "."));
 }));
 
+function displayWarning(warning) {
+    console.log("Fehler: ", warning);
+    warningHolder.innerHTML = warning;
+    warningHolder.style.visibility = 'visible';
+}
 function selectBetreiber(sample) {
     if (NetzNOEEinspeiser.probe(sample)) {
-        console.log("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
+        displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
         return null;
     }
     if (NetzNOEVerbrauch.probe(sample)) {
         return NetzNOEVerbrauch;
     }
-    console.log("Netzbetreiber fuer sample unbekannt: ", sample);
+    displayWarning("Netzbetreiber fuer Upload unbekannt: ");
+    console.log("sample: ", sample);
     return null;
 }
 
