@@ -43,7 +43,7 @@ class Tracker {
     getDateBegin() {
         // console.log("entries: ", Object.entries(this.data));
         var ret = Object.entries(this.data)[0]
-        console.log("ret: ", ret);
+        // console.log("ret: ", ret);
         return ret[0];
     }
 
@@ -53,7 +53,6 @@ class Tracker {
 
 class Awattar {
     data = {}
-    first = true;
     async addDay(fullday) {
         if (fullday in this.data) {
             // console.log("cache hit for ", fullday);
@@ -64,23 +63,13 @@ class Awattar {
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
 
-        if (this.first) {
-            console.log("unixStamp: ", unixStamp);
-        }
-
         const response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
         const data = await response.json();
-        if (this.first) {
-            console.log("awattar data: ", data['data']);
-        }
         var i = 0;
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
             this.data[fullday][i] = data['data'][i].marketprice / 10.0;
-        }
-        if (this.first) {
-            console.log('addDay', this);
         }
         this.first = false;
     }
@@ -202,18 +191,13 @@ function calculateCosts() {
         if (!(monthKey in months)) {
             months[monthKey] = 0.0;
         }
-        console.log("day: ", day);
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
-        console.log("usages: ", usages);
-        console.log("prices: ", prices);
         var sum = 0.0;
         for (var i = 0; i < len; i++) {
-            console.log("usages[i]: ", usages[i]);
             sum += usages[i] * prices[i];
         }
-        console.log("sum: ", sum);
         months[monthKey] += sum;
     }
     var content = "<tbody>";
@@ -242,7 +226,7 @@ function displayDay(index) {
     }
     var ctx = document.getElementById('awattarChart').getContext('2d');
 
-    console.log("awattar.data[fullday]: ", awattar.data[fullday]);
+    // console.log("awattar.data[fullday]: ", awattar.data[fullday]);
     var data = {
         // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
         labels: Array.from({length: 25}, (_, i) => i.toString()),
