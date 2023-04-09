@@ -144,6 +144,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const fileInputs = document.getElementById('file-form');
 
     fileInputs.onchange = () => {
+        warningHolder.style.visibility = 'hidden';
         const reader = new FileReader();
 
         reader.onload = (event) => {
@@ -186,6 +187,7 @@ document.addEventListener("DOMContentLoaded", function() {
 function calculateCosts() {
     console.log("tracker: ", tracker);
     var months = {}
+    var monthsKwh = {}
     var days = Array.from(tracker.days);
     for (var idx = 0; idx < days.length; idx++) {
         var day = days[idx];
@@ -193,14 +195,24 @@ function calculateCosts() {
         if (!(monthKey in months)) {
             months[monthKey] = 0.0;
         }
+        if (!(monthKey in monthsKwh)) {
+            monthsKwh[monthKey] = 0.0;
+        }
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
-        var sum = 0.0;
+        var sumPrice = 0.0;
+        var sumKwh = 0.0;
         for (var i = 0; i < len; i++) {
-            sum += usages[i] * prices[i];
+            if (!(i in usages)) {
+                // Zeitumstellung
+                continue;
+            }
+            sumPrice += usages[i] * prices[i];
+            sumKwh += usages[i];
         }
-        months[monthKey] += sum;
+        months[monthKey] += sumPrice;
+        monthsKwh[monthKey] += sumKwh;
     }
     var content = "<tbody>";
     var monthsArray = Object.keys(months);
@@ -208,9 +220,11 @@ function calculateCosts() {
         var e = monthsArray[idx];
         content += "<tr>";
         content += "<td><b>" + format(parse(e, "yyyyMM", new Date()), "yyyy-MM") + "<b></td>";
-        content += "<td>" + (months[e] / 100).toFixed(2) + "&euro;</td>";
-        content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + "&euro;</td>";
-        content += "<td>" + (months[e] * 1.2 * 1.03 / 100).toFixed(2) + "&euro;</td>";
+        content += "<td>" + (monthsKwh[e]).toFixed(2) + " kWh</td>";
+        content += "<td>" + ((months[e] / 100) / monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + (months[e] / 100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + (months[e] * 1.2 * 1.03 / 100).toFixed(2) + " &euro;</td>";
         content += "</tr>";
     }
     content += "</tbody>";
