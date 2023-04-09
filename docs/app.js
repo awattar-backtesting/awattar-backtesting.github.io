@@ -109,19 +109,19 @@ var dayIndex = 0;
 var oldChart = null;
 
 prevBtn.addEventListener('click', e => {
-	dayIndex--;
-	if (dayIndex < 0) {
+    dayIndex--;
+    if (dayIndex < 0) {
         var len = Array.from(tracker.days.keys()).length;
-		dayIndex = len - 1;
-	}
+        dayIndex = len - 1;
+    }
     displayDay(dayIndex);
 });
 nextBtn.addEventListener('click', e => {
-	dayIndex++;
+    dayIndex++;
     var len = Array.from(tracker.days.keys()).length;
-	if (dayIndex >= len) {
+    if (dayIndex >= len) {
         dayIndex = 0;
-	}
+    }
     displayDay(dayIndex);
 });
 
@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", function() {
         reader.onload = (event) => {
             var fileContent = event.target.result;
             console.log("fileContent: ", fileContent);
-			fileContent = stripIfNeeded(fileContent);
+            fileContent = stripIfNeeded(fileContent);
             console.log("fileContent after strip: ", fileContent);
 
             Papa.parse(fileContent, {
@@ -235,7 +235,7 @@ function calculateCosts() {
     }
     content += "</tbody>";
     costs.innerHTML += content;
-	costs.style.visibility = 'visible';
+    costs.style.visibility = 'visible';
     costslbl.style.visibility = 'visible';
 }
 
@@ -390,18 +390,18 @@ function selectBetreiber(sample) {
 
 function stripIfNeeded(input) {
     // Kaernten Netz
-	// > Kundennummer;XXXXXX
-	// > Kundenname;YYYYYYYY
-	// > ZP-Nummer;ATXXXXX00XXXX0000XX0XXX0XXXXXXXXX
-	// > Beginn;01.01.2020
-	// > Ende;29.03.2023
-	// > Energierichtung;Netzbezug
+    // > Kundennummer;XXXXXX
+    // > Kundenname;YYYYYYYY
+    // > ZP-Nummer;ATXXXXX00XXXX0000XX0XXX0XXXXXXXXX
+    // > Beginn;01.01.2020
+    // > Ende;29.03.2023
+    // > Energierichtung;Netzbezug
     if (input.includes("Kundennummer") && input.includes("Kundenname")) {
         if (!input.includes("Netzbezug")) {
             displayWarning("Falsche Daten (Einspeisepunkt?). Bitte Bezug waehlen");
             return null;
         }
         return input.split("\n").slice(8).join("\n")
-	}
+    }
     return input;
 }
