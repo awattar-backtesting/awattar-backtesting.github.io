@@ -108,10 +108,12 @@ const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
 const nextBtn = document.getElementById('nextBtn');
 const costs = document.getElementById('costs');
+const costslbl = document.getElementById('costslbl');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
 costs.style.visibility = 'hidden';
+costslbl.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
@@ -191,15 +193,49 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function calculateCosts() {
-    costs.innerHTML += "<tbody>";
-    costs.innerHTML += "</tbody>";
+    console.log("tracker: ", tracker);
+    var months = {}
+    var days = Array.from(tracker.days);
+    for (var idx = 0; idx < days.length; idx++) {
+        var day = days[idx];
+        var monthKey = day.substring(0, 6);
+        if (!(monthKey in months)) {
+            months[monthKey] = 0.0;
+        }
+        console.log("day: ", day);
+        var len = Array.from(Object.keys(tracker.data[day])).length;
+        var usages = tracker.data[day];
+        var prices = awattar.data[day];
+        console.log("usages: ", usages);
+        console.log("prices: ", prices);
+        var sum = 0.0;
+        for (var i = 0; i < len; i++) {
+            console.log("usages[i]: ", usages[i]);
+            sum += usages[i] * prices[i];
+        }
+        console.log("sum: ", sum);
+        months[monthKey] += sum;
+    }
+    var content = "<tbody>";
+    var monthsArray = Object.keys(months);
+    for (var idx = 0; idx < monthsArray.length; idx++) {
+        var e = monthsArray[idx];
+        content += "<tr>";
+        content += "<td><b>" + format(parse(e, "yyyyMM", new Date()), "yyyy-MM") + "<b></td>";
+        content += "<td>" + (months[e] / 100).toFixed(2) + "&euro;</td>";
+        content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + "&euro;</td>";
+        content += "<td>" + (months[e] * 1.2 * 1.03 / 100).toFixed(2) + "&euro;</td>";
+        content += "</tr>";
+    }
+    content += "</tbody>";
+    costs.innerHTML += content;
 	costs.style.visibility = 'visible';
+    costslbl.style.visibility = 'visible';
 }
 
 function displayDay(index) {
     var fullday = Array.from(tracker.days)[index];
     graphDescr.innerHTML = '' + format(parse(fullday, 'yyyyMMdd', new Date()), 'yyyy-MM-dd');
-    console.log("tracker: ", tracker);
 
     if (oldChart != null) {
         oldChart.destroy();

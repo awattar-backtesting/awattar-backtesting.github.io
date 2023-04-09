@@ -20,6 +20,11 @@ table {
     text-align: left;
     padding: 2px;
 }
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+  padding: 5px;
+}
 
 th {
 	font-family: verdana;
@@ -165,13 +170,14 @@ button {
 			<button id="nextBtn">next</button>
 		</div>
 
+        <p id="costslbl">&Uuml;bersicht Energiekosten</p>
         <table id="costs">
           <thead>
               <tr>
-                <td>&nbsp;</td>
                 <td>Monat</td>
                 <td>Netto</td>
                 <td>+20% MwSt</td>
+                <td>+3% Aufschlag</td>
               </tr>
           </thead>
         </table>
