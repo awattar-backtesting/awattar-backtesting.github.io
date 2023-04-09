@@ -34,6 +34,7 @@ class Tracker {
 }
 
 class Awattar {
+    data = {}
     first = true;
     async addDay(fullday) {
         if (fullday in this) {
@@ -52,14 +53,16 @@ class Awattar {
         if (this.first) {
             console.log("awattar data: ", data['data']);
         }
-        Object.defineProperty(this, fullday, {
-            value: {},
-            writable: true
-        });
         var i = 0;
 
+        if (!(fullday in this.data)) {
+            Object.defineProperty(this.data, fullday, {
+                value: {},
+                writable: true
+            });
+        }
         for (i = 0; i < data['data'].length; i++) {
-            this[fullday][i] = data['data'][i].marketprice / 10.0;
+            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
         }
         if (this.first) {
             console.log('addDay', this);
@@ -69,15 +72,20 @@ class Awattar {
 }
 
 function loadAwattarCache() {
+    var awattar = new Awattar();
     var cache = localStorage.getItem('awattarCache');
     if (cache === null) {
-        return new Awattar();
+        return awattar;
     }
-    return JSON.parse(cache);
+    awattar.data = JSON.parse(cache);
+    return awattar;
 }
 
 function storeAwattarCache(a) {
-    localStorage.setItem('awattarCache', JSON.stringify(a));
+    var obj = Object.assign({}, a.data)
+    console.log("stringify for: ", obj);
+    console.log("stringify for: ", JSON.stringify(obj));
+    localStorage.setItem('awattarCache', JSON.stringify(obj));
 }
 
 
@@ -124,6 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     (async () => {
                         await Promise.all(entries);
                         storeAwattarCache(awattar);
+                        console.log("final awattar", awattar);
                     })();
 
                     console.log("tracker: ", tracker);
