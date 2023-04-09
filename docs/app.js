@@ -227,7 +227,7 @@ function calculateCosts() {
         content += "<tr>";
         content += "<td><b>" + format(parse(e, "yyyyMM", new Date()), "yyyy-MM") + "<b></td>";
         content += "<td>" + (monthsKwh[e]).toFixed(2) + " kWh</td>";
-        content += "<td>" + ((months[e] / 100) / monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + (months[e] / monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + (months[e] / 100).toFixed(2) + " &euro;</td>";
         content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + " &euro;</td>";
         content += "<td>" + (months[e] * 1.2 * 1.03 / 100).toFixed(2) + " &euro;</td>";
