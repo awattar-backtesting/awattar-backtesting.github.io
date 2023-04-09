@@ -11,10 +11,7 @@ class Tracker {
         var fullday = format(res.timestamp, "yyyyMMdd")
 
         if (!(fullday in this)) {
-            Object.defineProperty(this, fullday, {
-                value: {},
-                writable: true
-            });
+            this[fullday] = {};
         }
         if (!(hour in this[fullday])) {
             this[fullday][hour] = 0;
@@ -27,6 +24,10 @@ class Tracker {
     }
 
     getDateBegin() {
+        console.log("entries: ", Object.entries(this));
+        var ret = Object.entries(this)[0][0]
+        console.log("ret: ", ret);
+        return ret;
     }
 
     getDateEnd() {
@@ -129,48 +130,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         console.log("final awattar", awattar);
                     })();
 
-                    console.log("tracker: ", tracker);
-
-                    var ctx = document.getElementById('awattarChart').getContext('2d');
-
-                    var data = {
-                        // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-                        labels: Array.from({length: 25}, (_, i) => i.toString()),
-                        datasets: [
-                            {
-                                label: 'Verbrauch in kWh',
-                                // data: [150, 200, 180, 220, 250, 230, 240],
-                                data: tracker['20230101'],
-                                fill: false,
-                                borderColor: 'rgb(75, 192, 192)',
-                                tension: 0.1
-                            },
-                            {
-                                label: 'ct/kWh',
-                                // data: [150, 200, 180, 220, 250, 230, 240],
-                                data: awattar.data['20230101'],
-                                fill: false,
-                                borderColor: 'rgb(192, 75, 75)',
-                                tension: 0.1
-                            },
-                        ]
-                    };
-
-                    // Define chart options
-                    var options = {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    };
-
-                    // Create chart
-                    var myChart = new Chart(ctx, {
-                        type: 'line',
-                        data: data,
-                        options: options
-                    });
+                    displayDay(tracker.getDateBegin())
                 }
             });
         };
@@ -179,9 +139,51 @@ document.addEventListener("DOMContentLoaded", function() {
             reader.readAsText(file)
         }
     };
-
-
 });
+
+function displayDay(fullday) {
+
+    console.log("tracker: ", tracker);
+
+    var ctx = document.getElementById('awattarChart').getContext('2d');
+
+    var data = {
+        // labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+        labels: Array.from({length: 25}, (_, i) => i.toString()),
+        datasets: [
+            {
+                label: 'Verbrauch in kWh',
+                data: tracker[fullday],
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            },
+            {
+                label: 'ct/kWh',
+                data: awattar.data[fullday],
+                fill: false,
+                borderColor: 'rgb(192, 75, 75)',
+                tension: 0.1
+            },
+        ]
+    };
+
+    // Define chart options
+    var options = {
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    };
+
+    // Create chart
+    var myChart = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: options
+    });
+}
 
 class Netzbetreiber {
     name = "name";
