@@ -152,12 +152,16 @@ document.addEventListener("DOMContentLoaded", function() {
         reader.onload = (event) => {
             var fileContent = event.target.result;
             // console.log("fileContent: ", fileContent);
-            fileContent = stripIfNeeded(fileContent);
+            fileContent = stripPlain(fileContent);
             // console.log("fileContent after strip: ", fileContent);
 
             const bytes = new Uint8Array(fileContent);
-            const xls = XLSX.read(bytes);
+            var xls = XLSX.read(bytes);
+            // console.log("xls: ", xls);
+            xls = stripXls(xls);
+            // console.log("after strip, xls: ", xls);
             fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
+            console.log("csv: ", fileContent);
 
             Papa.parse(fileContent, {
                 header: true,
@@ -322,7 +326,7 @@ class Netzbetreiber {
     descriptorTimesub = "timesub";
     dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
@@ -330,6 +334,7 @@ class Netzbetreiber {
         this.dateFormatString = dateFormatString;
         this.usageParser = usageParser;
         this.otherFields = otherFields;
+        this.shouldSkip = shouldSkip;
     }
 
     probe(entry) {
@@ -351,13 +356,18 @@ class Netzbetreiber {
         if (!this.probe(entry)) {
             return null;
         }
-        var valueUsage = entry[this.descriptorUsage];
+        if (this.shouldSkip !== null && this.shouldSkip(entry)) {
+            return null;
+        }
+
         var valueTimestamp = entry[this.descriptorTimestamp];
         if (this.descriptorTimeSub !== null) {
             valueTimestamp += " " + entry[this.descriptorTimeSub];
         }
         var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
-        var parsedUsage = this.usageParser(valueUsage);
+
+        var valueUsage = entry[this.descriptorUsage];
+        var parsedUsage = valueUsage === "" ? 0.0 : this.usageParser(valueUsage);
 
         return {
             timestamp: parsedTimestamp,
@@ -366,19 +376,26 @@ class Netzbetreiber {
     }
 };
 
-const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null);
+const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null, null);
 
 const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"]);
+}), ["Ersatzwert"], null);
 
 const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["kW", "Status"]);
+}), ["kW", "Status"], null);
 
 const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Status"]);
+}), ["Status"], null);
+
+const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel String", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage);
+}), ["Angezeigter Zeitraum"], (function (row) {
+    var valueObiscode = row["Obiscode"];
+    return valueObiscode !== "1.8.0";
+}));
 
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
@@ -400,6 +417,9 @@ function selectBetreiber(sample) {
     if (KaerntenNetz.probe(sample)) {
         return KaerntenNetz;
     }
+    if (EbnerStrom.probe(sample)) {
+        return EbnerStrom;
+    }
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
     return null;
@@ -417,7 +437,7 @@ function stringToBuffer(str) {
     }
     return buf;
 }
-function stripIfNeeded(buf) {
+function stripPlain(buf) {
     var input = bufferToString(buf);
     // Kaernten Netz
     // > Kundennummer;XXXXXX
@@ -434,4 +454,45 @@ function stripIfNeeded(buf) {
         return stringToBuffer(input.split("\n").slice(8).join("\n"));
     }
     return buf;
+}
+
+function ec(r, c){
+    return XLSX.utils.encode_cell({r:r,c:c});
+}
+
+function delete_row(ws, row_index){
+    var variable = XLSX.utils.decode_range(ws["!ref"])
+    for(var R = row_index; R < variable.e.r; ++R){
+        for(var C = variable.s.c; C <= variable.e.c; ++C){
+            ws[ec(R,C)] = ws[ec(R+1,C)];
+        }
+    }
+    variable.e.r--
+    ws['!ref'] = XLSX.utils.encode_range(variable.s, variable.e);
+    return ws;
+}
+
+function update_sheet_range(ws) {
+  var range = {s:{r:20000000, c:20000000},e:{r:0,c:0}};
+  Object.keys(ws).filter(function(x) { return x.charAt(0) != "!"; }).map(XLSX.utils.decode_cell).forEach(function(x) {
+    range.s.c = Math.min(range.s.c, x.c); range.s.r = Math.min(range.s.r, x.r);
+    range.e.c = Math.max(range.e.c, x.c); range.e.r = Math.max(range.e.r, x.r);
+  });
+  ws['!ref'] = XLSX.utils.encode_range(range);
+}
+
+function stripXls(xls) {
+    var first_ws = xls.Sheets[xls.SheetNames[0]];
+    // Ebner Strom
+    // > Zeitstempel String	Obiscode	Wert (kWh)	Angezeigter Zeitraum
+    // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ	
+    // > 01.03.2023 00:15	1.8.0	0,28	01.03.2023 - 31.03.2023
+    // > 01.03.2023 00:15	2.8.0	0	01.03.2023 - 31.03.2023
+    if (first_ws.A1.v.includes("Zeitstempel String") && first_ws.A2.v.includes("hlpunkt")) {
+        /* fixup broken XLS, so that [!ref] is set correctly */
+        update_sheet_range(first_ws);
+        /* delete "Zaehlpunkt" row, it confuses the CSV parser */
+        delete_row(first_ws, 1);
+    }
+    return xls;
 }
