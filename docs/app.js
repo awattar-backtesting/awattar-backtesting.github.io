@@ -151,9 +151,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         reader.onload = (event) => {
             var fileContent = event.target.result;
-            console.log("fileContent: ", fileContent);
+            // console.log("fileContent: ", fileContent);
             fileContent = stripIfNeeded(fileContent);
-            console.log("fileContent after strip: ", fileContent);
+            // console.log("fileContent after strip: ", fileContent);
+
+            const bytes = new Uint8Array(fileContent);
+            const xls = XLSX.read(bytes);
+            fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
 
             Papa.parse(fileContent, {
                 header: true,
@@ -185,7 +189,7 @@ document.addEventListener("DOMContentLoaded", function() {
         };
 
         for (let file of fileInputs[0].files) {
-            reader.readAsText(file)
+            reader.readAsArrayBuffer(file)
         }
     };
 });
@@ -318,13 +322,14 @@ class Netzbetreiber {
     descriptorTimesub = "timesub";
     dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
         this.descriptorTimeSub = descriptorTimeSub;
         this.dateFormatString = dateFormatString;
         this.usageParser = usageParser;
+        this.otherFields = otherFields;
     }
 
     probe(entry) {
@@ -333,6 +338,11 @@ class Netzbetreiber {
         }
         if (!(this.descriptorTimestamp in entry)) {
             return false;
+        }
+        for (var e in this.otherFields) {
+            if (!(this.otherFields[e] in entry)) {
+                return false;
+            }
         }
         return true;
     }
@@ -356,15 +366,19 @@ class Netzbetreiber {
     }
 };
 
-const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null);
+const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null);
 
 const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}));
+}), ["Ersatzwert"]);
+
+const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["kW", "Status"]);
 
 const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}));
+}), ["Status"]);
 
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
@@ -380,6 +394,9 @@ function selectBetreiber(sample) {
     if (NetzNOEVerbrauch.probe(sample)) {
         return NetzNOEVerbrauch;
     }
+    if (NetzOOE.probe(sample)) {
+        return NetzOOE;
+    }
     if (KaerntenNetz.probe(sample)) {
         return KaerntenNetz;
     }
@@ -388,7 +405,19 @@ function selectBetreiber(sample) {
     return null;
 }
 
-function stripIfNeeded(input) {
+function bufferToString(buf) {
+    return String.fromCharCode.apply(null, new Uint8Array(buf));
+}
+function stringToBuffer(str) {
+    var buf = new ArrayBuffer(str.length);
+    var bufView = new Uint8Array(buf);
+    for (var i=0, strLen=str.length; i < strLen; i++) {
+        bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+}
+function stripIfNeeded(buf) {
+    var input = bufferToString(buf);
     // Kaernten Netz
     // > Kundennummer;XXXXXX
     // > Kundenname;YYYYYYYY
@@ -401,7 +430,7 @@ function stripIfNeeded(input) {
             displayWarning("Falsche Daten (Einspeisepunkt?). Bitte Bezug waehlen");
             return null;
         }
-        return input.split("\n").slice(8).join("\n")
+        return stringToBuffer(input.split("\n").slice(8).join("\n"));
     }
-    return input;
+    return buf;
 }
