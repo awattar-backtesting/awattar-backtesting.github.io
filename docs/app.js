@@ -406,7 +406,8 @@ function selectBetreiber(sample) {
 }
 
 function bufferToString(buf) {
-    return String.fromCharCode.apply(null, new Uint8Array(buf));
+    return new Uint8Array(buf)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
 }
 function stringToBuffer(str) {
     var buf = new ArrayBuffer(str.length);
