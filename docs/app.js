@@ -90,8 +90,8 @@ function storeAwattarCache(a) {
 }
 
 
-const tracker = new Tracker();
-const awattar = loadAwattarCache();
+var tracker = null;
+var awattar = null;
 
 const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
@@ -107,6 +107,8 @@ costslbl.style.visibility = 'hidden';
 warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
+
+const initialTableState = costslbl.innerHTML;
 
 prevBtn.addEventListener('click', e => {
     dayIndex--;
@@ -150,6 +152,13 @@ document.addEventListener("DOMContentLoaded", function() {
         const reader = new FileReader();
 
         reader.onload = (event) => {
+            /* reset state */
+            awattar = loadAwattarCache();
+            tracker = new Tracker();
+            costs.innerHTML = initialTableState;
+
+
+
             var fileContent = event.target.result;
             // console.log("fileContent: ", fileContent);
             fileContent = stripPlain(fileContent);
