@@ -337,8 +337,26 @@ class Netzbetreiber {
         this.shouldSkip = shouldSkip;
     }
 
+    matchUsage(entry) {
+        if (this.descriptorUsage[0] === '!') {
+            /* fuzzy check as we don't know the exact column name */
+            var desc = this.descriptorUsage.substring(1);
+            var entries = Object.keys(entry);
+            for (var e in entries) {
+                if (entries[e].includes(desc)) {
+                    return entries[e];
+                }
+            }
+        } else {
+            if (this.descriptorUsage in entry) {
+                return this.descriptorUsage;
+            }
+        }
+        return null;
+    }
+
     probe(entry) {
-        if (!(this.descriptorUsage in entry)) {
+        if (this.matchUsage(entry) === null) {
             return false;
         }
         if (!(this.descriptorTimestamp in entry)) {
@@ -366,8 +384,8 @@ class Netzbetreiber {
         }
         var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
 
-        var valueUsage = entry[this.descriptorUsage];
-        var parsedUsage = valueUsage === "" ? 0.0 : this.usageParser(valueUsage);
+        var valueUsage = entry[this.matchUsage(entry)];
+        var parsedUsage = valueUsage === "" || valueUsage === undefined ? 0.0 : this.usageParser(valueUsage);
 
         return {
             timestamp: parsedTimestamp,
@@ -397,6 +415,10 @@ const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel St
     return valueObiscode !== "1.8.0";
 }));
 
+const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Zeit bis"], null);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -419,6 +441,9 @@ function selectBetreiber(sample) {
     }
     if (EbnerStrom.probe(sample)) {
         return EbnerStrom;
+    }
+    if (WienerNetze.probe(sample)) {
+        return WienerNetze;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
