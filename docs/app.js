@@ -217,30 +217,37 @@ function calculateCosts() {
         var day = days[idx];
         var monthKey = day.substring(0, 6);
         if (!(monthKey in months)) {
-            months[monthKey] = 0.0;
+            months[monthKey] = new Decimal(0.0);
         }
         if (!(monthKey in monthsKwh)) {
-            monthsKwh[monthKey] = 0.0;
-            monthsFee[monthKey] = 0.0;
+            monthsKwh[monthKey] = new Decimal(0.0);
+        }
+        if (!(monthKey in monthsFee)) {
+            monthsFee[monthKey] = new Decimal(0.0);
         }
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
-        var sumPrice = 0.0;
-        var sumKwh = 0.0;
-        var sumFee = 0.0;
+        var sumPrice = new Decimal(0.0);
+        var sumKwh = new Decimal(0.0);
+        var sumFee = new Decimal(0.0);
         for (var i = 0; i < len; i++) {
             if (!(i in usages)) {
                 // Zeitumstellung
                 continue;
             }
-            sumPrice += usages[i] * prices[i];
-            sumFee += Math.abs(prices[i]) * 0.03;
-            sumKwh += usages[i];
+            var dUsage = new Decimal(usages[i]);
+            var dPrice = new Decimal(prices[i]);
+
+            sumPrice = sumPrice.plus(dUsage.times(dPrice));
+            sumFee = sumFee.plus(dPrice.abs().times(0.03));
+            sumKwh = sumKwh.plus(dUsage);
+            console.log("dPrice: ", dPrice.toFixed(2));
+            console.log("sumPrice: ", sumPrice.toFixed(2));
         }
-        months[monthKey] += sumPrice;
-        monthsKwh[monthKey] += sumKwh;
-        monthsFee[monthKey] += sumFee;
+        months[monthKey] = months[monthKey].plus(sumPrice);
+        monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
+        monthsFee[monthKey] = monthsFee[monthKey].plus(sumFee);
     }
     var content = "<tbody>";
     var monthsArray = Object.keys(months);
@@ -248,11 +255,11 @@ function calculateCosts() {
         var e = monthsArray[idx];
         content += "<tr>";
         content += "<td><b>" + format(parse(e, "yyyyMM", new Date()), "yyyy-MM") + "<b></td>";
-        content += "<td>" + (monthsKwh[e]).toFixed(2) + " kWh</td>";
-        content += "<td>" + (months[e] / monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
-        content += "<td>" + (months[e] / 100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + ((months[e] * 1.2 + monthsFee[e]) / 100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + monthsKwh[e].toFixed(2) + " kWh</td>";
+        content += "<td>" + months[e].dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + months[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + months[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + months[e].times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "</tr>";
     }
     content += "</tbody>";
