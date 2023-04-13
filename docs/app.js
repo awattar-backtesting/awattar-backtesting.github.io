@@ -211,6 +211,7 @@ function calculateCosts() {
     console.log("tracker: ", tracker);
     var months = {}
     var monthsKwh = {}
+    var monthsFee = {}
     var days = Array.from(tracker.days);
     for (var idx = 0; idx < days.length; idx++) {
         var day = days[idx];
@@ -220,22 +221,26 @@ function calculateCosts() {
         }
         if (!(monthKey in monthsKwh)) {
             monthsKwh[monthKey] = 0.0;
+            monthsFee[monthKey] = 0.0;
         }
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
         var sumPrice = 0.0;
         var sumKwh = 0.0;
+        var sumFee = 0.0;
         for (var i = 0; i < len; i++) {
             if (!(i in usages)) {
                 // Zeitumstellung
                 continue;
             }
             sumPrice += usages[i] * prices[i];
+            sumFee += Math.abs(prices[i]) * 0.03;
             sumKwh += usages[i];
         }
         months[monthKey] += sumPrice;
         monthsKwh[monthKey] += sumKwh;
+        monthsFee[monthKey] += sumFee;
     }
     var content = "<tbody>";
     var monthsArray = Object.keys(months);
@@ -247,7 +252,7 @@ function calculateCosts() {
         content += "<td>" + (months[e] / monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + (months[e] / 100).toFixed(2) + " &euro;</td>";
         content += "<td>" + (months[e] * 1.2 / 100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + (months[e] * 1.2 * 1.03 / 100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + ((months[e] * 1.2 + monthsFee[e]) / 100).toFixed(2) + " &euro;</td>";
         content += "</tr>";
     }
     content += "</tbody>";
