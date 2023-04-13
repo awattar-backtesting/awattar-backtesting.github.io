@@ -108,7 +108,7 @@ warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
-const initialTableState = costslbl.innerHTML;
+const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td> <td>+3% Aufschlag</td> </tr> </thead>"
 
 prevBtn.addEventListener('click', e => {
     dayIndex--;
