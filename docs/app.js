@@ -440,6 +440,10 @@ const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum"
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null);
 
+const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}));
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -465,6 +469,9 @@ function selectBetreiber(sample) {
     }
     if (WienerNetze.probe(sample)) {
         return WienerNetze;
+    }
+    if (LinzAG.probe(sample)) {
+        return LinzAG;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
