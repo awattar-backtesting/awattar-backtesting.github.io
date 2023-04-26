@@ -1,4 +1,4 @@
-import { format, add, getHours, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
+import { format, add, getHours, parse, parseISO } from "https://cdn.skypack.dev/date-fns@2.16.1";
 
 class Tracker {
     data = {}
@@ -406,7 +406,12 @@ class Netzbetreiber {
         if (this.descriptorTimeSub !== null) {
             valueTimestamp += " " + entry[this.descriptorTimeSub];
         }
-        var parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
+        var parsedTimestamp = null;
+        if (this.dateFormatString === "parseISO") {
+            parsedTimestamp = parseISO(valueTimestamp);
+        } else {
+            parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
+        }
 
         var valueUsage = entry[this.matchUsage(entry)];
         var parsedUsage = valueUsage === "" || valueUsage === undefined ? 0.0 : this.usageParser(valueUsage);
@@ -447,6 +452,10 @@ const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", n
     return parseFloat(usage.replace(",", "."));
 }), ["Ersatzwert"], null);
 
+const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einheitstarif", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
+    return parseFloat(usage);
+}), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -475,6 +484,9 @@ function selectBetreiber(sample) {
     }
     if (LinzAG.probe(sample)) {
         return LinzAG;
+    }
+    if (StromnetzGraz.probe(sample)) {
+        return StromnetzGraz;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
