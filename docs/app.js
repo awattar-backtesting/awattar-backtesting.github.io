@@ -445,7 +445,7 @@ const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum"
 
 const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}));
+}), ["Ersatzwert"], null);
 
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
