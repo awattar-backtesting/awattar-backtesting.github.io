@@ -24,16 +24,19 @@ class Tracker {
     }
 
     postProcess() {
-        /* remove incomplete entries */
+        /* remove incomplete entries, e.g. if 15-interval is not activated some
+         * Netzbetreiber put one entry for each day. This kind of data is not
+         * useful for our purpose. */
         var entries = Object.entries(this.data);
         for (var i = 0; i < entries.length; i++) {
             var e = entries[i];
-            if (Object.keys(e[1]).length < 22) {
+            if (Object.keys(e[1]).length < 2) {
                 // console.log("e: ", e);
                 // console.log("e[1]: ", e[1]);
                 // console.log("e[1].length: ", Object.keys(e[1]).length);
                 // console.log("removing this entry: ", e);
                 // console.log("removing this entry via: ", e[0]);
+
                 this.days.delete(e[0])
                 delete this.data[e[0]];
             }
