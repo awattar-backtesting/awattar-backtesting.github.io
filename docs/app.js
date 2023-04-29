@@ -456,6 +456,10 @@ const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einheitstari
     return parseFloat(usage);
 }), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null);
 
+const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verbrauch", "Verbrauchszeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -488,6 +492,10 @@ function selectBetreiber(sample) {
     if (StromnetzGraz.probe(sample)) {
         return StromnetzGraz;
     }
+    if (EnergienetzeSteiermark.probe(sample)) {
+        return EnergienetzeSteiermark;
+    }
+
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
     return null;
