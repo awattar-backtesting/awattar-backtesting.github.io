@@ -111,7 +111,12 @@ warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
-const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td> <td>+3% Aufschlag</td> </tr> </thead>"
+// awattar alt: https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf
+const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
+    + "<td>+3% Aufschlag (<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
+    + "<td>+3% + 1.5ct/kWh (<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
+    + "<td>+ 1.2ct/kWh (<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
+    + "</tr> </thead>"
 
 prevBtn.addEventListener('click', e => {
     dayIndex--;
@@ -262,7 +267,9 @@ function calculateCosts() {
         content += "<td>" + months[e].dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + months[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td>" + months[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + months[e].times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + months[e].times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>"; // awattar alt
+        content += "<td>" + months[e].plus(monthsKwh[e].times(1.5)).times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>"; // awattar neu (Juli 2023)
+        content += "<td>" + months[e].plus(monthsKwh[e].times(1.2)).times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>"; // smartcontrol
         content += "</tr>";
     }
     content += "</tbody>";
