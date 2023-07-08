@@ -166,14 +166,15 @@ document.addEventListener("DOMContentLoaded", function() {
             costs.innerHTML = initialTableState;
 
 
-
             var fileContent = event.target.result;
             // console.log("fileContent: ", fileContent);
             fileContent = stripPlain(fileContent);
             // console.log("fileContent after strip: ", fileContent);
 
             const bytes = new Uint8Array(fileContent);
-            var xls = XLSX.read(bytes);
+            var xls = XLSX.read(bytes, {
+                raw: 'true'
+            });
             // console.log("xls: ", xls);
             xls = stripXls(xls);
             // console.log("after strip, xls: ", xls);
