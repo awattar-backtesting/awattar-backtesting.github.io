@@ -113,9 +113,9 @@ var oldChart = null;
 
 // awattar alt: https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf
 const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
-    + "<td>+3% Aufschlag<br />(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
-    + "<td>+3% + 1.5ct/kWh <br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
-    + "<td>+ 1.2ct/kWh <br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
+    + "<td>+3% Aufschlag <br />+ 5,75 EUR Grundpreis<br />(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
+    + "<td>+3% + 1.5ct/kWh <br />+ 5,75 EUR Grundpreis<br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
+    + "<td>+ 1.2ct/kWh <br />+ 4,99 EUR Grundpreis<br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
     + "</tr> </thead>"
 
 prevBtn.addEventListener('click', e => {
@@ -268,9 +268,12 @@ function calculateCosts() {
         content += "<td>" + months[e].dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + months[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td>" + months[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + months[e].times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>"; // awattar alt
-        content += "<td>" + months[e].plus(monthsKwh[e].times(1.5)).times(1.2).plus(monthsFee[e]).dividedBy(100).toFixed(2) + " &euro;</td>"; // awattar neu (Juli 2023)
-        content += "<td>" + months[e].plus(monthsKwh[e].times(1.2)).times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>"; // smartcontrol
+        var awattar_alt = months[e].times(1.2).plus(monthsFee[e].plus(575));
+        var awattar_neu = months[e].plus(monthsKwh[e].times(1.5)).times(1.2).plus(monthsFee[e].plus(575));
+        var smartcontrol = months[e].plus(monthsKwh[e].times(1.2)).times(1.2).plus(499);
+        content += "<td>" + awattar_alt.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_alt.dividedBy(monthsKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar alt
+        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(monthsKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (Juli 2023)
+        content += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
         content += "</tr>";
     }
     content += "</tbody>";
