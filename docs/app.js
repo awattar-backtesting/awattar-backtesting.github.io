@@ -456,6 +456,10 @@ const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum"
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null);
 
+const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!Lastgänge", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Status"], null);
+
 const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ersatzwert"], null);
@@ -493,6 +497,9 @@ function selectBetreiber(sample) {
     }
     if (WienerNetze.probe(sample)) {
         return WienerNetze;
+    }
+    if (SalzburgNetz.probe(sample)) {
+        return SalzburgNetz;
     }
     if (LinzAG.probe(sample)) {
         return LinzAG;
