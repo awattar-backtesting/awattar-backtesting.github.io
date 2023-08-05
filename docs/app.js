@@ -475,6 +475,11 @@ const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verb
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
 
+
+const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermarkLeistung", "Wert", "Statistikzeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -514,6 +519,10 @@ function selectBetreiber(sample) {
         return EnergienetzeSteiermark;
     }
 
+    if (EnergienetzeSteiermarkLeistung.probe(sample)) {
+        return EnergienetzeSteiermarkLeistung;
+    }
+    
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
     return null;
