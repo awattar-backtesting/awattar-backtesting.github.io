@@ -100,13 +100,17 @@ const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
 const nextBtn = document.getElementById('nextBtn');
 const costs = document.getElementById('costs');
+const costsDaily = document.getElementById('costsDaily');
 const costslbl = document.getElementById('costslbl');
+const costslblDaily= document.getElementById('costslblDaily');
 const warningholder = document.getElementById('warningHolder');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
 costs.style.visibility = 'hidden';
+costsDaily.style.visibility = 'hidden';
 costslbl.style.visibility = 'hidden';
+costslblDaily.style.visibility = 'hidden';
 warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
@@ -117,6 +121,12 @@ const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durch
     + "<td>+3% + 1.5ct/kWh <br />+ 5,75 EUR Grundpreis<br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
     + "<td>+ 1.2ct/kWh <br />+ 4,99 EUR Grundpreis<br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
     + "</tr> </thead>"
+
+const initialTableStateDaily= "<thead><tr> <td>Datum</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
++ "<td>+3% Aufschlag <br />(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
++ "<td>+3% + 1.5ct/kWh <br /><br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
++ "<td>+ 1.2ct/kWh <br /><br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
++ "</tr> </thead>"
 
 prevBtn.addEventListener('click', e => {
     dayIndex--;
@@ -164,6 +174,7 @@ document.addEventListener("DOMContentLoaded", function() {
             awattar = loadAwattarCache();
             tracker = new Tracker();
             costs.innerHTML = initialTableState;
+            costsDaily.innerHTML = initialTableStateDaily;
 
 
             var fileContent = event.target.result;
@@ -221,10 +232,27 @@ function calculateCosts() {
     var months = {}
     var monthsKwh = {}
     var monthsFee = {}
+
+    let daily = {}
+    let dailyKwh = {}
+    let dailyFee = {}
+
     var days = Array.from(tracker.days);
     for (var idx = 0; idx < days.length; idx++) {
         var day = days[idx];
         var monthKey = day.substring(0, 6);
+
+        let dayKey=day;
+        if (!(dayKey in daily)) {
+            daily[dayKey] = new Decimal(0.0);
+        }
+        if (!(dayKey in dailyKwh)) {
+            dailyKwh[dayKey] = new Decimal(0.0);
+        }
+        if (!(dayKey in dailyFee)) {
+            dailyFee[dayKey] = new Decimal(0.0);
+        }
+
         if (!(monthKey in months)) {
             months[monthKey] = new Decimal(0.0);
         }
@@ -254,6 +282,10 @@ function calculateCosts() {
             // console.log("dPrice: ", dPrice.toFixed(2));
             // console.log("sumPrice: ", sumPrice.toFixed(2));
         }
+        daily[dayKey]=daily[dayKey].plus(sumPrice);
+        dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
+        dailyFee[dayKey] = dailyFee[dayKey].plus(sumFee);
+
         months[monthKey] = months[monthKey].plus(sumPrice);
         monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
         monthsFee[monthKey] = monthsFee[monthKey].plus(sumFee);
@@ -280,6 +312,33 @@ function calculateCosts() {
     costs.innerHTML += content;
     costs.style.visibility = 'visible';
     costslbl.style.visibility = 'visible';
+
+    drawTableDaily(daily, dailyKwh, dailyFee);
+}
+
+function drawTableDaily(daily, dailyKwh, dailyFee) {
+    let contentDaily = "<tbody>";
+    let dailyArray = Object.keys(daily);
+    for (let idx = 0; idx < dailyArray.length; idx++) {
+        let e = dailyArray[idx];
+        contentDaily += "<tr>";
+        contentDaily += "<td><b>" + format(parse(e, "yyyyMMdd", new Date()), "yyyy-MM-dd") + "<b></td>";
+        contentDaily += "<td>" + dailyKwh[e].toFixed(2) + " kWh</td>";
+        contentDaily += "<td>" + daily[e].dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh</td>";
+        contentDaily += "<td>" + daily[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+        contentDaily += "<td>" + daily[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        let awattar_alt = daily[e].times(1.2).plus(dailyFee[e]);
+        let awattar_neu = daily[e].plus(dailyKwh[e].times(1.5)).times(1.2).plus(dailyFee[e]);
+        let smartcontrol = daily[e].plus(dailyKwh[e].times(1.2)).times(1.2);
+        contentDaily += "<td>" + awattar_alt.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + awattar_alt.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // awattar alt
+        contentDaily += "<td>" + awattar_neu.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + awattar_neu.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // awattar neu (Juli 2023)
+        contentDaily += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
+        contentDaily += "</tr>";
+    }
+    contentDaily += "</tbody>";
+    costsDaily.innerHTML += contentDaily;
+    costsDaily.style.visibility = 'visible';
+    costslblDaily.style.visibility = 'visible';
 }
 
 function displayDay(index) {
