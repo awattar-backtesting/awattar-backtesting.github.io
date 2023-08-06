@@ -124,8 +124,8 @@ const initialTableStateMonthly = "<thead><tr> <td>Monat</td> <td>Energie</td> <t
 
 const initialTableStateDaily= "<thead><tr> <td>Datum</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
 + "<td>+3% Aufschlag <br />(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
-+ "<td>+3% + 1.5ct/kWh <br /><br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
-+ "<td>+ 1.2ct/kWh <br /><br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
++ "<td>+3% + 1.5ct/kWh <br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
++ "<td>+ 1.2ct/kWh <br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
 + "</tr> </thead>"
 
 prevBtn.addEventListener('click', e => {
