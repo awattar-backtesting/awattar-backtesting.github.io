@@ -306,7 +306,16 @@ function calculateCosts() {
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
 
+    /* monthly should be opened by default */
+    /* click each one at least once, in order to force refresh */
     costslblMonthly.click();
+    if (!costslblMonthly.classList.contains("active")) {
+        costslblMonthly.click();
+    }
+    costslblDaily.click();
+    if (costslblDaily.classList.contains("active")) {
+        costslblDaily.click();
+    }
 }
 
 function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
