@@ -444,6 +444,10 @@ const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy H
     return parseFloat(usage.replace(",", "."));
 }), ["kW", "Status"], null);
 
+const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - Gesamtverbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Ende"], null);
+
 const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null);
@@ -491,6 +495,9 @@ function selectBetreiber(sample) {
     }
     if (NetzOOE.probe(sample)) {
         return NetzOOE;
+    }
+    if (NetzBurgenland.probe(sample)) {
+        return NetzBurgenland;
     }
     if (KaerntenNetz.probe(sample)) {
         return KaerntenNetz;
