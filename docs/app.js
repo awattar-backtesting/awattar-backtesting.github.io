@@ -300,6 +300,8 @@ function calculateCosts() {
     costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
+
+    costslblMonthly.click();
 }
 
 function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
