@@ -99,24 +99,24 @@ var awattar = null;
 const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
 const nextBtn = document.getElementById('nextBtn');
-const costs = document.getElementById('costs');
+const costsMonthly = document.getElementById('costsMonthly');
 const costsDaily = document.getElementById('costsDaily');
-const costslbl = document.getElementById('costslbl');
+const costslblMonthly = document.getElementById('costslblMonthly');
 const costslblDaily= document.getElementById('costslblDaily');
 const warningholder = document.getElementById('warningHolder');
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
-costs.style.visibility = 'hidden';
+costsMonthly.style.visibility = 'hidden';
 costsDaily.style.visibility = 'hidden';
-costslbl.style.visibility = 'hidden';
+costslblMonthly.style.visibility = 'hidden';
 costslblDaily.style.visibility = 'hidden';
 warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
 // awattar alt: https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf
-const initialTableState = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
+const initialTableStateMonthly = "<thead><tr> <td>Monat</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
     + "<td>+3% Aufschlag <br />+ 5,75 EUR Grundpreis<br />(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
     + "<td>+3% + 1.5ct/kWh <br />+ 5,75 EUR Grundpreis<br />(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
     + "<td>+ 1.2ct/kWh <br />+ 4,99 EUR Grundpreis<br />(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
@@ -173,7 +173,7 @@ document.addEventListener("DOMContentLoaded", function() {
             /* reset state */
             awattar = loadAwattarCache();
             tracker = new Tracker();
-            costs.innerHTML = initialTableState;
+            costsMonthly.innerHTML = initialTableStateMonthly;
             costsDaily.innerHTML = initialTableStateDaily;
 
 
@@ -290,55 +290,38 @@ function calculateCosts() {
         monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
         monthsFee[monthKey] = monthsFee[monthKey].plus(sumFee);
     }
-    var content = "<tbody>";
-    var monthsArray = Object.keys(months);
-    for (var idx = 0; idx < monthsArray.length; idx++) {
-        var e = monthsArray[idx];
-        content += "<tr>";
-        content += "<td><b>" + format(parse(e, "yyyyMM", new Date()), "yyyy-MM") + "<b></td>";
-        content += "<td>" + monthsKwh[e].toFixed(2) + " kWh</td>";
-        content += "<td>" + months[e].dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh</td>";
-        content += "<td>" + months[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + months[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
-        var awattar_alt = months[e].times(1.2).plus(monthsFee[e].plus(575));
-        var awattar_neu = months[e].plus(monthsKwh[e].times(1.5)).times(1.2).plus(monthsFee[e].plus(575));
-        var smartcontrol = months[e].plus(monthsKwh[e].times(1.2)).times(1.2).plus(499);
-        content += "<td>" + awattar_alt.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_alt.dividedBy(monthsKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar alt
-        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(monthsKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (Juli 2023)
-        content += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(monthsKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
-        content += "</tr>";
-    }
-    content += "</tbody>";
-    costs.innerHTML += content;
-    costs.style.visibility = 'visible';
-    costslbl.style.visibility = 'visible';
 
-    drawTableDaily(daily, dailyKwh, dailyFee);
-}
+    var content = drawTableTframe(months, monthsKwh, monthsFee, "yyyyMM", "yyyy-MM", new Array(575 /* awattar_alt */, 575 /* awattar_neu */, 499 /* smartcontrol */));
+    costsMonthly.innerHTML += content;
+    costsMonthly.style.visibility = 'visible';
+    costslblMonthly.style.visibility = 'visible';
 
-function drawTableDaily(daily, dailyKwh, dailyFee) {
-    let contentDaily = "<tbody>";
-    let dailyArray = Object.keys(daily);
-    for (let idx = 0; idx < dailyArray.length; idx++) {
-        let e = dailyArray[idx];
-        contentDaily += "<tr>";
-        contentDaily += "<td><b>" + format(parse(e, "yyyyMMdd", new Date()), "yyyy-MM-dd") + "<b></td>";
-        contentDaily += "<td>" + dailyKwh[e].toFixed(2) + " kWh</td>";
-        contentDaily += "<td>" + daily[e].dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh</td>";
-        contentDaily += "<td>" + daily[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-        contentDaily += "<td>" + daily[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
-        let awattar_alt = daily[e].times(1.2).plus(dailyFee[e]);
-        let awattar_neu = daily[e].plus(dailyKwh[e].times(1.5)).times(1.2).plus(dailyFee[e]);
-        let smartcontrol = daily[e].plus(dailyKwh[e].times(1.2)).times(1.2);
-        contentDaily += "<td>" + awattar_alt.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + awattar_alt.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // awattar alt
-        contentDaily += "<td>" + awattar_neu.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + awattar_neu.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // awattar neu (Juli 2023)
-        contentDaily += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(dailyKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
-        contentDaily += "</tr>";
-    }
-    contentDaily += "</tbody>";
-    costsDaily.innerHTML += contentDaily;
+    content = drawTableTframe(daily, dailyKwh, dailyFee, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0));
+    costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
+}
+
+function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
+    let content = "<tbody>";
+    var tframeArray = Object.keys(tframe);
+    for (var idx = 0; idx < tframeArray.length; idx++) {
+        var e = tframeArray[idx];
+        content += "<tr>";
+        content += "<td><b>" + format(parse(e, tframeFmt1, new Date()), tframeFmt2) + "<b></td>";
+        content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
+        content += "<td>" + tframe[e].dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+        content += "<td>" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        var awattar_alt = tframe[e].times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[0]));
+        var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[1]));
+        var smartcontrol = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
+        content += "<td>" + awattar_alt.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_alt.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar alt
+        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (Juli 2023)
+        content += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
+        content += "</tr>";
+    }
+    return content + "</tbody>";
 }
 
 function displayDay(index) {
@@ -577,11 +560,9 @@ function selectBetreiber(sample) {
     if (EnergienetzeSteiermark.probe(sample)) {
         return EnergienetzeSteiermark;
     }
-
     if (EnergienetzeSteiermarkLeistung.probe(sample)) {
         return EnergienetzeSteiermarkLeistung;
     }
-    
     displayWarning("Netzbetreiber fuer Upload unbekannt: ");
     console.log("sample: ", sample);
     return null;
