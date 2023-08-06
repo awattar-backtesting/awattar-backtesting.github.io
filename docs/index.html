@@ -2,6 +2,8 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <title>aWATTar Backtesting</title>
 <style>
 body {
 	background-color: #fff;
@@ -174,9 +176,15 @@ button {
 			<button id="nextBtn">next</button>
 		</div>
 
-        <p id="costslbl">&Uuml;bersicht Energiekosten</p>
-        <table id="costs"></table>
+        <button class="collapsible" id="costslblMonthly">&Uuml;bersicht Energiekosten monatlich</button>
+        <div class="content">
+            <table id="costsMonthly"></table>
+        </div>
 
+        <button class="collapsible" id="costslblDaily">&Uuml;bersicht Energiekosten t&auml;glich</button>
+        <div class="content">
+            <table id="costsDaily"></table>
+        </div>
 
         <h4>Disclaimer</h4>
         Keine Garantie auf Richtigkeit der dargestellten Daten.
