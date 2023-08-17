@@ -223,8 +223,8 @@ document.addEventListener("DOMContentLoaded", function() {
                         });
                     })();
                 }
-            });        };
-
+            });
+        };
         for (let file of fileInputs[0].files) {
             reader.readAsArrayBuffer(file)
         }
