@@ -223,8 +223,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         });
                     })();
                 }
-            });
-        };
+            });        };
 
         for (let file of fileInputs[0].files) {
             reader.readAsArrayBuffer(file)
@@ -542,6 +541,12 @@ const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermark
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
 
+const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "!Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), [ ], null);
+
+
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -586,7 +591,10 @@ function selectBetreiber(sample) {
     if (EnergienetzeSteiermarkLeistung.probe(sample)) {
         return EnergienetzeSteiermarkLeistung;
     }
-    displayWarning("Netzbetreiber fuer Upload unbekannt: ");
+    if (VorarlbergNetz.probe(sample)){
+       return VorarlbergNetz;
+    }
+    displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
     return null;
 }
@@ -594,6 +602,9 @@ function selectBetreiber(sample) {
 function bufferToString(buf) {
     return new Uint8Array(buf)
         .reduce((data, byte) => data + String.fromCharCode(byte), '')
+}
+function decodeUTF16LE( buf ) {
+    return new TextDecoder('utf-16le').decode(buf);
 }
 function stringToBuffer(str) {
     var buf = new ArrayBuffer(str.length);
@@ -618,6 +629,14 @@ function stripPlain(buf) {
             return null;
         }
         return stringToBuffer(input.split("\n").slice(8).join("\n"));
+    }
+    // VorarlbergNetz
+    // > Vertragskonto;XXXXXXXXXXXX
+    // > Zählpunkt;ATXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    input = decodeUTF16LE(buf);
+   console.log("input2: " + input);
+    if (input.includes("Vertragskonto;") && input.includes("Zählpunkt;")) {
+        return stringToBuffer(input.split("\n").slice(3).join("\n"));
     }
     return buf;
 }
