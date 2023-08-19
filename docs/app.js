@@ -117,7 +117,7 @@ var oldChart = null;
 
 // awattar alt: https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf
 function genTableInit(datefmt, grundpreis) {
-    return "<thead><tr> <td>" + datefmt + "</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td>+20% MwSt</td>"
+    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
         + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
         + "<td>+3% + 1.5ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
         + "<td>+ 1.2ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
@@ -327,7 +327,7 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, v
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
         content += "<td>" + tframe[e].dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-        content += "<td>" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
         var awattar_alt = tframe[e].times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[0]));
         var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[1]));
         var smartcontrol = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
