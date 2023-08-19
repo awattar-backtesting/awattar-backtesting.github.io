@@ -541,9 +541,9 @@ const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermark
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
 
-const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "!Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
+const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), [ ], null);
+}), ["Ende der Messreihe"], null);
 
 
 
@@ -601,9 +601,9 @@ function selectBetreiber(sample) {
 
 function bufferToString(buf) {
     return new Uint8Array(buf)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+        .reduce((data, byte) => data + String.fromCharCode(byte), '');
 }
-function decodeUTF16LE( buf ) {
+function decodeUTF16LE(buf) {
     return new TextDecoder('utf-16le').decode(buf);
 }
 function stringToBuffer(str) {
@@ -630,11 +630,11 @@ function stripPlain(buf) {
         }
         return stringToBuffer(input.split("\n").slice(8).join("\n"));
     }
+
     // VorarlbergNetz
     // > Vertragskonto;XXXXXXXXXXXX
     // > Zählpunkt;ATXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     input = decodeUTF16LE(buf);
-   console.log("input2: " + input);
     if (input.includes("Vertragskonto;") && input.includes("Zählpunkt;")) {
         return stringToBuffer(input.split("\n").slice(3).join("\n"));
     }
