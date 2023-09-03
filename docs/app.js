@@ -195,7 +195,7 @@ document.addEventListener("DOMContentLoaded", function() {
             xls = stripXls(xls);
             // console.log("after strip, xls: ", xls);
             fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
-            console.log("csv: ", fileContent);
+            // console.log("csv: ", fileContent);
 
             Papa.parse(fileContent, {
                 header: true,
@@ -505,6 +505,10 @@ const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - G
     return parseFloat(usage.replace(",", "."));
 }), ["Ende"], null);
 
+const NetzBurgenlandv2 = new Netzbetreiber("Netz Burgenland V2", "Verbrauch (in kWh)", "Startdatum", "Startuhrzeit", "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), [/*" Status", */"Enddatum", "Enduhrzeit"], null);
+
 const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null);
@@ -566,6 +570,9 @@ function selectBetreiber(sample) {
     }
     if (NetzBurgenland.probe(sample)) {
         return NetzBurgenland;
+    }
+    if (NetzBurgenlandv2.probe(sample)) {
+        return NetzBurgenlandv2;
     }
     if (KaerntenNetz.probe(sample)) {
         return KaerntenNetz;
@@ -634,10 +641,54 @@ function stripPlain(buf) {
     // VorarlbergNetz
     // > Vertragskonto;XXXXXXXXXXXX
     // > Zählpunkt;ATXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    input = decodeUTF16LE(buf);
-    if (input.includes("Vertragskonto;") && input.includes("Zählpunkt;")) {
-        return stringToBuffer(input.split("\n").slice(3).join("\n"));
+    var input16le = decodeUTF16LE(buf);
+    if (input16le.includes("Vertragskonto;") && input16le.includes("Zählpunkt;")) {
+        return stringToBuffer(input16le.split("\n").slice(3).join("\n"));
     }
+
+    // NetzBurgenland V2
+    // > Zählpunktbezeichnung;Kennzahl;Zählernummer;Exportiere ab;Exportiere bis;Exportiere ab;Exportiere bis
+    // > AT0090000000000000000000000049656;1-1:1.9.0 P.01;;01.08.2023;31.08.2023;00:00;00:00
+    // [.. data for bezug ..]
+    // > Zählpunktbezeichnung;Kennzahl;Zählernummer;Exportiere ab;Exportiere bis;Exportiere ab;Exportiere bis
+    // > AT0090000000000000000000000049656;1-1:1.9.0 P.01;;01.08.2023;31.08.2023;00:00;00:00
+    // [.. data for einspeisung ..]
+    function isBurgenlandv2Header(s) {
+        if (!s.includes("hlpunktbezeichnung")) {
+            return false;
+        }
+        if (!s.includes("Kennzahl")) {
+            return false;
+        }
+        if (!s.includes("hlernummer")) {
+            return false;
+        }
+        if (!s.includes("Exportiere ab")) {
+            return false;
+        }
+        return s.includes("Exportiere bis");
+    }
+
+    if (isBurgenlandv2Header(input)) {
+        var result = [];
+
+        // drop first two lines
+        input = input.split("\n").slice(2);
+
+        for (let i = 0; i < input.length; i++) {
+            var line = input[i];
+            if (isBurgenlandv2Header(line)) {
+                // second header found, drop lines from here on.
+                return stringToBuffer(result.join("\n"));
+            }
+            result.push(line);
+        }
+
+        displayWarning("NetzBurgenland Bug: Bitte auf GitHub reporten");
+        return buf;
+    }
+
+    // everything else
     return buf;
 }
 
