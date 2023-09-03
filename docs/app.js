@@ -115,22 +115,23 @@ warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
-// awattar alt: https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf
 function genTableInit(datefmt, grundpreis) {
     return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
-        + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
-        + "<td>+3% + 1.5ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar neu</a>)</td>"
-        + "<td>+ 1.2ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL</a>)</td>"
+        + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
+        + "<td>+3% + 1.80ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://web.archive.org/web/20230903185216/https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar ab 2023/07</a>)</td>"
+        + "<td>+ 1.44ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL alt</a>)</td>"
+        + "<td>+ 1.44ct/kWh <br />" + grundpreis[3] + "(<a href=\"https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL ab 2023/09</a>)</td>"
         + "</tr> </thead>";
 }
 
 const initialTableStateMonthly = genTableInit("Monat", new Array(
-    "+5,75 EUR Grundpreis<br />",
-    "+5,75 EUR Grundpreis<br />",
-    "+4,99 EUR Grundpreis<br />"
+    "+5,75 EUR Grundpreis<br />inkl. 20% USt.<br />",
+    "+5,75 EUR Grundpreis<br />inkl. 20% USt.<br />",
+    "+4,99 EUR Grundpreis<br />inkl. 20% USt.<br />",
+    "+2,99 EUR Grundpreis<br />inkl. 20% USt.<br />"
     ));
 
-const initialTableStateDaily= genTableInit("Datum", new Array("", "", ""));
+const initialTableStateDaily= genTableInit("Datum", new Array("", "", "", ""));
 
 
 prevBtn.addEventListener('click', e => {
@@ -295,12 +296,18 @@ function calculateCosts() {
         monthsFee[monthKey] = monthsFee[monthKey].plus(sumFee);
     }
 
-    var content = drawTableTframe(months, monthsKwh, monthsFee, "yyyyMM", "yyyy-MM", new Array(575 /* awattar_alt */, 575 /* awattar_neu */, 499 /* smartcontrol */));
+    var content = drawTableTframe(months, monthsKwh, monthsFee, "yyyyMM", "yyyy-MM",
+        new Array(
+            575 /* awattar_alt */,
+            575 /* awattar_neu (2023/07) */,
+            499 /* smartcontrol_alt */,
+            299 /* smartcontrol_neu (2023/09) */
+        ));
     costsMonthly.innerHTML += content;
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = drawTableTframe(daily, dailyKwh, dailyFee, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0));
+    content = drawTableTframe(daily, dailyKwh, dailyFee, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0));
     costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
@@ -330,10 +337,12 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, v
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
         var awattar_alt = tframe[e].times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[0]));
         var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[1]));
-        var smartcontrol = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
+        var smartcontrol_alt = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
+        var smartcontrol_neu = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[3]);
         content += "<td>" + awattar_alt.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_alt.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar alt
-        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (Juli 2023)
-        content += "<td>" + smartcontrol.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol
+        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (2023/07)
+        content += "<td>" + smartcontrol_alt.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol_alt.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol alt
+        content += "<td>" + smartcontrol_neu.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol_neu.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol neu (2023/09)
         content += "</tr>";
     }
     return content + "</tbody>";
