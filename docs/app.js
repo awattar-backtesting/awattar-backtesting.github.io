@@ -338,16 +338,35 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, v
         content += "<td>" + tframe[e].dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh</td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+
         var awattar_alt = tframe[e].times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[0]));
         var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.2).plus(tframeFee[e].plus(vendorgrundgebuehr[1]));
         var smartcontrol_alt = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
         var smartcontrol_neu = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[3]);
         var steirerstrom = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[4]); // +1.44ct/kWh inkl. 20% USt. = 1.2 * 1.2
-        content += "<td>" + awattar_alt.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_alt.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar alt
-        content += "<td>" + awattar_neu.dividedBy(100).toFixed(2)  + " &euro; (&rArr; " + awattar_neu.dividedBy(tframeKwh[e]).toFixed(2)  + " ct/kWh) </td>"; // awattar neu (2023/07)
-        content += "<td>" + smartcontrol_alt.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol_alt.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol alt
-        content += "<td>" + smartcontrol_neu.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + smartcontrol_neu.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // smartcontrol neu (2023/09)
-        content += "<td>" + steirerstrom.dividedBy(100).toFixed(2) + " &euro; (&rArr; " + steirerstrom.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh) </td>"; // steierstrom (2023/10)
+
+        var providers = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom];
+        var minprice = providers[0];
+        for (var i in providers) {
+            if (minprice.greaterThanOrEqualTo(providers[i])) {
+                minprice = providers[i];
+            }
+        }
+        for (var i in providers) {
+            var provider = providers[i];
+            content += "<td>";
+            if (minprice.greaterThanOrEqualTo(provider)) {
+                content += "<b>";
+            }
+            content += provider.dividedBy(100).toFixed(2);
+            content += " &euro; (&rArr; ";
+            content += provider.dividedBy(tframeKwh[e]).toFixed(2);
+            content += " ct/kWh)";
+            if (minprice.greaterThanOrEqualTo(provider)) {
+                content += "</b>";
+            }
+            content += "</td>";
+        }
         content += "</tr>";
     }
     return content + "</tbody>";
