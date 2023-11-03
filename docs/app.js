@@ -717,8 +717,8 @@ function stripPlain(buf) {
             result.push(line);
         }
 
-        displayWarning("NetzBurgenland Bug: Bitte auf GitHub reporten");
-        return buf;
+        // v3, yet another format discovered in the wild
+        return stringToBuffer(result.join("\n"));
     }
 
     // everything else
