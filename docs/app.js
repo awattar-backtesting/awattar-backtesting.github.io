@@ -451,7 +451,7 @@ class Netzbetreiber {
     descriptorTimesub = "timesub";
     dateFormatString = "foo";
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
@@ -460,6 +460,7 @@ class Netzbetreiber {
         this.usageParser = usageParser;
         this.otherFields = otherFields;
         this.shouldSkip = shouldSkip;
+        this.fixupTimestamp = fixupTimestamp;
     }
 
     matchUsage(entry) {
@@ -517,6 +518,20 @@ class Netzbetreiber {
         var valueUsage = entry[this.matchUsage(entry)];
         var parsedUsage = valueUsage === "" || valueUsage === undefined ? 0.0 : this.usageParser(valueUsage);
 
+
+        if (this.fixupTimestamp) {
+            /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
+             * > Messzeitpunkt;Gemessener Verbrauch (kWh);Ersatzwert;
+             * > 10.11.2023 00:15;0,228000;;
+             * > 10.11.2023 00:30;0,197000;;
+             * > [...]
+             * > 10.11.2023 23:45;0,214000;;
+             * > 11.11.2023 00:00;0,397000;;
+            */
+            var MS_PER_MINUTE = 60000;
+            parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
+        }
+
         return {
             timestamp: parsedTimestamp,
             usage: parsedUsage,
@@ -524,63 +539,63 @@ class Netzbetreiber {
     }
 };
 
-const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null, null);
+const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null, null, false);
 
 const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null);
+}), ["Ersatzwert"], null, true);
 
 const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["kW", "Status"], null);
+}), ["kW", "Status"], null, false);
 
 const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - Gesamtverbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Ende"], null);
+}), ["Ende"], null, false);
 
 const NetzBurgenlandv2 = new Netzbetreiber("Netz Burgenland V2", "Verbrauch (in kWh)", "Startdatum", "Startuhrzeit", "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), [/*" Status", */"Enddatum", "Enduhrzeit"], null);
+}), [/*" Status", */"Enddatum", "Enduhrzeit"], null, false);
 
 const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Status"], null);
+}), ["Status"], null, false);
 
 const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel String", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage);
 }), ["Angezeigter Zeitraum"], (function (row) {
     var valueObiscode = row["Obiscode"];
     return valueObiscode !== "1.8.0";
-}));
+}), true);
 
 const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Zeit bis"], null);
+}), ["Zeit bis"], null, false);
 
 const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Status"], null);
+}), ["Status"], null, false);
 
 const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null);
+}), ["Ersatzwert"], null, false);
 
 const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einheitstarif", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
     return parseFloat(usage);
-}), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null);
+}), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null, false);
 
 const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verbrauch", "Verbrauchszeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
+}), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
 
 
 const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermarkLeistung", "Wert", "Statistikzeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null);
+}), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
 
 const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
-}), ["Ende der Messreihe"], null);
+}), ["Ende der Messreihe"], null, false);
 
 
 
