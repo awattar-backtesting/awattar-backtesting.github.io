@@ -557,7 +557,7 @@ const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum"
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null);
 
-const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!Lastgänge", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
+const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null);
 
