@@ -116,7 +116,7 @@ var dayIndex = 0;
 var oldChart = null;
 
 function genTableInit(datefmt, grundpreis) {
-    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Durchschnitt</td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
+    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Preis</td> <td>Durchschnittspreis</td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
         + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar alt</a>)</td>"
         + "<td>+3% + 1.80ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://web.archive.org/web/20230903185216/https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar ab 2023/07</a>)</td>"
         + "<td>+ 1.44ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL alt</a>)</td>"
@@ -239,12 +239,16 @@ function calculateCosts() {
     var months = {}
     var monthsKwh = {}
     var monthsFee = {}
+    var monthsAvg = {}
 
     let daily = {}
     let dailyKwh = {}
     let dailyFee = {}
+    let dailyAvg = {}
 
     var days = Array.from(tracker.days);
+    let monthSumOfPrices = new Decimal(0);
+
     for (var idx = 0; idx < days.length; idx++) {
         var day = days[idx];
         var monthKey = day.substring(0, 6);
@@ -259,6 +263,9 @@ function calculateCosts() {
         if (!(dayKey in dailyFee)) {
             dailyFee[dayKey] = new Decimal(0.0);
         }
+        if (!(dayKey in dailyFee)) {
+            dailyAvg[dayKey] = new Decimal(0.0);
+        }
 
         if (!(monthKey in months)) {
             months[monthKey] = new Decimal(0.0);
@@ -269,12 +276,16 @@ function calculateCosts() {
         if (!(monthKey in monthsFee)) {
             monthsFee[monthKey] = new Decimal(0.0);
         }
+        if (!(monthKey in monthsAvg)) {
+            monthsAvg[monthKey] = new Decimal(0.0);
+        }
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
         var sumPrice = new Decimal(0.0);
         var sumKwh = new Decimal(0.0);
         var sumFee = new Decimal(0.0);
+        let daySumOfPrices = new Decimal(0);
         for (var i = 0; i < len; i++) {
             if (!(i in usages)) {
                 // Zeitumstellung
@@ -282,7 +293,8 @@ function calculateCosts() {
             }
             var dUsage = new Decimal(usages[i]);
             var dPrice = new Decimal(prices[i]);
-
+            daySumOfPrices = daySumOfPrices.plus(dPrice);
+            monthSumOfPrices = monthSumOfPrices.plus(dPrice);
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
             sumFee = sumFee.plus(dPrice.abs().times(0.03));
             sumKwh = sumKwh.plus(dUsage);
@@ -292,13 +304,17 @@ function calculateCosts() {
         daily[dayKey]=daily[dayKey].plus(sumPrice);
         dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
         dailyFee[dayKey] = dailyFee[dayKey].plus(sumFee);
+        dailyAvg[dayKey] = daySumOfPrices / len;
+        // console.log("daily avg (", dayKey, ") =", dailyAvg[dayKey]);
 
         months[monthKey] = months[monthKey].plus(sumPrice);
         monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
         monthsFee[monthKey] = monthsFee[monthKey].plus(sumFee);
     }
 
-    var content = drawTableTframe(months, monthsKwh, monthsFee, "yyyyMM", "yyyy-MM",
+    monthsAvg[monthKey] = monthSumOfPrices / (days.length * 24);
+
+    var content = drawTableTframe(months, monthsKwh, monthsFee, monthsAvg, "yyyyMM", "yyyy-MM",
         new Array(
             575 /* awattar_alt */,
             575 /* awattar_neu (2023/07) */,
@@ -310,7 +326,7 @@ function calculateCosts() {
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = drawTableTframe(daily, dailyKwh, dailyFee, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
+    content = drawTableTframe(daily, dailyKwh, dailyFee, dailyAvg, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
     costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
@@ -327,7 +343,7 @@ function calculateCosts() {
     }
 }
 
-function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
+function drawTableTframe(tframe, tframeKwh, tframeFee, tFrameAvgPrice, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
@@ -336,6 +352,7 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeFmt1, tframeFmt2, v
         content += "<td><b>" + format(parse(e, tframeFmt1, new Date()), tframeFmt2) + "<b></td>";
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
         content += "<td>" + tframe[e].dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + tFrameAvgPrice[e].toFixed(2) + " ct/kWh</td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
 
