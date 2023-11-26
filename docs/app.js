@@ -360,12 +360,17 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeAvg, tframeAvgKwh, 
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
+
         var e = tframeArray[idx];
+        const timeframePrice = tframe[e].dividedBy(tframeKwh[e]).toFixed(2);
+        const avgPrice = tframeAvg[e].dividedBy(tframeAvgKwh[e]).toFixed(2);
+        const diff = (timeframePrice - avgPrice);
+        const diffSpanClass = diff < 0 ? 'diff-price-good' : 'diff-price-bad'
         content += "<tr>";
         content += "<td><b>" + format(parse(e, tframeFmt1, new Date()), tframeFmt2) + "<b></td>";
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
-        content += "<td>" + tframe[e].dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh</td>";
-        content += "<td>" + tframeAvg[e].dividedBy(tframeAvgKwh[e]).toFixed(2) + " ct/kWh</td>";
+        content += "<td>" + timeframePrice + " ct/kWh</td>";
+        content += "<td>" + avgPrice + " ct/kWh <span class=" + diffSpanClass + ">(" + diff.toFixed(2) + ")</span></td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
 
