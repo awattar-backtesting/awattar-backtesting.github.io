@@ -627,6 +627,10 @@ const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "B
     return parseFloat(usage.replace(",", "."));
 }), ["Ende der Messreihe"], null, false);
 
+const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["DATE_FROM", "DATE_TO"], null, false);
+
 
 
 function displayWarning(warning) {
@@ -678,6 +682,9 @@ function selectBetreiber(sample) {
     }
     if (VorarlbergNetz.probe(sample)){
        return VorarlbergNetz;
+    }
+    if (Tinetz.probe(sample)){
+       return Tinetz;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
@@ -764,6 +771,24 @@ function stripPlain(buf) {
 
         // v3, yet another format discovered in the wild
         return stringToBuffer(result.join("\n"));
+    }
+
+    // > PLZ Ort, Adresse [Zählpunktnummer];;;PLZ Ort, Adresse [Zählpunktnummer];;
+    // > Zählpunktnummer;;;Zählpunktnummer;;
+    // > Strom - Wirkenergie (kWh);;;Strom - Wirkenergie (kWh);;
+    // > kWh;;;kWh;;
+    // > DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE
+    function isTinetz(s) {
+        if (!s.includes("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE")) {
+            return false;
+        }
+        return true;
+    }
+
+    if (isTinetz(input)) {
+        var s = input.split("\n").slice(4).join("\n");
+        s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM;DATE_TO;VALUE;DATE_FROM2;DATE_TO2;VALUE2");
+        return stringToBuffer(s);
     }
 
     // everything else
