@@ -56,12 +56,15 @@ class Tracker {
 
 class Awattar {
     data = {}
+	data_chart = {}
+	version = "2023-12-16";
     async addDay(fullday) {
         if (fullday in this.data) {
             // console.log("cache hit for ", fullday);
             return;
         }
         this.data[fullday] = "requesting"
+		this.data_chart[fullday] ={};
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -72,7 +75,8 @@ class Awattar {
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
+			this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
+			this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
         this.first = false;
     }
@@ -84,12 +88,23 @@ function loadAwattarCache() {
     if (cache === null) {
         return awattar;
     }
-    awattar.data = JSON.parse(cache);
+
+	let cached = JSON.parse(cache);
+	if (cache.version != awattar.version) {
+		return awattar;
+	}
+	awattar.data = cached.data;
+	awattar.data_chart = cached.data_chart;
     return awattar;
 }
 
 function storeAwattarCache(a) {
-    localStorage.setItem('awattarCache', JSON.stringify(a.data));
+	let object = {
+		version: a.version,
+		data: a.data,
+		data_chart: a.data_chart,
+	}
+	localStorage.setItem('awattarCache', JSON.stringify(object));
 }
 
 
@@ -301,9 +316,10 @@ function calculateCosts() {
                 //continue;
             }
 			var dUsage = usages[hour];
-            var dPrice = new Decimal(prices[hour]);
+			var dPrice = prices[hour];
+
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
-            sumFee = sumFee.plus(dPrice.abs().times(0.03));
+			sumFee = sumFee.plus(dPrice.times(0.03));
             sumKwh = sumKwh.plus(dUsage);
             // console.log("dPrice: ", dPrice.toFixed(2));
             // console.log("sumPrice: ", sumPrice.toFixed(2));
@@ -427,7 +443,7 @@ function displayDay(index) {
             },
             {
                 label: 'ct/kWh',
-                data: awattar.data[fullday],
+				data: awattar.data_chart[fullday],
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
                 yAxisID: 'y2',
