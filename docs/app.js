@@ -17,9 +17,9 @@ class Tracker {
             this.data[fullday] = {};
         }
         if (!(hour in this.data[fullday])) {
-            this.data[fullday][hour] = 0;
+            this.data[fullday][hour] = new Decimal(0);
         }
-        this.data[fullday][hour] += res.usage;
+		this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
         return awattar.addDay(fullday);
     }
 
@@ -56,12 +56,15 @@ class Tracker {
 
 class Awattar {
     data = {}
+	data_chart = {}
+	version = "2023-12-16";
     async addDay(fullday) {
         if (fullday in this.data) {
             // console.log("cache hit for ", fullday);
             return;
         }
         this.data[fullday] = "requesting"
+		this.data_chart[fullday] ={};
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -72,7 +75,8 @@ class Awattar {
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
+			this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
+			this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
         this.first = false;
     }
@@ -84,12 +88,23 @@ function loadAwattarCache() {
     if (cache === null) {
         return awattar;
     }
-    awattar.data = JSON.parse(cache);
+
+	let cached = JSON.parse(cache);
+	if (cache.version != awattar.version) {
+		return awattar;
+	}
+	awattar.data = cached.data;
+	awattar.data_chart = cached.data_chart;
     return awattar;
 }
 
 function storeAwattarCache(a) {
-    localStorage.setItem('awattarCache', JSON.stringify(a.data));
+	let object = {
+		version: a.version,
+		data: a.data,
+		data_chart: a.data_chart,
+	}
+	localStorage.setItem('awattarCache', JSON.stringify(object));
 }
 
 
@@ -285,7 +300,7 @@ function calculateCosts() {
         if (!(monthKey in monthsAvgKwh)) {
             monthsAvgKwh[monthKey] = new Decimal(0.0);
         }
-        var len = Array.from(Object.keys(tracker.data[day])).length;
+
         var usages = tracker.data[day];
         var prices = awattar.data[day];
         var sumPrice = new Decimal(0.0);
@@ -293,16 +308,18 @@ function calculateCosts() {
         var sumFee = new Decimal(0.0);
         var sumAvgPrice = new Decimal(0.0);
         var sumAvgKwh = new Decimal(0.0);
-        for (var i = 0; i < len; i++) {
-            if (!(i in usages)) {
+
+		Object.keys(tracker.data[day]).forEach(hour => {
+            if (!(hour in usages)) {
                 // Zeitumstellung
-                continue;
+				console.log("Zeit")
+                //continue;
             }
-            var dUsage = new Decimal(usages[i]);
-            var dPrice = new Decimal(prices[i]);
+			var dUsage = usages[hour];
+			var dPrice = prices[hour];
 
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
-            sumFee = sumFee.plus(dPrice.abs().times(0.03));
+			sumFee = sumFee.plus(dPrice.times(0.03));
             sumKwh = sumKwh.plus(dUsage);
             // console.log("dPrice: ", dPrice.toFixed(2));
             // console.log("sumPrice: ", sumPrice.toFixed(2));
@@ -310,7 +327,7 @@ function calculateCosts() {
             sumAvgPrice = sumAvgPrice.plus(dPrice.times(1.00)); // always 1 kWh
             // console.log("sumAvgPrice: ", sumPrice.toFixed(2));
             sumAvgKwh = sumAvgKwh.plus(1.00);
-        }
+		})
         daily[dayKey]=daily[dayKey].plus(sumPrice);
         dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
         dailyFee[dayKey] = dailyFee[dayKey].plus(sumFee);
@@ -426,7 +443,7 @@ function displayDay(index) {
             },
             {
                 label: 'ct/kWh',
-                data: awattar.data[fullday],
+				data: awattar.data_chart[fullday],
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
                 yAxisID: 'y2',
@@ -834,7 +851,7 @@ function stripXls(xls) {
     var first_ws = xls.Sheets[xls.SheetNames[0]];
     // Ebner Strom
     // > Zeitstempel String	Obiscode	Wert (kWh)	Angezeigter Zeitraum
-    // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ	
+    // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ
     // > 01.03.2023 00:15	1.8.0	0,28	01.03.2023 - 31.03.2023
     // > 01.03.2023 00:15	2.8.0	0	01.03.2023 - 31.03.2023
     if (first_ws.A1.v.includes("Zeitstempel String") && first_ws.A2.v.includes("hlpunkt")) {
