@@ -631,8 +631,6 @@ const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.
     return parseFloat(usage.replace(",", "."));
 }), ["DATE_FROM", "DATE_TO"], null, false);
 
-
-
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -779,16 +777,28 @@ function stripPlain(buf) {
     // > kWh;;;kWh;;
     // > DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE
     function isTinetz(s) {
-        if (!s.includes("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE")) {
-            return false;
-        }
-        return true;
+        return s.includes("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE");
     }
 
     if (isTinetz(input)) {
-        var s = input.split("\n").slice(4).join("\n");
-        s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM;DATE_TO;VALUE;DATE_FROM2;DATE_TO2;VALUE2");
-        return stringToBuffer(s);
+        var lines = input.split("\n");
+        var s = lines.slice(4).join("\n");
+        var lastLine = lines.slice(-2)[0];
+
+        /* check if 15min values are on the left or right side (the CSV export also contains daily usages) */
+        if (lastLine.startsWith(";;;")) {
+            s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM;DATE_TO;VALUE;DATE_FROM2;DATE_TO2;VALUE2");
+        } else {
+            s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM2;DATE_TO2;VALUE2;DATE_FROM;DATE_TO;VALUE");
+            if (!lastLine.endsWith(";;;")) {
+                displayWarning("why tho TINETZ?!? Please report...");
+            }
+        }
+
+        /* normalize date format (= remove seconds) */
+        var t = s.replace(/ (\d\d:\d\d):00;/gm, " $1;");
+
+        return stringToBuffer(t);
     }
 
     // everything else
