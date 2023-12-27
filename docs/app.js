@@ -19,7 +19,7 @@ class Tracker {
         if (!(hour in this.data[fullday])) {
             this.data[fullday][hour] = new Decimal(0);
         }
-		this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
+        this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
         return awattar.addDay(fullday);
     }
 
@@ -56,15 +56,18 @@ class Tracker {
 
 class Awattar {
     data = {}
-	data_chart = {}
-	version = "2023-12-16";
+    data_chart = {}
+
+    /* bump if format changes */
+    version = "2023-12-16";
+
     async addDay(fullday) {
         if (fullday in this.data) {
             // console.log("cache hit for ", fullday);
             return;
         }
         this.data[fullday] = "requesting"
-		this.data_chart[fullday] ={};
+        this.data_chart[fullday] = {};
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -75,8 +78,8 @@ class Awattar {
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-			this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
-			this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
+            this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
+            this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
         this.first = false;
     }
@@ -89,22 +92,22 @@ function loadAwattarCache() {
         return awattar;
     }
 
-	let cached = JSON.parse(cache);
-	if (cache.version != awattar.version) {
-		return awattar;
-	}
-	awattar.data = cached.data;
-	awattar.data_chart = cached.data_chart;
+    let cached = JSON.parse(cache);
+    if (cache.version != awattar.version) {
+        return awattar;
+    }
+    awattar.data = cached.data;
+    awattar.data_chart = cached.data_chart;
     return awattar;
 }
 
 function storeAwattarCache(a) {
-	let object = {
-		version: a.version,
-		data: a.data,
-		data_chart: a.data_chart,
-	}
-	localStorage.setItem('awattarCache', JSON.stringify(object));
+    let object = {
+        version: a.version,
+        data: a.data,
+        data_chart: a.data_chart,
+    }
+    localStorage.setItem('awattarCache', JSON.stringify(object));
 }
 
 
@@ -309,17 +312,17 @@ function calculateCosts() {
         var sumAvgPrice = new Decimal(0.0);
         var sumAvgKwh = new Decimal(0.0);
 
-		Object.keys(tracker.data[day]).forEach(hour => {
+        Object.keys(tracker.data[day]).forEach(hour => {
             if (!(hour in usages)) {
                 // Zeitumstellung
-				console.log("Zeit")
+                // console.log("Zeit")
                 //continue;
             }
-			var dUsage = usages[hour];
-			var dPrice = prices[hour];
+            var dUsage = usages[hour];
+            var dPrice = prices[hour];
 
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
-			sumFee = sumFee.plus(dPrice.times(0.03));
+            sumFee = sumFee.plus(dPrice.times(0.03));
             sumKwh = sumKwh.plus(dUsage);
             // console.log("dPrice: ", dPrice.toFixed(2));
             // console.log("sumPrice: ", sumPrice.toFixed(2));
@@ -327,7 +330,7 @@ function calculateCosts() {
             sumAvgPrice = sumAvgPrice.plus(dPrice.times(1.00)); // always 1 kWh
             // console.log("sumAvgPrice: ", sumPrice.toFixed(2));
             sumAvgKwh = sumAvgKwh.plus(1.00);
-		})
+        })
         daily[dayKey]=daily[dayKey].plus(sumPrice);
         dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
         dailyFee[dayKey] = dailyFee[dayKey].plus(sumFee);
@@ -443,7 +446,7 @@ function displayDay(index) {
             },
             {
                 label: 'ct/kWh',
-				data: awattar.data_chart[fullday],
+                data: awattar.data_chart[fullday],
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
                 yAxisID: 'y2',
