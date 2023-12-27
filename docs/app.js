@@ -322,7 +322,7 @@ function calculateCosts() {
             var dPrice = prices[hour];
 
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
-            sumFee = sumFee.plus(dPrice.times(0.03));
+            sumFee = sumFee.plus(dPrice.abs().times(0.03));
             sumKwh = sumKwh.plus(dUsage);
             // console.log("dPrice: ", dPrice.toFixed(2));
             // console.log("sumPrice: ", sumPrice.toFixed(2));
