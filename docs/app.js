@@ -566,8 +566,10 @@ class Netzbetreiber {
         }
 
         var valueUsage = entry[this.matchUsage(entry)];
-        var parsedUsage = valueUsage === "" || valueUsage === undefined ? 0.0 : this.usageParser(valueUsage);
-
+        if (valueUsage === "" || valueUsage === undefined) {
+            return null;
+        }
+        var parsedUsage = this.usageParser(valueUsage);
 
         if (this.fixupTimestamp) {
             /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
