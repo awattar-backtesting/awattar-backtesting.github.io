@@ -17,7 +17,7 @@ class Tracker {
             this.data[fullday] = {};
         }
         if (!(hour in this.data[fullday])) {
-            this.data[fullday][hour] = new Decimal(0);
+            this.data[fullday][hour] = new Decimal(0.0);
         }
         this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
         return awattar.addDay(fullday);
@@ -42,16 +42,6 @@ class Tracker {
             }
         }
     }
-
-    getDateBegin() {
-        // console.log("entries: ", Object.entries(this.data));
-        var ret = Object.entries(this.data)[0]
-        // console.log("ret: ", ret);
-        return ret[0];
-    }
-
-    getDateEnd() {
-    }
 }
 
 class Awattar {
@@ -59,7 +49,7 @@ class Awattar {
     data_chart = {}
 
     /* bump if format changes */
-    version = "2023-12-16";
+    version = "2023-12-29";
 
     async addDay(fullday) {
         if (fullday in this.data) {
@@ -78,7 +68,7 @@ class Awattar {
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-            this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
+            this.data[fullday][i]       = new Decimal(data['data'][i].marketprice).dividedBy(10);
             this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
         this.first = false;
@@ -86,19 +76,19 @@ class Awattar {
 }
 
 function loadAwattarCache() {
-    var awattar = new Awattar();
+    var a = new Awattar();
     var cache = localStorage.getItem('awattarCache');
     if (cache === null) {
-        return awattar;
+        return a;
     }
 
     let cached = JSON.parse(cache);
-    if (cache.version != awattar.version) {
-        return awattar;
+    if (cached.version != a.version) {
+        return a;
     }
-    awattar.data = cached.data;
-    awattar.data_chart = cached.data_chart;
-    return awattar;
+    a.data = cached.data;
+    a.data_chart = cached.data_chart;
+    return a;
 }
 
 function storeAwattarCache(a) {
