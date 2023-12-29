@@ -17,9 +17,9 @@ class Tracker {
             this.data[fullday] = {};
         }
         if (!(hour in this.data[fullday])) {
-            this.data[fullday][hour] = 0;
+            this.data[fullday][hour] = new Decimal(0);
         }
-        this.data[fullday][hour] += res.usage;
+        this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
         return awattar.addDay(fullday);
     }
 
@@ -56,12 +56,18 @@ class Tracker {
 
 class Awattar {
     data = {}
+    data_chart = {}
+
+    /* bump if format changes */
+    version = "2023-12-16";
+
     async addDay(fullday) {
         if (fullday in this.data) {
             // console.log("cache hit for ", fullday);
             return;
         }
         this.data[fullday] = "requesting"
+        this.data_chart[fullday] = {};
 
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
@@ -72,7 +78,8 @@ class Awattar {
 
         this.data[fullday] = []
         for (i = 0; i < data['data'].length; i++) {
-            this.data[fullday][i] = data['data'][i].marketprice / 10.0;
+            this.data[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10);
+            this.data_chart[fullday][i] = new Decimal(data['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
         this.first = false;
     }
@@ -84,12 +91,23 @@ function loadAwattarCache() {
     if (cache === null) {
         return awattar;
     }
-    awattar.data = JSON.parse(cache);
+
+    let cached = JSON.parse(cache);
+    if (cache.version != awattar.version) {
+        return awattar;
+    }
+    awattar.data = cached.data;
+    awattar.data_chart = cached.data_chart;
     return awattar;
 }
 
 function storeAwattarCache(a) {
-    localStorage.setItem('awattarCache', JSON.stringify(a.data));
+    let object = {
+        version: a.version,
+        data: a.data,
+        data_chart: a.data_chart,
+    }
+    localStorage.setItem('awattarCache', JSON.stringify(object));
 }
 
 
@@ -348,6 +366,7 @@ function calculateCosts() {
         if (!(monthKey in monthsH0)) {
             monthsH0[monthKey] = new Decimal(0.0);
         }
+
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
         var prices = awattar.data[day];
@@ -357,13 +376,13 @@ function calculateCosts() {
         var sumAvgPrice = new Decimal(0.0);
         var sumAvgKwh = new Decimal(0.0);
         var sumH0Price = new Decimal(0.0);
+
         for (var i = 0; i < len; i++) {
             if (!(i in usages)) {
-                // Zeitumstellung
-                continue;
-            }
-            var dUsage = new Decimal(usages[i]);
-            var dPrice = new Decimal(prices[i]);
+
+        Object.keys(tracker.data[day]).forEach(hour => {
+            var dUsage = usages[hour];
+            var dPrice = prices[hour];
 
             sumPrice = sumPrice.plus(dUsage.times(dPrice));
             sumFee = sumFee.plus(dPrice.abs().times(0.03));
@@ -374,23 +393,18 @@ function calculateCosts() {
             sumAvgPrice = sumAvgPrice.plus(dPrice.times(1.00)); // always 1 kWh
             // console.log("sumAvgPrice: ", sumPrice.toFixed(2));
             sumAvgKwh = sumAvgKwh.plus(1.00);
-        }
+        });
 
         const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
         const isWeekend = dayAsDate.getDay() === 0 || dayAsDate.getDay() === 6;
         const h0DayProfile = isWeekend ? weekendH0Profile : weekdayH0Profile;
 
         // second pass over the day to use sumKwh to generate h0 price
-        for (var i = 0; i < len; i++) {
-            if (!(i in usages)) {
-                // Zeitumstellung
-                continue;
-            }
-
-            const fictionalKwhInHour = sumKwh.times(h0DayProfile[i]);
-            const fictionalPriceOfHour = fictionalKwhInHour.times(prices[i]);
+        Object.keys(tracker.data[day]).forEach(hour => {
+            const fictionalKwhInHour = sumKwh.times(h0DayProfile[hour]);
+            const fictionalPriceOfHour = fictionalKwhInHour.times(prices[hour]);
             sumH0Price = sumH0Price.plus(fictionalPriceOfHour);
-        }
+        });
         // console.log("date=", day, "weekend=", isWeekend, ", total day usage=",
         //     sumKwh.toFixed(2), ", my price=", sumPrice / sumKwh, " avg price=", sumAvgPrice / sumAvgKwh,
         //     "h0 price", sumH0Price / sumKwh
@@ -521,7 +535,7 @@ function displayDay(index) {
             },
             {
                 label: 'ct/kWh',
-                data: awattar.data[fullday],
+                data: awattar.data_chart[fullday],
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
                 yAxisID: 'y2',
@@ -641,8 +655,10 @@ class Netzbetreiber {
         }
 
         var valueUsage = entry[this.matchUsage(entry)];
-        var parsedUsage = valueUsage === "" || valueUsage === undefined ? 0.0 : this.usageParser(valueUsage);
-
+        if (valueUsage === "" || valueUsage === undefined) {
+            return null;
+        }
+        var parsedUsage = this.usageParser(valueUsage);
 
         if (this.fixupTimestamp) {
             /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
@@ -722,7 +738,9 @@ const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "B
     return parseFloat(usage.replace(",", "."));
 }), ["Ende der Messreihe"], null, false);
 
-
+const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["DATE_FROM", "DATE_TO"], null, false);
 
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
@@ -773,6 +791,9 @@ function selectBetreiber(sample) {
     }
     if (VorarlbergNetz.probe(sample)){
        return VorarlbergNetz;
+    }
+    if (Tinetz.probe(sample)){
+       return Tinetz;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
@@ -861,6 +882,36 @@ function stripPlain(buf) {
         return stringToBuffer(result.join("\n"));
     }
 
+    // > PLZ Ort, Adresse [Zählpunktnummer];;;PLZ Ort, Adresse [Zählpunktnummer];;
+    // > Zählpunktnummer;;;Zählpunktnummer;;
+    // > Strom - Wirkenergie (kWh);;;Strom - Wirkenergie (kWh);;
+    // > kWh;;;kWh;;
+    // > DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE
+    function isTinetz(s) {
+        return s.includes("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE");
+    }
+
+    if (isTinetz(input)) {
+        var lines = input.split("\n");
+        var s = lines.slice(4).join("\n");
+        var lastLine = lines.slice(-2)[0];
+
+        /* check if 15min values are on the left or right side (the CSV export also contains daily usages) */
+        if (lastLine.startsWith(";;;")) {
+            s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM;DATE_TO;VALUE;DATE_FROM2;DATE_TO2;VALUE2");
+        } else {
+            s = s.replace("DATE_FROM;DATE_TO;VALUE;DATE_FROM;DATE_TO;VALUE", "DATE_FROM2;DATE_TO2;VALUE2;DATE_FROM;DATE_TO;VALUE");
+            if (!lastLine.endsWith(";;;")) {
+                displayWarning("why tho TINETZ?!? Please report...");
+            }
+        }
+
+        /* normalize date format (= remove seconds) */
+        var t = s.replace(/ (\d\d:\d\d):00;/gm, " $1;");
+
+        return stringToBuffer(t);
+    }
+
     // everything else
     return buf;
 }
@@ -894,7 +945,7 @@ function stripXls(xls) {
     var first_ws = xls.Sheets[xls.SheetNames[0]];
     // Ebner Strom
     // > Zeitstempel String	Obiscode	Wert (kWh)	Angezeigter Zeitraum
-    // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ	
+    // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ
     // > 01.03.2023 00:15	1.8.0	0,28	01.03.2023 - 31.03.2023
     // > 01.03.2023 00:15	2.8.0	0	01.03.2023 - 31.03.2023
     if (first_ws.A1.v.includes("Zeitstempel String") && first_ws.A2.v.includes("hlpunkt")) {
