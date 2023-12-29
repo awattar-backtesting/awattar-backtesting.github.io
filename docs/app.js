@@ -134,7 +134,7 @@ var dayIndex = 0;
 var oldChart = null;
 
 function genTableInit(datefmt, grundpreis) {
-    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Ø Preis</td> <td> B&ouml;rsen Ø <sup>1</sup></td> <td>H0 Preis</td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
+    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Ø Preis</td> <td> B&ouml;rsen Ø <sup>1</sup></td> <td>H0 Ø Preis <sup>2</sup></td> <td>H0 Ø Norm <sup>3</sup></td><td<td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
         + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar HOURLY alt</a>)</td>"
         + "<td>+3% + 1.80ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://web.archive.org/web/20230903185216/https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar HOURLY ab 2023/07</a>)</td>"
         + "<td>+ 1.44ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL alt</a>)</td>"
@@ -315,6 +315,8 @@ function calculateCosts() {
     var monthsAvg = {}
     var monthsAvgKwh = {}
     var monthsH0 = {}
+    var monthsH0Norm = {}
+    var monthsH0NormKwh = {}
 
     let daily = {}
     let dailyKwh = {}
@@ -322,13 +324,15 @@ function calculateCosts() {
     let dailyAvg = {}
     let dailyAvgKwh = {}
     let dailyH0 = {}
+    let dailyH0Norm = {}
+    let dailyH0NormKwh = {}
 
     var days = Array.from(tracker.days);
     for (var idx = 0; idx < days.length; idx++) {
         var day = days[idx];
         var monthKey = day.substring(0, 6);
 
-        let dayKey=day;
+        let dayKey = day;
         if (!(dayKey in daily)) {
             daily[dayKey] = new Decimal(0.0);
         }
@@ -346,6 +350,12 @@ function calculateCosts() {
         }
         if (!(dayKey in dailyH0)) {
             dailyH0[dayKey] = new Decimal(0.0);
+        }
+        if (!(dayKey in dailyH0Norm)) {
+            dailyH0Norm[dayKey] = new Decimal(0.0);
+        }
+        if (!(dayKey in dailyH0NormKwh)) {
+            dailyH0NormKwh[dayKey] = new Decimal(0.0);
         }
 
         if (!(monthKey in months)) {
@@ -366,6 +376,12 @@ function calculateCosts() {
         if (!(monthKey in monthsH0)) {
             monthsH0[monthKey] = new Decimal(0.0);
         }
+        if (!(monthKey in monthsH0Norm)) {
+            monthsH0Norm[monthKey] = new Decimal(0.0);
+        }
+        if (!(monthKey in monthsH0NormKwh)) {
+            monthsH0NormKwh[monthKey] = new Decimal(0.0);
+        }
 
         var len = Array.from(Object.keys(tracker.data[day])).length;
         var usages = tracker.data[day];
@@ -376,9 +392,12 @@ function calculateCosts() {
         var sumAvgPrice = new Decimal(0.0);
         var sumAvgKwh = new Decimal(0.0);
         var sumH0Price = new Decimal(0.0);
+        var sumH0NormPrice = new Decimal(0.0);
+        var sumH0NormKwh = new Decimal(0.0);
 
-        for (var i = 0; i < len; i++) {
-            if (!(i in usages)) {
+        const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
+        const isWeekend = dayAsDate.getDay() === 0 || dayAsDate.getDay() === 6;
+        const h0DayProfile = isWeekend ? weekendH0Profile : weekdayH0Profile;
 
         Object.keys(tracker.data[day]).forEach(hour => {
             var dUsage = usages[hour];
@@ -393,11 +412,13 @@ function calculateCosts() {
             sumAvgPrice = sumAvgPrice.plus(dPrice.times(1.00)); // always 1 kWh
             // console.log("sumAvgPrice: ", sumPrice.toFixed(2));
             sumAvgKwh = sumAvgKwh.plus(1.00);
-        });
 
-        const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
-        const isWeekend = dayAsDate.getDay() === 0 || dayAsDate.getDay() === 6;
-        const h0DayProfile = isWeekend ? weekendH0Profile : weekdayH0Profile;
+            const dailyAvgVerbrauch = 10.0;
+            const fictionalKwhInHour = new Decimal(h0DayProfile[hour]).times(dailyAvgVerbrauch);
+            sumH0NormKwh = sumH0NormKwh.plus(fictionalKwhInHour);
+            const fictionalPriceOfHour = fictionalKwhInHour.times(prices[hour]);
+            sumH0NormPrice = sumH0NormPrice.plus(fictionalPriceOfHour);
+        });
 
         // second pass over the day to use sumKwh to generate h0 price
         Object.keys(tracker.data[day]).forEach(hour => {
@@ -405,18 +426,16 @@ function calculateCosts() {
             const fictionalPriceOfHour = fictionalKwhInHour.times(prices[hour]);
             sumH0Price = sumH0Price.plus(fictionalPriceOfHour);
         });
-        // console.log("date=", day, "weekend=", isWeekend, ", total day usage=",
-        //     sumKwh.toFixed(2), ", my price=", sumPrice / sumKwh, " avg price=", sumAvgPrice / sumAvgKwh,
-        //     "h0 price", sumH0Price / sumKwh
-        //     );
 
-        daily[dayKey]=daily[dayKey].plus(sumPrice);
+        daily[dayKey] = daily[dayKey].plus(sumPrice);
         dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
         dailyFee[dayKey] = dailyFee[dayKey].plus(sumFee);
 
         dailyAvg[dayKey] = dailyAvg[dayKey].plus(sumAvgPrice);
         dailyAvgKwh[dayKey] = dailyAvgKwh[dayKey].plus(sumAvgKwh);
         dailyH0[dayKey] = dailyH0[dayKey].plus(sumH0Price);
+        dailyH0Norm[dayKey] = dailyH0Norm[dayKey].plus(sumH0NormPrice);
+        dailyH0NormKwh[dayKey] = dailyH0NormKwh[dayKey].plus(sumH0NormKwh);
 
         months[monthKey] = months[monthKey].plus(sumPrice);
         monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
@@ -425,9 +444,11 @@ function calculateCosts() {
         monthsAvg[monthKey] = monthsAvg[monthKey].plus(sumAvgPrice);
         monthsAvgKwh[monthKey] = monthsAvgKwh[monthKey].plus(sumAvgKwh);
         monthsH0[monthKey] = monthsH0[monthKey].plus(sumH0Price);
+        monthsH0Norm[monthKey] = monthsH0Norm[monthKey].plus(sumH0NormPrice);
+        monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
 
-    var content = drawTableTframe(months, monthsKwh, monthsFee, monthsAvg, monthsAvgKwh, monthsH0, "yyyyMM", "yyyy-MM",
+    var content = drawTableTframe(months, monthsKwh, monthsFee, monthsAvg, monthsAvgKwh, monthsH0, monthsH0Norm, monthsH0NormKwh, "yyyyMM", "yyyy-MM",
         new Array(
             575 /* awattar_alt */,
             575 /* awattar_neu (2023/07) */,
@@ -439,7 +460,7 @@ function calculateCosts() {
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = drawTableTframe(daily, dailyKwh, dailyFee, dailyAvg, dailyAvgKwh, dailyH0, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
+    content = drawTableTframe(daily, dailyKwh, dailyFee, dailyAvg, dailyAvgKwh, dailyH0, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
     costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
@@ -458,7 +479,7 @@ function calculateCosts() {
 
 const getPriceDiffClass = (diff) => diff < 0 ? 'diff-price-good' : 'diff-price-bad'
 
-function drawTableTframe(tframe, tframeKwh, tframeFee, tframeAvg, tframeAvgKwh, h0Price, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
+function drawTableTframe(tframe, tframeKwh, tframeFee, tframeAvg, tframeAvgKwh, h0Price, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
@@ -467,14 +488,17 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, tframeAvg, tframeAvgKwh, 
         const timeframePrice = tframe[e].dividedBy(tframeKwh[e]).toFixed(2);
         const avgPrice = tframeAvg[e].dividedBy(tframeAvgKwh[e]).toFixed(2);
         const h0 = h0Price[e].dividedBy(tframeKwh[e]).toFixed(2);
+        const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
         const diff = (timeframePrice - avgPrice);
         const h0Diff = (timeframePrice - h0);
+        const h0NormDiff = (timeframePrice - h0Norm);
         content += "<tr>";
         content += "<td><b>" + format(parse(e, tframeFmt1, new Date()), tframeFmt2) + "<b></td>";
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
         content += "<td>" + timeframePrice + " ct/kWh</td>";
         content += "<td>" + avgPrice + " ct/kWh <span class=" + getPriceDiffClass(diff) + ">(" + diff.toFixed(2) + ")</span></td>";
         content += "<td>" + h0 + " ct/kWh <span class=" + getPriceDiffClass(h0Diff) + ">(" + h0Diff.toFixed(2) + ")</span></td>";
+        content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
 
