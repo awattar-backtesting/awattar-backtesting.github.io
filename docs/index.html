@@ -172,6 +172,18 @@ button {
     </head>
     <body>
         <h3>aWATTar Backtesting</h3>
+        <p></p>
+        <button class="collapsible">Um was geht es hier? →</button>
+        <div class="content">
+            <p>Dynamische Stromtarife haben keinen fixen Preis sondern einen Stunden variierenden Preis der sich nach den Ergebnissen der Stromb&ouml;rse EPEX SPOT ergibt.</p>
+            <p>Durch bewusstes Anwenden von Haushaltsger&auml;ten wie Waschmaschine oder Geschirrsp&uuml;ler mittels Zeitvorwahl kann man damit seinen pers&ouml;nlichen Strompreis verringern. Noch besser funktioniert das mit großen Verbraucher wie Elektroauto oder <a href='https://twitter.com/lewurm/status/1739194991832903936'>W&auml;rmepumpe</a>.
+            Der B&ouml;rsenpreis ist in der Regel niedriger wenn viele erneuerbare Energien im Netz verf&uuml;gbar sind, aber keine Abnehmer finden.
+            Dynamische Stromtarife sind daher eines der vielen Puzzlesteine die wir f&uuml;r die Energiewende ben&ouml;tigen.</p>
+            <p>Backtesting ist ein Vorgang um ein Modell auf historische Daten zu testen. Mit diesem Tool kann man die Verbrauchsdaten seines Netzanbieters uploaden (siehe Anleitungen weiter unten), welches dann den erzielten Strompreis berechnet. Dabei wird zuerst der Preis anhand EPEX SPOT errechnet, und danach verschiedene Anbieter und deren Geb&uuml;hren/Aufschl&auml;ge ber&uuml;cksichtigt. Netzgeb&uuml;hren werden nicht ber&uuml;cksichtigt.</p>
+            <p>Hier ein Beispiel wie sowas aussieht:</p>
+            <p><img src="img/example.png"></li> </p>
+
+        </div>
         <div class="spacer_right">
             <p>Wenn dieses Tool f&uuml;r deine Entscheidung n&uuml;tzlich war, verwende bitte meinen aWATTar Empfehlungscode: <b>3JJEWLKBE</b></p>
         </div>
@@ -189,12 +201,12 @@ button {
 			<button id="nextBtn">next</button>
 		</div>
 
-        <button class="collapsible" id="costslblMonthly">&Uuml;bersicht Energiekosten monatlich</button>
+        <button class="collapsible" id="costslblMonthly">&Uuml;bersicht Energiekosten monatlich →</button>
         <div class="content">
             <table id="costsMonthly"></table>
         </div>
 
-        <button class="collapsible" id="costslblDaily">&Uuml;bersicht Energiekosten t&auml;glich</button>
+        <button class="collapsible" id="costslblDaily">&Uuml;bersicht Energiekosten t&auml;glich →</button>
         <div class="content">
             <table id="costsDaily"></table>
         </div>
@@ -204,7 +216,7 @@ button {
         Keine Garantie auf Richtigkeit der dargestellten Daten.
         <h3>Netzbetreiber Anleitungen</h3>
 
-        <button class="collapsible">Netz N&Ouml;</button>
+        <button class="collapsible">Netz N&Ouml; →</button>
         <div class="content">
             <ol>
                 <li><p>Gehe auf <a href="https://smartmeter.netz-noe.at/">https://smartmeter.netz-noe.at</a></p></li>
@@ -224,7 +236,7 @@ button {
             </p>
         </div>
 
-        <button class="collapsible">Netz O&Ouml;</button>
+        <button class="collapsible">Netz O&Ouml; →</button>
         <div class="content">
             <ol>
                 <li><p>Download der 15-Minutenwerte &uuml;ber das <a href="https://eservice.netzooe.at/app/login">NetzO&Ouml; e-Service-Portal</a></p></li>
@@ -236,7 +248,7 @@ button {
             </ol>
         </div>
 
-        <button class="collapsible">K&auml;rnten Netz</button>
+        <button class="collapsible">K&auml;rnten Netz →</button>
         <div class="content">
             <ol>
                 <li><p>Gehe auf <a href="https://kaerntennetz.at/">kaerntennetz.at</a></p></li>
@@ -249,7 +261,7 @@ button {
             </ol>
         </div>
 
-        <button class="collapsible">TINETZ</button>
+        <button class="collapsible">TINETZ →</button>
         <div class="content">
             <ol>
                 <li><p>Einloggen beim Tinetz Kundenportal: <a href="https://kundenportal.tinetz.at/">https://kundenportal.tinetz.at/</a></p></li>
@@ -259,7 +271,7 @@ button {
             </ol>
         </div>
 
-        <button class="collapsible">Wiener Netze</button>
+        <button class="collapsible">Wiener Netze →</button>
         <div class="content">
             <ol>
                 <li><p>Gehe auf <a href="https://smartmeter-web.wienernetze.at">smartmeter-web.wienernetze.at</a></p></li>
