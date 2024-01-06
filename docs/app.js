@@ -236,60 +236,108 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 });
 
-const weekdayH0Profile = [
-    0.0246,
-    0.0182,
-    0.0165,
-    0.0159,
-    0.0163,
-    0.0196,
-    0.0348,
-    0.0483,
-    0.0512,
-    0.0499,
-    0.0480,
-    0.0487,
-    0.0542,
-    0.0530,
-    0.0463,
-    0.0418,
-    0.0404,
-    0.0457,
-    0.0564,
-    0.0652,
-    0.0625,
-    0.0563,
-    0.0491,
-    0.0369,
-]
 
-const weekendH0Profile = [
-    0.0280,
-    0.0209,
-    0.0168,
-    0.0156,
-    0.0151,
-    0.0152,
-    0.0174,
-    0.0242,
-    0.0382,
-    0.0524,
-    0.0608,
-    0.0675,
-    0.0697,
-    0.0612,
-    0.0513,
-    0.0457,
-    0.0428,
-    0.0480,
-    0.0571,
-    0.0633,
-    0.0584,
-    0.0503,
-    0.0451,
-    0.0353,
-]
+const Zeitzone = {
+	Sommer: 0,
+	Winter: 1,
+	Uebergang: 2,
+}
 
+function computeZeitzone(date) {
+    /*
+     * Ein Jahreslastprofil besteht aus drei Zeitzonen,
+     * → Winter: 1.11.-20.03.,
+     * → Sommer: 15.05.-14.09. und
+     * → Übergang: 21.03.-14.05. bzw. 15.09.-31.10
+     */
+
+    const year = Number(date.substring(0, 4));
+    const month = Number(date.substring(4, 6));
+    const day = Number(date.substring(6, 8));
+
+    if (month <= 2 || (month <= 3 && day <= 20)) {
+        return Zeitzone.Winter;
+    } else if (month >= 11) {
+        return Zeitzone.Winter;
+    } else if ((month >= 6 && month <= 8) || (month == 5 && day >= 15) || (month == 9 && day <= 14)) {
+        return Zeitzone.Sommer;
+    }
+    return Zeitzone.Uebergang;
+}
+
+function computeSheetIndex(zeitzone, dayIndex) {
+    /* layout:
+     * B = Winter_Samstag
+     * C = Winter_Sonntag
+     * D = Winter_Werktag
+     *
+     * E = Sommer_Samstag
+     * F = Sommer_Sonntag
+     * G = Sommer_Werktag
+     *
+     * H = Übergang_Samstag
+     * I = Übergang_Sonntag
+     * J = Übergang_Werktag
+     */
+    switch (zeitzone) {
+        case Zeitzone.Winter:
+            if (dayIndex == 6) {
+                return 'B';
+            } else if (dayIndex == 0) {
+                return 'C';
+            } else {
+                return 'D';
+            }
+            break;
+        case Zeitzone.Sommer:
+            if (dayIndex == 6) {
+                return 'E';
+            } else if (dayIndex == 0) {
+                return 'F';
+            } else {
+                return 'G';
+            }
+            break;
+        case Zeitzone.Uebergang:
+            if (dayIndex == 6) {
+                return 'H';
+            } else if (dayIndex == 0) {
+                return 'I';
+            } else {
+                return 'J';
+            }
+            break;
+    }
+}
+
+const lastprofile_url = "./lastprofile.xls";
+const lastprofile_file = await (await fetch(lastprofile_url)).arrayBuffer();
+const lastprofile = XLSX.read(lastprofile_file);
+
+
+function computeH0Day(day) {
+    const zeitzone = computeZeitzone(day);
+    const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
+    const dayIndex = dayAsDate.getDay();  // 0 == Sonntag, 6 == Samstag
+
+    var h0_sheet = lastprofile.Sheets[lastprofile.SheetNames[0]];
+    var sheetIndex = computeSheetIndex(zeitzone, dayIndex);
+
+    var h0DayProfile = new Array(24).fill(0);
+
+    for (let i = 0; i < 24; i++) {
+        // Werte in 15min Takte, startet in Zeile 4
+        const offset = 4;
+
+        for (let j = 0; j < 4; j++) {
+            h0DayProfile[i] += h0_sheet['' + sheetIndex + (offset + i*4 + j)].v;
+        }
+    }
+    console.log("computed zeitzone for day=" + day + " -> " + zeitzone + ", dayIndex = " + dayIndex);
+    console.log("h0DayProfile: " + h0DayProfile);
+
+    return h0DayProfile;
+}
 
 function calculateCosts() {
     console.log("tracker: ", tracker);
@@ -379,9 +427,7 @@ function calculateCosts() {
         var sumH0NormPrice = new Decimal(0.0);
         var sumH0NormKwh = new Decimal(0.0);
 
-        const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
-        const isWeekend = dayAsDate.getDay() === 0 || dayAsDate.getDay() === 6;
-        const h0DayProfile = isWeekend ? weekendH0Profile : weekdayH0Profile;
+        const h0DayProfile = computeH0Day(day);
 
         Object.keys(tracker.data[day]).forEach(hour => {
             var dUsage = usages[hour];
