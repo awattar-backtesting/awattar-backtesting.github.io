@@ -217,13 +217,16 @@ document.addEventListener("DOMContentLoaded", function() {
                     tracker.postProcess();
 
                     (async () => {
+                        const lastprofile_array = await (await fetch('./lastprofile.xls')).arrayBuffer();
+                        const lastprofile_sheets = XLSX.read(lastprofile_array);
+                        const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
                         await Promise.all(entries).then(data => {
                             storeAwattarCache(awattar);
                             console.log("final awattar", awattar);
                             prevBtn.style.visibility = 'visible';
                             graphDescr.style.visibility = 'visible';
                             nextBtn.style.visibility = 'visible';
-                            calculateCosts();
+                            calculateCosts(h0Sheet);
                             displayDay(dayIndex);
                         });
                     })();
@@ -241,7 +244,7 @@ const Zeitzone = {
 	Sommer: 0,
 	Winter: 1,
 	Uebergang: 2,
-}
+};
 
 function computeZeitzone(date) {
     /*
@@ -310,17 +313,11 @@ function computeSheetIndex(zeitzone, dayIndex) {
     }
 }
 
-const lastprofile_url = "./lastprofile.xls";
-const lastprofile_file = await (await fetch(lastprofile_url)).arrayBuffer();
-const lastprofile = XLSX.read(lastprofile_file);
-
-
-function computeH0Day(day) {
+function computeH0Day(h0Sheet, day) {
     const zeitzone = computeZeitzone(day);
     const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
     const dayIndex = dayAsDate.getDay();  // 0 == Sonntag, 6 == Samstag
 
-    var h0_sheet = lastprofile.Sheets[lastprofile.SheetNames[0]];
     var sheetIndex = computeSheetIndex(zeitzone, dayIndex);
 
     var h0DayProfile = new Array(24).fill(0);
@@ -330,7 +327,7 @@ function computeH0Day(day) {
         const offset = 4;
 
         for (let j = 0; j < 4; j++) {
-            h0DayProfile[i] += h0_sheet['' + sheetIndex + (offset + i*4 + j)].v;
+            h0DayProfile[i] += h0Sheet['' + sheetIndex + (offset + i*4 + j)].v;
         }
     }
     // console.log("computed zeitzone for day=" + day + " -> " + zeitzone + ", dayIndex = " + dayIndex);
@@ -339,7 +336,7 @@ function computeH0Day(day) {
     return h0DayProfile;
 }
 
-function calculateCosts() {
+function calculateCosts(h0Sheet) {
     console.log("tracker: ", tracker);
     var months = {}
     var monthsKwh = {}
@@ -400,7 +397,7 @@ function calculateCosts() {
         var sumH0NormPrice = new Decimal(0.0);
         var sumH0NormKwh = new Decimal(0.0);
 
-        const h0DayProfile = computeH0Day(day);
+        const h0DayProfile = computeH0Day(h0Sheet, day);
 
         Object.keys(tracker.data[day]).forEach(hour => {
             var dUsage = usages[hour];
@@ -462,7 +459,7 @@ function calculateCosts() {
     }
 }
 
-const getPriceDiffClass = (diff) => diff < 0 ? 'diff-price-good' : 'diff-price-bad'
+const getPriceDiffClass = (diff) => diff < 0 ? 'diff-price-good' : 'diff-price-bad';
 
 function drawTableTframe(tframe, tframeKwh, tframeFee, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
     let content = "<tbody>";
