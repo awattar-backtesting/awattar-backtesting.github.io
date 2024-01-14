@@ -686,6 +686,10 @@ const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh
     return parseFloat(usage.replace(",", "."));
 }), ["Ersatzwert"], null, true);
 
+const NetzNOEVerbrauchv2 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Qualität"], null, true);
+
 const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["kW", "Status"], null, false);
@@ -755,6 +759,9 @@ function selectBetreiber(sample) {
     }
     if (NetzNOEVerbrauch.probe(sample)) {
         return NetzNOEVerbrauch;
+    }
+    if (NetzNOEVerbrauchv2.probe(sample)) {
+        return NetzNOEVerbrauchv2;
     }
     if (NetzOOE.probe(sample)) {
         return NetzOOE;
