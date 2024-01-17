@@ -690,6 +690,10 @@ const NetzNOEVerbrauchv2 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Mess
     return parseFloat(usage.replace(",", "."));
 }), ["Qualität"], null, true);
 
+const NetzNOEVerbrauchv3 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), [], null, true);
+
 const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["kW", "Status"], null, false);
@@ -753,16 +757,6 @@ function displayWarning(warning) {
 }
 
 function selectBetreiber(sample) {
-    if (NetzNOEEinspeiser.probe(sample)) {
-        displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
-        return null;
-    }
-    if (NetzNOEVerbrauch.probe(sample)) {
-        return NetzNOEVerbrauch;
-    }
-    if (NetzNOEVerbrauchv2.probe(sample)) {
-        return NetzNOEVerbrauchv2;
-    }
     if (NetzOOE.probe(sample)) {
         return NetzOOE;
     }
@@ -801,6 +795,19 @@ function selectBetreiber(sample) {
     }
     if (Tinetz.probe(sample)){
        return Tinetz;
+    }
+    if (NetzNOEEinspeiser.probe(sample)) {
+        displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
+        return null;
+    }
+    if (NetzNOEVerbrauch.probe(sample)) {
+        return NetzNOEVerbrauch;
+    }
+    if (NetzNOEVerbrauchv2.probe(sample)) {
+        return NetzNOEVerbrauchv2;
+    }
+    if (NetzNOEVerbrauchv3.probe(sample)) {
+        return NetzNOEVerbrauchv3;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
