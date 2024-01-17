@@ -682,6 +682,10 @@ class Netzbetreiber {
 
 const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null, null, false);
 
+const NetzNOEVerbrauchv3EEG = new Netzbetreiber("NetzNÖ", "Restnetzbezug (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Eigendeckung (kWh)", "Verbrauch (kWh)", ], null, true);
+
 const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ersatzwert"], null, true);
@@ -805,6 +809,10 @@ function selectBetreiber(sample) {
     }
     if (NetzNOEVerbrauchv2.probe(sample)) {
         return NetzNOEVerbrauchv2;
+    }
+    if (NetzNOEVerbrauchv3EEG.probe(sample)) {
+        displayWarning("Hinweis: Export enth&auml;lt EEG Verbrauch. Nur tats&auml;chlicher Restbezug wird hier ber&uuml;cksichtigt, <a href=\"https://github.com/awattar-backtesting/awattar-backtesting.github.io/issues/32\">siehe auch</a>.");
+        return NetzNOEVerbrauchv3EEG;
     }
     if (NetzNOEVerbrauchv3.probe(sample)) {
         return NetzNOEVerbrauchv3;
