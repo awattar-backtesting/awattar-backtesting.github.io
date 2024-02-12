@@ -124,6 +124,7 @@ function genTableInit(datefmt, grundpreis) {
         + "<td>+ 1.44ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL alt</a>)</td>"
         + "<td>+ 1.44ct/kWh <br />" + grundpreis[3] + "(<a href=\"https://web.archive.org/web/20231103201719/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL ab 2023/10</a>)</td>"
         + "<td>+ 1.44ct/kWh <br />" + grundpreis[4] + "(<a href=\"https://web.archive.org/web/20231103201559/https://www.e-steiermark.com/fileadmin/user_upload/downloads/E-Steiermark_Tarifblatt_Privatkunden_SteirerStrom_Smart.pdf\">SteirerStrom Smart</a>)</td>"
+        + "<td>+ 1.79ct/kWh <br />" + grundpreis[5] + "(<a href=\"https://web.archive.org/web/20240212135551/https://static1.squarespace.com/static/5a5381aff9a61ed1f688abc6/t/65c315875cde300de6287a2a/1707283847731/Spotty+Direkt+-+Smart.pdf\">Spotty Direkt</a>)</td>"
         + "</tr> </thead>";
 }
 
@@ -132,10 +133,11 @@ const initialTableStateMonthly = genTableInit("Monat", new Array(
     "+5,75 EUR Grundpreis<br />inkl. 20% USt.<br />",
     "+4,99 EUR Grundpreis<br />inkl. 20% USt.<br />",
     "+2,99 EUR Grundpreis<br />inkl. 20% USt.<br />",
-    "+3,82 EUR Grundpreis<br />inkl. 20% USt.<br />"
+    "+3,82 EUR Grundpreis<br />inkl. 20% USt.<br />",
+    "+2,40 EUR Grundpreis<br />inkl. 20% USt.<br />"
     ));
 
-const initialTableStateDaily= genTableInit("Datum", new Array("", "", "", "", ""));
+const initialTableStateDaily= genTableInit("Datum", new Array("", "", "", "", "", ""));
 
 
 prevBtn.addEventListener('click', e => {
@@ -436,13 +438,14 @@ function calculateCosts(h0Sheet) {
             575 /* awattar_neu (2023/07) */,
             499 /* smartcontrol_alt */,
             299 /* smartcontrol_neu (2023/09) */,
-            382 /* SteirerStrom Smart (2023/10) */
+            382 /* SteirerStrom Smart (2023/10) */,
+            240 /* spotty */
         ));
     costsMonthly.innerHTML += content;
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = drawTableTframe(daily, dailyKwh, dailyFee, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
+    content = drawTableTframe(daily, dailyKwh, dailyFee, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0, 0));
     costsDaily.innerHTML += content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
@@ -483,8 +486,9 @@ function drawTableTframe(tframe, tframeKwh, tframeFee, h0NormPrice, h0NormKwh, t
         var smartcontrol_alt = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
         var smartcontrol_neu = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[3]);
         var steirerstrom = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[4]); // +1.44ct/kWh inkl. 20% USt. = 1.2 * 1.2
-
-        var providers = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom];
+        var spotty = tframe[e].plus(tframeKwh[e].times(1.49)).times(1.2).plus(vendorgrundgebuehr[5]);
+ 
+        var providers = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty];
         var minprice = providers[0];
         for (var i in providers) {
             if (minprice.greaterThanOrEqualTo(providers[i])) {
