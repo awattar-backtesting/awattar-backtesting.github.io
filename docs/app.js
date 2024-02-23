@@ -754,6 +754,10 @@ const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.
     return parseFloat(usage.replace(",", "."));
 }), ["DATE_FROM", "DATE_TO"], null, false);
 
+const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "Verbrauch", "DatumUhrzeit", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Typ", "Anlage", "OBIS-Code", "Einheit"], null, false);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -794,11 +798,14 @@ function selectBetreiber(sample) {
     if (EnergienetzeSteiermarkLeistung.probe(sample)) {
         return EnergienetzeSteiermarkLeistung;
     }
-    if (VorarlbergNetz.probe(sample)){
+    if (VorarlbergNetz.probe(sample)) {
        return VorarlbergNetz;
     }
-    if (Tinetz.probe(sample)){
+    if (Tinetz.probe(sample)) {
        return Tinetz;
+    }
+    if (StadtwerkeKlagenfurt.probe(sample)) {
+        return StadtwerkeKlagenfurt;
     }
     if (NetzNOEEinspeiser.probe(sample)) {
         displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
