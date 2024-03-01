@@ -758,6 +758,10 @@ const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "Verbrau
     return parseFloat(usage.replace(",", "."));
 }), ["Typ", "Anlage", "OBIS-Code", "Einheit"], null, false);
 
+const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
+    return parseFloat(usage);
+}), [], null, true);
+
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -824,6 +828,10 @@ function selectBetreiber(sample) {
     if (NetzNOEVerbrauchv3.probe(sample)) {
         return NetzNOEVerbrauchv3;
     }
+    if (IKB.probe(sample)) {
+        return IKB;
+    }
+
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
     return null;
