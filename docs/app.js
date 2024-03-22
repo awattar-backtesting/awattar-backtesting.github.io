@@ -449,6 +449,16 @@ function calculateCosts(h0Sheet) {
 
 const getPriceDiffClass = (diff) => diff < 0 ? 'diff-price-good' : 'diff-price-bad';
 
+function getDaysForMonth(index, leapyear) {
+    if (index == 1 || index == 3 || index == 5 || index == 7 || index == 8 || index == 10 || index == 12) {
+        return 31;
+    } else if (index == 2) {
+        return leapyear ? 29 : 28;
+    } else {
+        return 30;
+    }
+}
+
 function drawTableTframe(tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
@@ -458,16 +468,25 @@ function drawTableTframe(tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, 
         const timeframePrice = tframe[e].dividedBy(tframeKwh[e]).toFixed(2);
         const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
         const h0NormDiff = (timeframePrice - h0Norm);
+        const currentDate = format(parse(e, tframeFmt1, new Date()), tframeFmt2);
         content += "<tr>";
-        content += "<td><b>" + format(parse(e, tframeFmt1, new Date()), tframeFmt2) + "<b></td>";
+        content += "<td><b>" + currentDate + "<b></td>";
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
         content += "<td>" + timeframePrice + " ct/kWh</td>";
         content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
 
-        var awattar_alt = tframe[e].times(1.03).times(1.2).plus(vendorgrundgebuehr[0]);
-        var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.03).times(1.2).plus(vendorgrundgebuehr[1]);
+        const currentYear = parseInt(currentDate.slice(0, 4), 10);
+        const currentMonth = parseInt(currentDate.slice(-2), 10);
+        const daysForYear = ((currentYear % 4) == 0 && !((currentYear % 100) == 0)) || (currentYear % 400) == 0 ? 366 : 365;
+        const daysForMonth = getDaysForMonth(currentMonth, daysForYear == 366);
+
+        var awattar_alt_grundgebuehren = new Decimal(((vendorgrundgebuehr[0] * 12) / daysForYear) * daysForMonth).toFixed(2);
+        var awattar_neu_grundgebuehren = new Decimal(((vendorgrundgebuehr[1] * 12) / daysForYear) * daysForMonth).toFixed(2);
+
+        var awattar_alt = tframe[e].times(1.03).times(1.2).plus(awattar_alt_grundgebuehren);
+        var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.03).times(1.2).plus(awattar_neu_grundgebuehren);
         var smartcontrol_alt = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
         var smartcontrol_neu = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[3]);
         var steirerstrom = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[4]); // +1.44ct/kWh inkl. 20% USt. = 1.2 * 1.2
