@@ -1,4 +1,32 @@
 import { format, add, getHours, parse, parseISO } from "https://cdn.skypack.dev/date-fns@2.16.1";
+import { 
+    awattar_alt, 
+    awattar_neu, 
+    smartcontrol_alt, 
+    smartcontrol_neu, 
+    steirerstrom, 
+    smartcontrol_sunny } from "./tariffs.js";
+import { 
+    NetzNOEEinspeiser, 
+    NetzNOEEinspeiser2, 
+    NetzNOEVerbrauchv3EEG, 
+    NetzNOEVerbrauch, 
+    NetzNOEVerbrauchv2, 
+    NetzNOEVerbrauchv3, 
+    NetzOOE, 
+    NetzBurgenland, 
+    NetzBurgenlandv2, 
+    KaerntenNetz, 
+    EbnerStrom, 
+    WienerNetze, 
+    SalzburgNetz, 
+    LinzAG, 
+    StromnetzGraz, 
+    EnergienetzeSteiermark, 
+    EnergienetzeSteiermarkLeistung, 
+    VorarlbergNetz, 
+    Tinetz, 
+    StadtwerkeKlagenfurt } from "./netzbetreiber.js";
 
 class Tracker {
     data = {}
@@ -117,26 +145,15 @@ warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
-function genTableInit(datefmt, grundpreis) {
-    return "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Ø Preis</td> </td> <td>H0 Lastprofil Ø <sup>1</sup></td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>"
-        + "<td>+3% Aufschlag <br />" + grundpreis[0] + "(<a href=\"https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf\">aWATTar HOURLY alt</a>)</td>"
-        + "<td>+3% + 1.80ct/kWh <br />" + grundpreis[1] + "(<a href=\"https://web.archive.org/web/20230903185216/https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf\">aWATTar HOURLY ab 2023/07</a>)</td>"
-        + "<td>+ 1.44ct/kWh <br />" + grundpreis[2] + "(<a href=\"https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL alt</a>)</td>"
-        + "<td>+ 1.44ct/kWh <br />" + grundpreis[3] + "(<a href=\"https://web.archive.org/web/20231103201719/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf\">smartCONTROL ab 2023/10</a>)</td>"
-        + "<td>+ 1.44ct/kWh <br />" + grundpreis[4] + "(<a href=\"https://web.archive.org/web/20231103201559/https://www.e-steiermark.com/fileadmin/user_upload/downloads/E-Steiermark_Tarifblatt_Privatkunden_SteirerStrom_Smart.pdf\">SteirerStrom Smart</a>)</td>"
-        + "</tr> </thead>";
+function genTableInit(datefmt, tariffs) {
+    let content = "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Ø Preis</td> </td> <td>H0 Lastprofil Ø <sup>1</sup></td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>";
+    tariffs.forEach (t => {
+        let description = (datefmt == "Monat") ? t.description : t.description_day;
+        content += "<td>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</td>";
+    })
+    content += "</tr></thead>";
+    return content;
 }
-
-const initialTableStateMonthly = genTableInit("Monat", new Array(
-    "+5,75 EUR Grundpreis<br />inkl. 20% USt.<br />",
-    "+5,75 EUR Grundpreis<br />inkl. 20% USt.<br />",
-    "+4,99 EUR Grundpreis<br />inkl. 20% USt.<br />",
-    "+2,99 EUR Grundpreis<br />inkl. 20% USt.<br />",
-    "+3,82 EUR Grundpreis<br />inkl. 20% USt.<br />"
-    ));
-
-const initialTableStateDaily= genTableInit("Datum", new Array("", "", "", "", ""));
-
 
 prevBtn.addEventListener('click', e => {
     dayIndex--;
@@ -183,9 +200,6 @@ document.addEventListener("DOMContentLoaded", function() {
             /* reset state */
             awattar = loadAwattarCache();
             tracker = new Tracker();
-            costsMonthly.innerHTML = initialTableStateMonthly;
-            costsDaily.innerHTML = initialTableStateDaily;
-
 
             var fileContent = event.target.result;
             // console.log("fileContent: ", fileContent);
@@ -207,6 +221,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 complete: (results) => {
                     var d = results.data;
                     var netzbetreiber = selectBetreiber(d[0]);
+                    var feedin = netzbetreiber.feedin;
                     var i = 0;
                     var entries = [];
 
@@ -226,7 +241,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             prevBtn.style.visibility = 'visible';
                             graphDescr.style.visibility = 'visible';
                             nextBtn.style.visibility = 'visible';
-                            calculateCosts(h0Sheet);
+                            calculateCosts(h0Sheet, feedin);
                             displayDay(dayIndex);
                         });
                     })();
@@ -336,7 +351,7 @@ function computeH0Day(h0Sheet, day) {
     return h0DayProfile;
 }
 
-function calculateCosts(h0Sheet) {
+function calculateCosts(h0Sheet, feedin) {
     console.log("tracker: ", tracker);
     var months = {}
     var monthsKwh = {}
@@ -418,20 +433,22 @@ function calculateCosts(h0Sheet) {
         monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
 
-    var content = drawTableTframe(months, monthsKwh, monthsH0Norm, monthsH0NormKwh, "yyyyMM", "yyyy-MM",
-        new Array(
-            575 /* awattar_alt */,
-            575 /* awattar_neu (2023/07) */,
-            499 /* smartcontrol_alt */,
-            299 /* smartcontrol_neu (2023/09) */,
-            382 /* SteirerStrom Smart (2023/10) */
-        ));
-    costsMonthly.innerHTML += content;
+    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom];
+    if (feedin) {
+        tariffs = [smartcontrol_sunny];
+    }
+
+    var content = genTableInit("Monat", tariffs);
+    let includeMonthlyFee = true;
+    content += drawTableTframe(includeMonthlyFee, months, monthsKwh, monthsH0Norm, monthsH0NormKwh, "yyyyMM", "yyyy-MM", tariffs, feedin);
+    costsMonthly.innerHTML = content
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = drawTableTframe(daily, dailyKwh, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", new Array(0, 0, 0, 0, 0));
-    costsDaily.innerHTML += content;
+    content = genTableInit("Datum", tariffs);
+    includeMonthlyFee = false;
+    content += drawTableTframe(includeMonthlyFee, daily, dailyKwh, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", tariffs, feedin, false);
+    costsDaily.innerHTML = content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
 
@@ -459,7 +476,7 @@ function getDaysForMonth(index, leapyear) {
     }
 }
 
-function drawTableTframe(tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, vendorgrundgebuehr) {
+function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, providers, feedin) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
@@ -481,34 +498,36 @@ function drawTableTframe(tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, 
         const currentMonth = parseInt(currentDate.slice(-2), 10);
         const daysForYear = ((currentYear % 4) == 0 && !((currentYear % 100) == 0)) || (currentYear % 400) == 0 ? 366 : 365;
         const daysForMonth = getDaysForMonth(currentMonth, daysForYear == 366);
+        const monthlyFeeFactor = 12 * daysForMonth / daysForYear;
 
-        var awattar_alt_grundgebuehren = new Decimal(((vendorgrundgebuehr[0] * 12) / daysForYear) * daysForMonth).toFixed(2);
-        var awattar_neu_grundgebuehren = new Decimal(((vendorgrundgebuehr[1] * 12) / daysForYear) * daysForMonth).toFixed(2);
-
-        var awattar_alt = tframe[e].times(1.03).times(1.2).plus(awattar_alt_grundgebuehren);
-        var awattar_neu = tframe[e].plus(tframeKwh[e].times(1.5)).times(1.03).times(1.2).plus(awattar_neu_grundgebuehren);
-        var smartcontrol_alt = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[2]);
-        var smartcontrol_neu = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[3]);
-        var steirerstrom = tframe[e].plus(tframeKwh[e].times(1.2)).times(1.2).plus(vendorgrundgebuehr[4]); // +1.44ct/kWh inkl. 20% USt. = 1.2 * 1.2
-
-        var providers = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom];
-        var minprice = providers[0];
+        var best_price = providers[0].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        var i_best_price = 0;
         for (var i in providers) {
-            if (minprice.greaterThanOrEqualTo(providers[i])) {
-                minprice = providers[i];
+            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+            console.log(typeof(best_price));
+            if (feedin) {
+                if (price.greaterThanOrEqualTo(best_price)) {
+                    best_price = price;
+                    i_best_price = i;
+                }
+            } else {
+                if (best_price.greaterThanOrEqualTo(price)) {
+                    best_price = price;
+                    i_best_price = i;
+                }
             }
         }
         for (var i in providers) {
-            var provider = providers[i];
+            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             content += "<td>";
-            if (minprice.greaterThanOrEqualTo(provider)) {
+            if (i == i_best_price) {
                 content += "<b>";
             }
-            content += provider.dividedBy(100).toFixed(2);
+            content += price.dividedBy(100).toFixed(2);
             content += " &euro; (&rArr; ";
-            content += provider.dividedBy(tframeKwh[e]).toFixed(2);
+            content += price.dividedBy(tframeKwh[e]).toFixed(2);
             content += " ct/kWh)";
-            if (minprice.greaterThanOrEqualTo(provider)) {
+            if (i == i_best_price) {
                 content += "</b>";
             }
             content += "</td>";
@@ -590,185 +609,6 @@ function displayDay(index) {
     oldChart = myChart;
 }
 
-class Netzbetreiber {
-    name = "name";
-    descriptorUsage = "usage";
-    descriptorTimestamp = "timestamp";
-    descriptorTimesub = "timesub";
-    dateFormatString = "foo";
-
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp) {
-        this.name = name;
-        this.descriptorUsage = descriptorUsage;
-        this.descriptorTimestamp = descriptorTimestamp;
-        this.descriptorTimeSub = descriptorTimeSub;
-        this.dateFormatString = dateFormatString;
-        this.usageParser = usageParser;
-        this.otherFields = otherFields;
-        this.shouldSkip = shouldSkip;
-        this.fixupTimestamp = fixupTimestamp;
-    }
-
-    matchUsage(entry) {
-        if (this.descriptorUsage[0] === '!') {
-            /* fuzzy check as we don't know the exact column name */
-            var desc = this.descriptorUsage.substring(1);
-            var entries = Object.keys(entry);
-            for (var e in entries) {
-                if (entries[e].includes(desc)) {
-                    return entries[e];
-                }
-            }
-        } else {
-            if (this.descriptorUsage in entry) {
-                return this.descriptorUsage;
-            }
-        }
-        return null;
-    }
-
-    probe(entry) {
-        if (this.matchUsage(entry) === null) {
-            return false;
-        }
-        if (!(this.descriptorTimestamp in entry)) {
-            return false;
-        }
-        for (var e in this.otherFields) {
-            if (!(this.otherFields[e] in entry)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    processEntry(entry) {
-        if (!this.probe(entry)) {
-            return null;
-        }
-        if (this.shouldSkip !== null && this.shouldSkip(entry)) {
-            return null;
-        }
-
-        var valueTimestamp = entry[this.descriptorTimestamp];
-        if (this.descriptorTimeSub !== null) {
-            valueTimestamp += " " + entry[this.descriptorTimeSub];
-        }
-        var parsedTimestamp = null;
-        if (this.dateFormatString === "parseISO") {
-            parsedTimestamp = parseISO(valueTimestamp);
-        } else {
-            parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
-        }
-
-        var valueUsage = entry[this.matchUsage(entry)];
-        if (valueUsage === "" || valueUsage === undefined) {
-            return null;
-        }
-        var parsedUsage = this.usageParser(valueUsage);
-
-        if (this.fixupTimestamp) {
-            /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
-             * > Messzeitpunkt;Gemessener Verbrauch (kWh);Ersatzwert;
-             * > 10.11.2023 00:15;0,228000;;
-             * > 10.11.2023 00:30;0,197000;;
-             * > [...]
-             * > 10.11.2023 23:45;0,214000;;
-             * > 11.11.2023 00:00;0,397000;;
-            */
-            var MS_PER_MINUTE = 60000;
-            parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
-        }
-
-        return {
-            timestamp: parsedTimestamp,
-            usage: parsedUsage,
-        }
-    }
-};
-
-const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", null, null, null, false);
-
-const NetzNOEVerbrauchv3EEG = new Netzbetreiber("NetzNÖ", "Restnetzbezug (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Eigendeckung (kWh)", "Verbrauch (kWh)", ], null, true);
-
-const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null, true);
-
-const NetzNOEVerbrauchv2 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Qualität"], null, true);
-
-const NetzNOEVerbrauchv3 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), [], null, true);
-
-const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["kW", "Status"], null, false);
-
-const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - Gesamtverbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ende"], null, false);
-
-const NetzBurgenlandv2 = new Netzbetreiber("Netz Burgenland V2", "Verbrauch (in kWh)", "Startdatum", "Startuhrzeit", "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), [/*" Status", */"Enddatum", "Enduhrzeit"], null, false);
-
-const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status"], null, false);
-
-const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel String", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage);
-}), ["Angezeigter Zeitraum"], (function (row) {
-    var valueObiscode = row["Obiscode"];
-    return valueObiscode !== "1.8.0";
-}), true);
-
-const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Zeit bis"], null, false);
-
-const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status"], null, false);
-
-const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null, false);
-
-const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einheitstarif", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
-    return parseFloat(usage);
-}), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null, false);
-
-const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verbrauch", "Verbrauchszeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
-
-
-const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermarkLeistung", "Wert", "Statistikzeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
-
-const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ende der Messreihe"], null, false);
-
-const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["DATE_FROM", "DATE_TO"], null, false);
-
-const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "Verbrauch", "DatumUhrzeit", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Typ", "Anlage", "OBIS-Code", "Einheit"], null, false);
-
-const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
-    return parseFloat(usage);
-}), [], null, true);
-
 function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
@@ -819,8 +659,12 @@ function selectBetreiber(sample) {
         return StadtwerkeKlagenfurt;
     }
     if (NetzNOEEinspeiser.probe(sample)) {
-        displayWarning("Falsche Daten (Einspeisepunkt). Bitte Bezug waehlen");
-        return null;
+        displayWarning("Einpeisung erkannt, verwende Einspeisetarife");
+        return NetzNOEEinspeiser;
+    }
+    if (NetzNOEEinspeiser2.probe(sample)) {
+        displayWarning("Einpeisung erkannt, verwende Einspeisetarife");
+        return NetzNOEEinspeiser2;
     }
     if (NetzNOEVerbrauch.probe(sample)) {
         return NetzNOEVerbrauch;
