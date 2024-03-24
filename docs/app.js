@@ -554,7 +554,7 @@ function displayDay(index) {
         labels: Array.from({length: 25}, (_, i) => i.toString()),
         datasets: [
             {
-                label: 'Verbrauch in kWh',
+                label: 'Verbrauch/Einspeisung in kWh',
                 data: tracker.data[fullday],
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
