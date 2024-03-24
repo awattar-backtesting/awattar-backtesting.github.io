@@ -26,7 +26,9 @@ import {
     EnergienetzeSteiermarkLeistung, 
     VorarlbergNetz, 
     Tinetz, 
-    StadtwerkeKlagenfurt } from "./netzbetreiber.js";
+    StadtwerkeKlagenfurt,
+    IKB
+} from "./netzbetreiber.js";
 
 class Tracker {
     data = {}
