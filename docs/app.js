@@ -148,8 +148,17 @@ warningHolder.style.visibility = 'hidden';
 var dayIndex = 0;
 var oldChart = null;
 
-function genTableInit(datefmt, tariffs) {
-    let content = "<thead><tr class=\"tablethickborderbottom\"> <td>" + datefmt + "</td> <td>Energie</td> <td>Erzielter Ø Preis</td> </td> <td>H0 Lastprofil Ø <sup>1</sup></td> <td>Netto</td> <td class=\"tablethickborderright\">+20% MwSt</td>";
+function genTableInit(datefmt, tariffs, feedin) {
+    let content = "<thead>";
+    content += "<tr class=\"tablethickborderbottom\">"
+    content += "<td>" + datefmt + "</td>";
+    content += "<td>Energie</td>";
+    content += "<td>Erzielter Ø Preis</td>";
+    if (!feedin) {
+        content += "<td>H0 Lastprofil Ø <sup>1</sup></td>";
+    }
+    content += "<td>Netto</td>";
+    content += "<td class=\"tablethickborderright\">+20% MwSt</td>";
     tariffs.forEach (t => {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
         content += "<td>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</td>";
@@ -443,14 +452,14 @@ function calculateCosts(h0Sheet, feedin) {
         tariffs = [smartcontrol_sunny];
     }
 
-    var content = genTableInit("Monat", tariffs);
+    var content = genTableInit("Monat", tariffs, feedin);
     let includeMonthlyFee = true;
     content += drawTableTframe(includeMonthlyFee, months, monthsKwh, monthsH0Norm, monthsH0NormKwh, "yyyyMM", "yyyy-MM", tariffs, feedin);
     costsMonthly.innerHTML = content
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
 
-    content = genTableInit("Datum", tariffs);
+    content = genTableInit("Datum", tariffs, feedin);
     includeMonthlyFee = false;
     content += drawTableTframe(includeMonthlyFee, daily, dailyKwh, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", tariffs, feedin, false);
     costsDaily.innerHTML = content;
@@ -488,14 +497,16 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
 
         var e = tframeArray[idx];
         const timeframePrice = tframe[e].dividedBy(tframeKwh[e]).toFixed(2);
-        const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
-        const h0NormDiff = (timeframePrice - h0Norm);
         const currentDate = format(parse(e, tframeFmt1, new Date()), tframeFmt2);
         content += "<tr>";
         content += "<td><b>" + currentDate + "<b></td>";
         content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
         content += "<td>" + timeframePrice + " ct/kWh</td>";
-        content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
+        if (!feedin) {
+            const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
+            const h0NormDiff = (timeframePrice - h0Norm);
+            content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
+        }
         content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
         content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
 
