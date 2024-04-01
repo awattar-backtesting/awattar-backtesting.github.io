@@ -244,6 +244,8 @@ document.addEventListener("DOMContentLoaded", function() {
                             prevBtn.style.visibility = 'visible';
                             graphDescr.style.visibility = 'visible';
                             nextBtn.style.visibility = 'visible';
+                            costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
+                            costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
                             calculateCosts(h0Sheet, feedin);
                             displayDay(dayIndex);
                         });
