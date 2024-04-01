@@ -157,8 +157,12 @@ function genTableInit(datefmt, tariffs, feedin) {
     if (!feedin) {
         content += "<td>H0 Lastprofil Ø <sup>1</sup></td>";
     }
-    content += "<td>Netto</td>";
-    content += "<td class=\"tablethickborderright\">+20% MwSt</td>";
+    if (!feedin) {
+        content += "<td>Netto</td>";
+        content += "<td class=\"tablethickborderright\">+20% MwSt</td>";
+    } else {
+        content += "<td class=\"tablethickborderright\">Netto</td>";
+    }
     tariffs.forEach (t => {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
         content += "<td>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</td>";
@@ -507,8 +511,12 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
             const h0NormDiff = (timeframePrice - h0Norm);
             content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         }
-        content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-        content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        if (!feedin) {
+            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+        } else {
+            content += "<td class=\"tablethickborderright\">" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+        }
 
         const currentYear = parseInt(currentDate.slice(0, 4), 10);
         const currentMonth = parseInt(currentDate.slice(-2), 10);
