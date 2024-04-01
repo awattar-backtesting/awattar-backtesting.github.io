@@ -4,7 +4,8 @@ import {
     awattar_neu, 
     smartcontrol_alt, 
     smartcontrol_neu, 
-    steirerstrom, 
+    steirerstrom,
+    spotty_direkt,
     smartcontrol_sunny } from "./tariffs.js";
 import { 
     NetzNOEEinspeiser, 
@@ -435,7 +436,7 @@ function calculateCosts(h0Sheet, feedin) {
         monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
 
-    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom];
+    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty_direkt];
     if (feedin) {
         tariffs = [smartcontrol_sunny];
     }
