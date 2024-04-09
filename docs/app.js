@@ -28,7 +28,8 @@ import {
     VorarlbergNetz, 
     Tinetz, 
     StadtwerkeKlagenfurt,
-    IKB
+    IKB,
+    ClamStrom
 } from "./netzbetreiber.js";
 
 class Tracker {
@@ -706,7 +707,9 @@ function selectBetreiber(sample) {
     if (IKB.probe(sample)) {
         return IKB;
     }
-
+    if (ClamStrom.probe(sample)) {
+        return ClamStrom;
+    }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
     return null;

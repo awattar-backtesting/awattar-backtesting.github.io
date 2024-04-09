@@ -166,7 +166,6 @@ export const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark"
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Zaehlpunkt","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
 
-
 export const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermarkLeistung", "Wert", "Statistikzeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Zaehlpunkt","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
@@ -186,3 +185,7 @@ export const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "
 export const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
     return parseFloat(usage);
 }), [], null, true);
+
+export const ClamStrom = new Netzbetreiber("ClamStrom", "Vorschub (kWh) - Verbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss",  (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Ende", "Zählerstand (kWh) - Verbrauch"], null, false);
