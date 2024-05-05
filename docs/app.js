@@ -730,14 +730,32 @@ function stringToBuffer(str) {
 function stripPlain(buf) {
     var input = bufferToString(buf);
     // Kaernten Netz
+    //
+    // v1:
     // > Kundennummer;XXXXXX
     // > Kundenname;YYYYYYYY
     // > ZP-Nummer;ATXXXXX00XXXX0000XX0XXX0XXXXXXXXX
     // > Beginn;01.01.2020
     // > Ende;29.03.2023
     // > Energierichtung;Netzbezug
+    // >
+    // >
+    // > Datum;Zeit;kWh;Status
+    //
+    //
+    // v2:
+    // > Kundennummer;12345678;;
+    // > Kundenname;Mustermann Max;;
+    // > ZP-Nummer;AT0070000XXXX10000000000000XXXXXX;;
+    // > Beginn;27.03.2024;;
+    // > Ende;01.05.2024;;
+    // > Energierichtung;Verbrauch gemessen;;
+    // > ;;;
+    // > ;;;
+    // > Datum;Zeit;kWh;Status
+    //
     if (input.includes("Kundennummer") && input.includes("Kundenname") && input.includes("ZP-Nummer") && input.includes("Energierichtung")) {
-        if (!input.includes("Netzbezug")) {
+        if (!input.includes("Netzbezug") && !input.includes("Verbrauch gemessen")) {
             displayWarning("Falsche Daten (Einspeisepunkt?). Bitte Bezug waehlen");
             return null;
         }
