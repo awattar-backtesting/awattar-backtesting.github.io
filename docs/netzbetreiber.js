@@ -185,3 +185,7 @@ export const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "
 export const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
     return parseFloat(usage);
 }), [], null, true);
+
+export const ClamStrom = new Netzbetreiber("ClamStrom", "Vorschub (kWh) - Verbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss",  (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Ende", "Zählerstand (kWh) - Verbrauch"], null, false);
