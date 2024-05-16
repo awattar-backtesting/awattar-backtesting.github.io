@@ -38,7 +38,7 @@ export const awattar_neu = new Tarif (
     "+3% + 1.80ct/kWh",
     575,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
-        let amount = price.plus(kwh.times(1.5)).times(1.03).times(1.2); 
+        let amount = price.times(1.03).plus(kwh.times(1.5)).times(1.2); 
         if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct*monthly_fee_factor);
         return amount;
     })
