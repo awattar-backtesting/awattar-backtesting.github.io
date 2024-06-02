@@ -162,6 +162,10 @@ export const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einhe
     return parseFloat(usage);
 }), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null, false);
 
+export const StromnetzGrazv2 = new Netzbetreiber("StromnetzGraz V2", "Verbrauch Gesamt - 1.8.0", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
+    return parseFloat(usage);
+}), ["Zaehlerstand Gesamt - 1.8.0", "Zaehlerstand Hochtarif - 1.8.1", "Zaehlerstand Niedertarif - 1.8.2", "Verbrauch Hochtarif - 1.8.1", "Verbrauch Niedertarif - 1.8.2"], null, false);
+
 export const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verbrauch", "Verbrauchszeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);

@@ -22,7 +22,8 @@ import {
     WienerNetze, 
     SalzburgNetz, 
     LinzAG, 
-    StromnetzGraz, 
+    StromnetzGraz,
+    StromnetzGrazv2,
     EnergienetzeSteiermark, 
     EnergienetzeSteiermarkLeistung, 
     VorarlbergNetz, 
@@ -221,7 +222,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var fileContent = event.target.result;
             // console.log("fileContent: ", fileContent);
             fileContent = stripPlain(fileContent);
-            // console.log("fileContent after strip: ", fileContent);
+            console.log("fileContent after strip: ", fileContent);
 
             const bytes = new Uint8Array(fileContent);
             var xls = XLSX.read(bytes, {
@@ -229,7 +230,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
             // console.log("xls: ", xls);
             xls = stripXls(xls);
-            // console.log("after strip, xls: ", xls);
+            console.log("after strip, xls: ", xls);
             fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
             // console.log("csv: ", fileContent);
 
@@ -668,6 +669,9 @@ function selectBetreiber(sample) {
     if (StromnetzGraz.probe(sample)) {
         return StromnetzGraz;
     }
+    if (StromnetzGrazv2.probe(sample)) {
+        return StromnetzGrazv2;
+    }
     if (EnergienetzeSteiermark.probe(sample)) {
         return EnergienetzeSteiermark;
     }
@@ -771,6 +775,11 @@ function stripPlain(buf) {
     var input16le = decodeUTF16LE(buf);
     if (input16le.includes("Vertragskonto;") && input16le.includes("Zählpunkt;")) {
         return stringToBuffer(input16le.split("\n").slice(3).join("\n"));
+    }
+
+    // Stromnetz Graz v2
+    if (input.includes("Lieferrichtung: Bezug;;;;;;;;;") && input.includes("Verbrauch Hochtarif - 1.8.1") && input.includes("Verbrauch Niedertarif - 1.8.2")) {
+        return stringToBuffer(input.split("\n").slice(1).join("\n"));
     }
 
     // NetzBurgenland V2
