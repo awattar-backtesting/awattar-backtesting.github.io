@@ -30,7 +30,8 @@ import {
     Tinetz, 
     StadtwerkeKlagenfurt,
     IKB,
-    ClamStrom
+    ClamStrom,
+    EWWWels,
 } from "./netzbetreiber.js";
 
 class Tracker {
@@ -713,6 +714,9 @@ function selectBetreiber(sample) {
     }
     if (ClamStrom.probe(sample)) {
         return ClamStrom;
+    }
+    if (EWWWels.probe(sample)) {
+        return EWWWels;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);

@@ -8,7 +8,7 @@ export class Netzbetreiber {
     dateFormatString = "foo";
     feedin = false;
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
@@ -18,7 +18,8 @@ export class Netzbetreiber {
         this.otherFields = otherFields;
         this.shouldSkip = shouldSkip;
         this.fixupTimestamp = fixupTimestamp;
-        this.feedin = feedin
+        this.feedin = feedin;
+        this.endDescriptorTimestamp = endDescriptorTimestamp;
     }
 
     matchUsage(entry) {
@@ -90,6 +91,24 @@ export class Netzbetreiber {
             */
             var MS_PER_MINUTE = 60000;
             parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
+        }
+
+        if (this.endDescriptorTimestamp != null) {
+            /* some Netzbetreiber mix the dataset with per-day consumption entries interleaved. Filter them */
+            var endValueTimestamp = entry[this.endDescriptorTimestamp];
+
+            var endParsedTimestamp = null;
+            if (this.dateFormatString === "parseISO") {
+                endParsedTimestamp = parseISO(endValueTimestamp);
+            } else {
+                endParsedTimestamp = parse(endValueTimestamp, this.dateFormatString, new Date())
+            }
+
+            var MS_PER_MINUTE = 60000;
+            if ((endParsedTimestamp - parsedTimestamp) > 15 * MS_PER_MINUTE) {
+                /* not a 15min entry, ignore it */
+                return null;
+            }
         }
 
         return {
@@ -193,3 +212,7 @@ export const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.y
 export const ClamStrom = new Netzbetreiber("ClamStrom", "Vorschub (kWh) - Verbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss",  (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ende", "Zählerstand (kWh) - Verbrauch"], null, false);
+
+export const EWWWels = new Netzbetreiber("eww Wels", "!Netztarif", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
