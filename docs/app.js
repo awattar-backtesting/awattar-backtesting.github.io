@@ -20,6 +20,7 @@ import {
     KaerntenNetz, 
     EbnerStrom, 
     WienerNetze, 
+    WienerNetzeEinspeiser,
     SalzburgNetz, 
     LinzAG, 
     StromnetzGraz,
@@ -660,6 +661,9 @@ function selectBetreiber(sample) {
     }
     if (WienerNetze.probe(sample)) {
         return WienerNetze;
+    }
+    if (WienerNetzeEinspeiser.probe(sample)) {
+        return WienerNetzeEinspeiser;
     }
     if (SalzburgNetz.probe(sample)) {
         return SalzburgNetz;
