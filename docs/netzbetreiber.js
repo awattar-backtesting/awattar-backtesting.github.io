@@ -169,6 +169,10 @@ export const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", 
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null, false);
 
+export const WienerNetzeEinspeiser = new Netzbetreiber("WienerNetze", "!Einspeiser [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Zeit bis"], null, false, true);
+
 export const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null, false);
