@@ -1,34 +1,35 @@
 import { format, add, getHours, parse, parseISO } from "https://cdn.skypack.dev/date-fns@2.16.1";
-import { 
-    awattar_alt, 
-    awattar_neu, 
-    smartcontrol_alt, 
-    smartcontrol_neu, 
+import {
+    awattar_alt,
+    awattar_neu,
+    smartcontrol_alt,
+    smartcontrol_neu,
     steirerstrom,
     spotty_direkt,
     smartcontrol_sunny } from "./tariffs.js";
-import { 
-    NetzNOEEinspeiser, 
-    NetzNOEEinspeiser2, 
-    NetzNOEVerbrauchv3EEG, 
-    NetzNOEVerbrauch, 
-    NetzNOEVerbrauchv2, 
-    NetzNOEVerbrauchv3, 
-    NetzOOE, 
-    NetzBurgenland, 
-    NetzBurgenlandv2, 
-    KaerntenNetz, 
-    EbnerStrom, 
-    WienerNetze, 
+import {
+    NetzNOEEinspeiser,
+    NetzNOEEinspeiser2,
+    NetzNOEVerbrauchv3EEG,
+    NetzNOEVerbrauch,
+    NetzNOEVerbrauchv2,
+    NetzNOEVerbrauchv3,
+    NetzOOE,
+    NetzBurgenland,
+    NetzBurgenlandv2,
+    KaerntenNetz,
+    EbnerStrom,
+    WienerNetze,
     WienerNetzeEinspeiser,
-    SalzburgNetz, 
-    LinzAG, 
+    SalzburgNetz,
+    LinzAG,
     StromnetzGraz,
     StromnetzGrazv2,
-    EnergienetzeSteiermark, 
-    EnergienetzeSteiermarkLeistung, 
-    VorarlbergNetz, 
-    Tinetz, 
+    EnergienetzeSteiermark,
+    EnergienetzeSteiermarkLeistung,
+    EnergienetzeSteiermarkv3,
+    VorarlbergNetz,
+    Tinetz,
     StadtwerkeKlagenfurt,
     IKB,
     ClamStrom,
@@ -230,11 +231,11 @@ document.addEventListener("DOMContentLoaded", function() {
             var xls = XLSX.read(bytes, {
                 raw: 'true'
             });
-            // console.log("xls: ", xls);
+            console.log("xls: ", xls);
             xls = stripXls(xls);
             console.log("after strip, xls: ", xls);
             fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
-            // console.log("csv: ", fileContent);
+            console.log("csv: ", fileContent);
 
             Papa.parse(fileContent, {
                 header: true,
@@ -682,6 +683,9 @@ function selectBetreiber(sample) {
     }
     if (EnergienetzeSteiermarkLeistung.probe(sample)) {
         return EnergienetzeSteiermarkLeistung;
+    }
+    if (EnergienetzeSteiermarkv3.probe(sample)) {
+        return EnergienetzeSteiermarkv3;
     }
     if (VorarlbergNetz.probe(sample)) {
        return VorarlbergNetz;

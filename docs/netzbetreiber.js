@@ -197,6 +197,10 @@ export const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSte
     return parseFloat(usage.replace(",", "."));
 }), ["Anlagennummer","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
 
+export const EnergienetzeSteiermarkv3 = new Netzbetreiber("EnergienetzeSteiermarkv3", "Leistung", "Leistungszeitraum Beginn", null, "dd.MM.yy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Anlagennummer","Tarif","Leistungszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
+
 export const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ende der Messreihe"], null, false);
