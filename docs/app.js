@@ -96,7 +96,7 @@ class Awattar {
         var date = parse(fullday, "yyyyMMdd", new Date());
         var unixStamp = date.getTime();
 
-        const response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
+        const response = await fetchAwattarMarketdata(unixStamp); 
         const d = await response.json();
         var i = 0;
 
@@ -105,6 +105,32 @@ class Awattar {
             this.data[fullday][i]       = new Decimal(d['data'][i].marketprice).dividedBy(10).toFixed(3);
         }
     }
+}
+
+async function fetchAwattarMarketdata(unixStamp) {
+    // cannot access 'x-retry-in' header from response as CORS headers are not returned on failures from Awattar
+    var waitForRetryMillis = 10000;
+
+    var retryFetch = 0;
+    do {
+        var response;
+        try {
+            response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
+        } catch (error) {
+            console.log("Requested failed; will retry to get Awattar market data:", error);
+            retryFetch++;
+        }
+        if (response && response.ok || retryFetch > 10) {
+            return response;
+        } // else
+        if (retryFetch > 0) {
+            await sleep (waitForRetryMillis);
+        }
+    } while (retryFetch > 0);
+}
+
+function sleep (time) {
+    return new Promise((resolve) => setTimeout(resolve, time));
 }
 
 function loadAwattarCache() {
