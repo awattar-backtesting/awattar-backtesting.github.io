@@ -34,6 +34,7 @@ import {
     IKB,
     ClamStrom,
     EWWWels,
+    EWWWelsv2,
 } from "./netzbetreiber.js";
 
 class Tracker {
@@ -725,6 +726,9 @@ function selectBetreiber(sample) {
     }
     if (EWWWels.probe(sample)) {
         return EWWWels;
+    }
+    if (EWWWelsv2.probe(sample)) {
+        return EWWWelsv2;
     }
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);

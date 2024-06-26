@@ -224,3 +224,7 @@ export const ClamStrom = new Netzbetreiber("ClamStrom", "Vorschub (kWh) - Verbra
 export const EWWWels = new Netzbetreiber("eww Wels", "!Netztarif", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
+
+export const EWWWelsv2 = new Netzbetreiber("eww Wels V2", "!Restnetzbezug", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
