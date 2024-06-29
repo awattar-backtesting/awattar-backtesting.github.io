@@ -1,5 +1,7 @@
 import { parse, parseISO } from "https://cdn.skypack.dev/date-fns@2.16.1";
 
+export var listOfNetzbetreiber = [];
+
 export class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
@@ -20,6 +22,7 @@ export class Netzbetreiber {
         this.fixupTimestamp = fixupTimestamp;
         this.feedin = feedin;
         this.endDescriptorTimestamp = endDescriptorTimestamp;
+        listOfNetzbetreiber.push(this);
     }
 
     matchUsage(entry) {

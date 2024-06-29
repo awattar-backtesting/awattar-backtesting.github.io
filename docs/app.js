@@ -8,33 +8,7 @@ import {
     spotty_direkt,
     smartcontrol_sunny } from "./tariffs.js";
 import {
-    NetzNOEEinspeiser,
-    NetzNOEEinspeiser2,
-    NetzNOEVerbrauchv3EEG,
-    NetzNOEVerbrauch,
-    NetzNOEVerbrauchv2,
-    NetzNOEVerbrauchv3,
-    NetzOOE,
-    NetzBurgenland,
-    NetzBurgenlandv2,
-    KaerntenNetz,
-    EbnerStrom,
-    WienerNetze,
-    WienerNetzeEinspeiser,
-    SalzburgNetz,
-    LinzAG,
-    StromnetzGraz,
-    StromnetzGrazv2,
-    EnergienetzeSteiermark,
-    EnergienetzeSteiermarkLeistung,
-    EnergienetzeSteiermarkv3,
-    VorarlbergNetz,
-    Tinetz,
-    StadtwerkeKlagenfurt,
-    IKB,
-    ClamStrom,
-    EWWWels,
-    EWWWelsv2,
+    listOfNetzbetreiber,
 } from "./netzbetreiber.js";
 
 class Tracker {
@@ -646,90 +620,13 @@ function displayWarning(warning) {
 }
 
 function selectBetreiber(sample) {
-    if (NetzOOE.probe(sample)) {
-        return NetzOOE;
+    for (var idx = 0; idx < listOfNetzbetreiber.length; idx++) {
+        var betreiber = listOfNetzbetreiber[idx];
+        if (betreiber.probe(sample)) {
+            return betreiber;
+        }
     }
-    if (NetzBurgenland.probe(sample)) {
-        return NetzBurgenland;
-    }
-    if (NetzBurgenlandv2.probe(sample)) {
-        return NetzBurgenlandv2;
-    }
-    if (KaerntenNetz.probe(sample)) {
-        return KaerntenNetz;
-    }
-    if (EbnerStrom.probe(sample)) {
-        return EbnerStrom;
-    }
-    if (WienerNetze.probe(sample)) {
-        return WienerNetze;
-    }
-    if (WienerNetzeEinspeiser.probe(sample)) {
-        return WienerNetzeEinspeiser;
-    }
-    if (SalzburgNetz.probe(sample)) {
-        return SalzburgNetz;
-    }
-    if (LinzAG.probe(sample)) {
-        return LinzAG;
-    }
-    if (StromnetzGraz.probe(sample)) {
-        return StromnetzGraz;
-    }
-    if (StromnetzGrazv2.probe(sample)) {
-        return StromnetzGrazv2;
-    }
-    if (EnergienetzeSteiermark.probe(sample)) {
-        return EnergienetzeSteiermark;
-    }
-    if (EnergienetzeSteiermarkLeistung.probe(sample)) {
-        return EnergienetzeSteiermarkLeistung;
-    }
-    if (EnergienetzeSteiermarkv3.probe(sample)) {
-        return EnergienetzeSteiermarkv3;
-    }
-    if (VorarlbergNetz.probe(sample)) {
-       return VorarlbergNetz;
-    }
-    if (Tinetz.probe(sample)) {
-       return Tinetz;
-    }
-    if (StadtwerkeKlagenfurt.probe(sample)) {
-        return StadtwerkeKlagenfurt;
-    }
-    if (NetzNOEEinspeiser.probe(sample)) {
-        displayWarning("Einpeisung erkannt, verwende Einspeisetarife");
-        return NetzNOEEinspeiser;
-    }
-    if (NetzNOEEinspeiser2.probe(sample)) {
-        displayWarning("Einpeisung erkannt, verwende Einspeisetarife");
-        return NetzNOEEinspeiser2;
-    }
-    if (NetzNOEVerbrauch.probe(sample)) {
-        return NetzNOEVerbrauch;
-    }
-    if (NetzNOEVerbrauchv2.probe(sample)) {
-        return NetzNOEVerbrauchv2;
-    }
-    if (NetzNOEVerbrauchv3EEG.probe(sample)) {
-        displayWarning("Hinweis: Export enth&auml;lt EEG Verbrauch. Nur tats&auml;chlicher Restbezug wird hier ber&uuml;cksichtigt, <a href=\"https://github.com/awattar-backtesting/awattar-backtesting.github.io/issues/32\">siehe auch</a>.");
-        return NetzNOEVerbrauchv3EEG;
-    }
-    if (NetzNOEVerbrauchv3.probe(sample)) {
-        return NetzNOEVerbrauchv3;
-    }
-    if (IKB.probe(sample)) {
-        return IKB;
-    }
-    if (ClamStrom.probe(sample)) {
-        return ClamStrom;
-    }
-    if (EWWWels.probe(sample)) {
-        return EWWWels;
-    }
-    if (EWWWelsv2.probe(sample)) {
-        return EWWWelsv2;
-    }
+
     displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
     console.log("sample: ", sample);
     return null;
