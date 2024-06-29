@@ -180,6 +180,10 @@ export const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum un
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null, false);
 
+export const SalzburgNetzv4 = new Netzbetreiber("SalzburgNetz V4", "!Restverbrauch", "Datum", null, "dd.MM.yyyy HH:mm:ss", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Status"], null, false);
+
 export const LinzAG = new Netzbetreiber("LinzAG", "Energiemenge in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ersatzwert"], null, false);
