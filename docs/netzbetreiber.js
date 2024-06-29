@@ -172,6 +172,10 @@ export const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", 
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null, false);
 
+export const WienerNetzeEcontrol = new Netzbetreiber("WienerNetze E-Control", "!Verbrauch [kWh]", "Ende Ablesezeitraum", null, "parseISO", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Messintervall"], null, false);
+
 export const WienerNetzeEinspeiser = new Netzbetreiber("WienerNetze", "!Einspeiser [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Zeit bis"], null, false, true);
