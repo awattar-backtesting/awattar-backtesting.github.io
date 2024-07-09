@@ -93,6 +93,7 @@ async function fetchAwattarMarketdata(unixStamp) {
             response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
         } catch (error) {
             console.log("Requested failed; will retry to get Awattar market data:", error);
+            displayWarning("Failed to obtain market data from aWATTar, initiating retry. Please wait a few seconds.");
             retryFetch++;
         }
         if (response && response.ok || retryFetch > 10) {
