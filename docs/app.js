@@ -259,6 +259,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         const lastprofile_sheets = XLSX.read(lastprofile_array);
                         const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
                         await Promise.all(entries).then(data => {
+                            hideWarning();
                             storeAwattarCache(awattar);
                             console.log("final awattar", awattar);
                             prevBtn.style.visibility = 'visible';
@@ -644,6 +645,10 @@ function displayWarning(warning) {
     console.log("Fehler: ", warning);
     warningHolder.innerHTML = warning;
     warningHolder.style.visibility = 'visible';
+}
+
+function hideWarning() {
+    warningHolder.style.visibility = 'hidden';
 }
 
 function selectBetreiber(sample) {
