@@ -32,12 +32,23 @@ export function genMarketdata() {
 }
 
 async function fetchAwattarMarketdata(unixStamp) {
+    /* try cache popluated at github.io first */
+    var response;
+    try {
+        response = await fetch('/cache/' + unixStamp)
+    } catch (error) { }
+    if (response && response.ok) {
+        return response;
+    }
+
+
+    /* otherwise try aWATTar API, be gentle */
+
     // cannot access 'x-retry-in' header from response as CORS headers are not returned on failures from Awattar
     var waitForRetryMillis = 10000;
 
     var retryFetch = 0;
     do {
-        var response;
         try {
             response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp)
         } catch (error) {
