@@ -1,0 +1,150 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "start_timestamp": 1515366000000,
+      "end_timestamp": 1515369600000,
+      "marketprice": 18.91,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515369600000,
+      "end_timestamp": 1515373200000,
+      "marketprice": 15.15,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515373200000,
+      "end_timestamp": 1515376800000,
+      "marketprice": 15.11,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515376800000,
+      "end_timestamp": 1515380400000,
+      "marketprice": 13.42,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515380400000,
+      "end_timestamp": 1515384000000,
+      "marketprice": 12.91,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515384000000,
+      "end_timestamp": 1515387600000,
+      "marketprice": 17.1,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515387600000,
+      "end_timestamp": 1515391200000,
+      "marketprice": 30.03,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515391200000,
+      "end_timestamp": 1515394800000,
+      "marketprice": 42.93,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515394800000,
+      "end_timestamp": 1515398400000,
+      "marketprice": 44.95,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515398400000,
+      "end_timestamp": 1515402000000,
+      "marketprice": 42.57,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515402000000,
+      "end_timestamp": 1515405600000,
+      "marketprice": 41.98,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515405600000,
+      "end_timestamp": 1515409200000,
+      "marketprice": 41.54,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515409200000,
+      "end_timestamp": 1515412800000,
+      "marketprice": 42.9,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515412800000,
+      "end_timestamp": 1515416400000,
+      "marketprice": 42.9,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515416400000,
+      "end_timestamp": 1515420000000,
+      "marketprice": 40.91,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515420000000,
+      "end_timestamp": 1515423600000,
+      "marketprice": 40.97,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515423600000,
+      "end_timestamp": 1515427200000,
+      "marketprice": 39.69,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515427200000,
+      "end_timestamp": 1515430800000,
+      "marketprice": 40.26,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515430800000,
+      "end_timestamp": 1515434400000,
+      "marketprice": 37.99,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515434400000,
+      "end_timestamp": 1515438000000,
+      "marketprice": 31.92,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515438000000,
+      "end_timestamp": 1515441600000,
+      "marketprice": 28.02,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515441600000,
+      "end_timestamp": 1515445200000,
+      "marketprice": 22.35,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515445200000,
+      "end_timestamp": 1515448800000,
+      "marketprice": 22.7,
+      "unit": "Eur/MWh"
+    },
+    {
+      "start_timestamp": 1515448800000,
+      "end_timestamp": 1515452400000,
+      "marketprice": 4.89,
+      "unit": "Eur/MWh"
+    }
+  ],
+  "url": "/at/v1/marketdata"
+}

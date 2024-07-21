@@ -53,7 +53,7 @@ class AwattarState:
 awattarState = AwattarState()
 
 endDate = dtoday = datetime.datetime.now() - datetime.timedelta(days=1)
-startDate = dtoday - datetime.timedelta(days=4*356)
+startDate = dtoday - datetime.timedelta(days=7*356)
 
 iDate = startDate
 
