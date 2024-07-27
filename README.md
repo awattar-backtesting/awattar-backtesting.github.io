@@ -8,4 +8,9 @@ $ /Users/lewurm/.sdkman/candidates/java/current/bin/python3 --version; /Users/le
 GraalPy 3.10.8 (Oracle GraalVM Native 23.0.0)
 dt: 2024-07-27 00:00:00
 unix time stamp: 1722063600000
+
+$ ~/Downloads/graalpy-24.0.2-macos-aarch64/bin/graalpy --version; ~/Downloads/graalpy-24.0.2-macos-aarch64/bin/graalpy build-cache.py
+GraalPy 3.10.13 (Oracle GraalVM Native 24.0.2)
+dt: 2024-07-27 00:00:00
+unix time stamp: 1722063600000
 ```
