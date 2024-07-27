@@ -62,7 +62,7 @@ while iDate < endDate:
     cachefile = "./docs/cache/" + str(timestamp)
     if not os.path.isfile(cachefile):
         timestamp2, jsondump = awattarState._fetch_awattar_day(iDate.day, iDate.month, iDate.year)
-        assert timestamp == timestamp2
+        assert timestamp == timestamp2, f"iDate: {iDate}, timestamp: {timestamp}, timetamp2: {timestamp2}"
         with open(cachefile, 'w') as f:
             f.write(jsondump)
     iDate = iDate + datetime.timedelta(days=1)
