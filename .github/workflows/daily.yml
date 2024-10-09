@@ -16,6 +16,8 @@ jobs:
 
     - name: bump API cache
       run: |
+        uptime
+        python3 --version 
         python3 build-cache.py
         git config --global user.name "API cache bump bot"
         git config --global user.email "lewurm+bot@gmail.com"
