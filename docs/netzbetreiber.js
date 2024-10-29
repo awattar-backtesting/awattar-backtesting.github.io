@@ -10,12 +10,13 @@ export class Netzbetreiber {
     dateFormatString = "foo";
     feedin = false;
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null, preprocessDateString = ()=>{} ) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
         this.descriptorTimeSub = descriptorTimeSub;
         this.dateFormatString = dateFormatString;
+        this.preprocessDateString = preprocessDateString;
         this.usageParser = usageParser;
         this.otherFields = otherFields;
         this.shouldSkip = shouldSkip;
@@ -55,6 +56,9 @@ export class Netzbetreiber {
                 return false;
             }
         }
+        if (this.preprocessDateString(entry.Datum) == null) {
+            return false;
+        }
         return true;
     }
 
@@ -70,6 +74,9 @@ export class Netzbetreiber {
         if (this.descriptorTimeSub !== null) {
             valueTimestamp += " " + entry[this.descriptorTimeSub];
         }
+
+        valueTimestamp = this.preprocessDateString(valueTimestamp);
+
         var parsedTimestamp = null;
         if (this.dateFormatString === "parseISO") {
             parsedTimestamp = parseISO(valueTimestamp);
@@ -226,6 +233,10 @@ export const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, 
 export const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "Verbrauch", "DatumUhrzeit", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Typ", "Anlage", "OBIS-Code", "Einheit"], null, false);
+
+export const StadtwerkeKufstein = new Netzbetreiber("Stadtwerke Kufstein", "!AT005140", "Datum", null, "dd.MM.yyyy HH:mm", (usage) => parseFloat(usage), [], null, false, false, null,
+    // date column contains a range, which is not parseable; drop end-date after dash
+(   dateStr) => dateStr.split("-")[0]);
 
 export const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
     return parseFloat(usage);
