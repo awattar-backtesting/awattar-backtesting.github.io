@@ -10,7 +10,7 @@ export class Netzbetreiber {
     dateFormatString = "foo";
     feedin = false;
 
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null, preprocessDateString = ()=>{} ) {
+    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null, preprocessDateString = (date)=>date ) {
         this.name = name;
         this.descriptorUsage = descriptorUsage;
         this.descriptorTimestamp = descriptorTimestamp;
