@@ -56,7 +56,7 @@ export class Netzbetreiber {
                 return false;
             }
         }
-        if (this.preprocessDateString(entry.Datum) == null) {
+        if ('Datum' in entry && this.preprocessDateString(entry.Datum) == null) {
             return false;
         }
         return true;
