@@ -6,6 +6,7 @@ import {
     smartcontrol_neu,
     steirerstrom,
     spotty_direkt,
+    naturstrom_spot_stunde_ii,
     smartcontrol_sunny } from "./tariffs.js";
 import {
     listOfNetzbetreiber,
@@ -409,7 +410,7 @@ function calculateCosts(h0Sheet, feedin) {
         monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
 
-    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty_direkt];
+    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii];
     if (feedin) {
         tariffs = [smartcontrol_sunny];
     }
