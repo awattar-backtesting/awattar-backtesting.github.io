@@ -24,8 +24,9 @@ export const awattar_alt = new Tarif (
     "+3% Aufschlag<br/>+5,75 EUR Grundpreis<br/>inkl. 20% USt.",
     "+3% Aufschlag",
     575,
-    (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
-        let amount = price.times(1.03).times(1.2); 
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
+        let amount = price.times(factor).times(1.2); 
         if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct*monthly_fee_factor);
         return amount;
     })
@@ -37,8 +38,9 @@ export const awattar_neu = new Tarif (
     "+3% + 1.80ct/kWh<br/>+5,75 EUR Grundpreis<br/>inkl. 20% USt.", 
     "+3% + 1.80ct/kWh",
     575,
-    (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
-        let amount = price.times(1.03).plus(kwh.times(1.5)).times(1.2); 
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
+        let amount = price.times(factor).plus(kwh.times(1.5)).times(1.2); 
         if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct*monthly_fee_factor);
         return amount;
     })
