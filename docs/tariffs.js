@@ -5,15 +5,17 @@ export class Tarif {
     descripton_day = "timestamp";
     grundgebuehr_ct = 0;
     calculate = null;
+    outdated = false;
     einspeise = false;
 
-    constructor(name, tarifflink, description, description_day, grundgebuehr_ct, calculate, einspeise = false) {
+    constructor(name, tarifflink, description, description_day, grundgebuehr_ct, calculate, outdated = false, einspeise = false) {
         this.name = name;
         this.tarifflink = tarifflink;
         this.description = description;
         this.description_day = description_day;
         this.grundgebuehr_ct = grundgebuehr_ct;
         this.calculate = calculate;
+        this.outdated = outdated;
         this.einspeise = einspeise;
     }
 }
@@ -29,7 +31,8 @@ export const awattar_alt = new Tarif (
         let amount = price.times(factor).times(1.2); 
         if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct*monthly_fee_factor);
         return amount;
-    })
+    }),
+    true
 );
 
 export const awattar_neu = new Tarif (
@@ -56,7 +59,8 @@ export const smartcontrol_alt = new Tarif (
         let amount = price.plus(kwh.times(1.2)).times(1.2); 
         if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
-    })
+    }),
+    true
 );
     
 export const smartcontrol_neu = new Tarif (
@@ -136,5 +140,6 @@ export const smartcontrol_sunny = new Tarif (
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
         return price.times(0.8); 
     }),
+    false,
     true
 );

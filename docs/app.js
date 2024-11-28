@@ -453,7 +453,7 @@ function getDaysForMonth(index, leapyear) {
     }
 }
 
-function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, providers, feedin) {
+function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, tariffs, feedin) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
@@ -483,10 +483,16 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const daysForMonth = getDaysForMonth(currentMonth, daysForYear == 366);
         const monthlyFeeFactor = 12 * daysForMonth / daysForYear;
 
-        var best_price = providers[0].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
-        var i_best_price = 0;
-        for (var i in providers) {
-            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        const firstActiveIndex = tariffs.findIndex(provider => !provider.outdated);
+        var best_price = tariffs[firstActiveIndex].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        var i_best_price = firstActiveIndex;
+        for (var i in tariffs) {
+            if(tariffs[i].outdated){
+                console.log(`outdated: ${tariffs[i].name}`)
+                continue;
+            }
+            console.log(`not outdated: ${tariffs[i].name}`)
+            let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             console.log(typeof(best_price));
             if (feedin) {
                 if (price.greaterThanOrEqualTo(best_price)) {
@@ -500,8 +506,8 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
                 }
             }
         }
-        for (var i in providers) {
-            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        for (var i in tariffs) {
+            let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             content += "<td>";
             if (i == i_best_price) {
                 content += "<b>";
