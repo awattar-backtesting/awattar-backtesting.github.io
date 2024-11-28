@@ -124,9 +124,14 @@ function genTableInit(datefmt, tariffs, feedin) {
     }
     tariffs.forEach (t => {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
-        content += "<td>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</td>";
+        content += "<th colspan=2>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</th>";
     })
     content += "</tr></thead>";
+    content += "<td></td><td>kWh</td><td>ct/kWh</td><td>ct/kWh</td><td>Euro</td><td class=\"tablethickborderright\">Euro</td>"
+    tariffs.forEach (t => {
+        content += `<td>Euro</td><td class="tablethickborderrightabit">ct/kWh</td>`;
+    })
+
     return content;
 }
 
@@ -463,18 +468,18 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const currentDate = format(parse(e, tframeFmt1, new Date()), tframeFmt2);
         content += "<tr>";
         content += "<td><b>" + currentDate + "<b></td>";
-        content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
-        content += "<td>" + timeframePrice + " ct/kWh</td>";
+        content += "<td>" + tframeKwh[e].toFixed(2) + "</td>";
+        content += "<td>" + timeframePrice + "</td>";
         if (!feedin) {
             const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
             const h0NormDiff = (timeframePrice - h0Norm);
-            content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
+            content += "<td>" + h0Norm + "<span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         }
         if (!feedin) {
-            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-            content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + "</td>";
+            content += `<td class="tablethickborderright">${tframe[e].times(1.2).dividedBy(100).toFixed(2)}</td>`;
         } else {
-            content += "<td class=\"tablethickborderright\">" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += `<td class="tablethickborderright">${tframe[e].dividedBy(100).toFixed(2)}</td>`;
         }
 
         const currentYear = parseInt(currentDate.slice(0, 4), 10);
@@ -488,10 +493,8 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         var i_best_price = firstActiveIndex;
         for (var i in tariffs) {
             if(tariffs[i].outdated){
-                console.log(`outdated: ${tariffs[i].name}`)
                 continue;
             }
-            console.log(`not outdated: ${tariffs[i].name}`)
             let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             console.log(typeof(best_price));
             if (feedin) {
@@ -507,16 +510,24 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
             }
         }
         for (var i in tariffs) {
+            let isBestPrice = i == i_best_price;
             let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             content += "<td>";
-            if (i == i_best_price) {
+            if (isBestPrice) {
                 content += "<b>";
             }
             content += price.dividedBy(100).toFixed(2);
-            content += " &euro; (&rArr; ";
+            if (isBestPrice) {
+                content += "</b>";
+            }
+            content += "</td>";
+            content += `<td class="tablethickborderrightabit">`;
+            if (isBestPrice) {
+                content += "<b>";
+            }
+
             content += price.dividedBy(tframeKwh[e]).toFixed(2);
-            content += " ct/kWh)";
-            if (i == i_best_price) {
+            if (isBestPrice) {
                 content += "</b>";
             }
             content += "</td>";
