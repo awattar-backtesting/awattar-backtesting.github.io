@@ -99,7 +99,19 @@ export const spotty_direkt = new Tarif (
     })
 );
 
-
+export const naturstrom_spot_stunde_ii = new Tarif(
+    "Naturstrom SPOT Stunde II",
+    "https://aae.at/wp-content/uploads/2024/10/Preisblatt_Naturstrom_SPOT_Stunde_II_p.pdf",
+    "+1.56 ct/kWh<br/>+2,16  EUR Grundpreis<br/>inkl. 20% USt.",
+    "+1.56 ct/kWh",
+    216, // Grundgebühr in Cent (2.16 EUR converted to cents)
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        // Calculate the total cost
+        let amount = price.plus(kwh.times(1.3)).times(1.2); // 1.30 ct/kWh and 20% VAT
+        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        return amount;
+    })
+);
 /* EINSPEISUNG */
 
 export const smartcontrol_sunny = new Tarif (
