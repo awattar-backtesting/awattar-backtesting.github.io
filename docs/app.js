@@ -1,8 +1,6 @@
 import { format, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
 import {
-    awattar_alt,
     awattar_neu,
-    smartcontrol_alt,
     smartcontrol_neu,
     steirerstrom,
     spotty_direkt,
@@ -124,9 +122,14 @@ function genTableInit(datefmt, tariffs, feedin) {
     }
     tariffs.forEach (t => {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
-        content += "<td>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</td>";
+        content += "<th colspan=2>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</th>";
     })
     content += "</tr></thead>";
+    content += "<td></td><td>kWh</td><td>ct/kWh</td><td>ct/kWh</td><td>Euro</td><td class=\"tablethickborderright\">Euro</td>"
+    tariffs.forEach (t => {
+        content += `<td>Euro</td><td class="tablethickborderrightabit">ct/kWh</td>`;
+    })
+
     return content;
 }
 
@@ -410,7 +413,7 @@ function calculateCosts(h0Sheet, feedin) {
         monthsH0Norm[monthKey] = monthsH0Norm[monthKey].plus(sumH0NormPrice);
         monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
-    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
+    var tariffs = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
     if (feedin) {
         tariffs = [smartcontrol_sunny];
     }
@@ -453,7 +456,7 @@ function getDaysForMonth(index, leapyear) {
     }
 }
 
-function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, providers, feedin) {
+function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0NormKwh, tframeFmt1, tframeFmt2, tariffs, feedin) {
     let content = "<tbody>";
     var tframeArray = Object.keys(tframe);
     for (var idx = 0; idx < tframeArray.length; idx++) {
@@ -463,18 +466,18 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const currentDate = format(parse(e, tframeFmt1, new Date()), tframeFmt2);
         content += "<tr>";
         content += "<td><b>" + currentDate + "<b></td>";
-        content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
-        content += "<td>" + timeframePrice + " ct/kWh</td>";
+        content += "<td>" + tframeKwh[e].toFixed(2) + "</td>";
+        content += "<td>" + timeframePrice + "</td>";
         if (!feedin) {
             const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
             const h0NormDiff = (timeframePrice - h0Norm);
-            content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
+            content += "<td>" + h0Norm + "<span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         }
         if (!feedin) {
-            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
-            content += "<td class=\"tablethickborderright\">" + tframe[e].times(1.2).dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + "</td>";
+            content += `<td class="tablethickborderright">${tframe[e].times(1.2).dividedBy(100).toFixed(2)}</td>`;
         } else {
-            content += "<td class=\"tablethickborderright\">" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += `<td class="tablethickborderright">${tframe[e].dividedBy(100).toFixed(2)}</td>`;
         }
 
         const currentYear = parseInt(currentDate.slice(0, 4), 10);
@@ -483,10 +486,10 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const daysForMonth = getDaysForMonth(currentMonth, daysForYear == 366);
         const monthlyFeeFactor = 12 * daysForMonth / daysForYear;
 
-        var best_price = providers[0].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        var best_price = tariffs[0].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
         var i_best_price = 0;
-        for (var i in providers) {
-            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        for (var i in tariffs) {
+            let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             console.log(typeof(best_price));
             if (feedin) {
                 if (price.greaterThanOrEqualTo(best_price)) {
@@ -500,17 +503,25 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
                 }
             }
         }
-        for (var i in providers) {
-            let price = providers[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        for (var i in tariffs) {
+            let isBestPrice = i == i_best_price;
+            let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             content += "<td>";
-            if (i == i_best_price) {
+            if (isBestPrice) {
                 content += "<b>";
             }
             content += price.dividedBy(100).toFixed(2);
-            content += " &euro; (&rArr; ";
+            if (isBestPrice) {
+                content += "</b>";
+            }
+            content += "</td>";
+            content += `<td class="tablethickborderrightabit">`;
+            if (isBestPrice) {
+                content += "<b>";
+            }
+
             content += price.dividedBy(tframeKwh[e]).toFixed(2);
-            content += " ct/kWh)";
-            if (i == i_best_price) {
+            if (isBestPrice) {
                 content += "</b>";
             }
             content += "</td>";

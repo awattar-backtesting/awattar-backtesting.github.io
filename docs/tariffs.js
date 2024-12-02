@@ -18,20 +18,6 @@ export class Tarif {
     }
 }
 
-export const awattar_alt = new Tarif (
-    "aWATTar HOURLY alt", 
-    "https://web.archive.org/web/20230316213722/https://api.awattar.at/v1/templates/1126e217-aa97-4d3e-9fdf-93cd73f04d3f/content?accept-override=application/pdf", 
-    "+3% Aufschlag<br/>+5,75 EUR Grundpreis<br/>inkl. 20% USt.",
-    "+3% Aufschlag",
-    575,
-    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
-        let factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
-        let amount = price.times(factor).times(1.2); 
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct*monthly_fee_factor);
-        return amount;
-    })
-);
-
 export const awattar_neu = new Tarif (
     "aWATTar HOURLY ab 2023/07", 
     "https://web.archive.org/web/20230903185216/https://api.awattar.at/v1/templates/bba9e568-777c-43a7-b181-79de2188439f/content?accept-override=application/pdf", 
@@ -46,19 +32,6 @@ export const awattar_neu = new Tarif (
     })
 );
 
-export const smartcontrol_alt = new Tarif (
-    "smartCONTROL alt", 
-    "https://web.archive.org/web/20230605223615/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf", 
-    "+1.44ct/kWh<br/>+4,99 EUR Grundpreis<br/>inkl. 20% USt.", 
-    "+1.44ct/kWh",
-    499,
-    (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
-        let amount = price.plus(kwh.times(1.2)).times(1.2); 
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
-        return amount;
-    })
-);
-    
 export const smartcontrol_neu = new Tarif (
     "smartCONTROL ab 2023/10", 
     "https://web.archive.org/web/20231103201719/https://www.smartenergy.at/fileadmin/user_upload/downloads/Kundeninformation_und_Preisblatt_-_smartCONTROL.pdf", 
