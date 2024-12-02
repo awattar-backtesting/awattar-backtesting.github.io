@@ -112,6 +112,19 @@ export const naturstrom_spot_stunde_ii = new Tarif(
         return amount;
     })
 );
+
+export const oekostrom_spot = new Tarif(
+    "Ökostrom Spot+",
+    "https://oekostrom.at/wp-content/uploads/joules_tariff_files/78-0_1.1.Produktblatt_oekospotV1_.pdf",
+    "+1.80 ct/kWh<br/>+2,16  EUR Grundpreis<br/>inkl. 20% USt.",
+    "+1.80 ct/kWh",
+    216,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.plus(kwh.times(1.5)).times(1.2); 
+        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        return amount;
+    })
+);
 /* EINSPEISUNG */
 
 export const smartcontrol_sunny = new Tarif (
