@@ -1,8 +1,6 @@
 import { format, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
 import {
-    awattar_alt,
     awattar_neu,
-    smartcontrol_alt,
     smartcontrol_neu,
     steirerstrom,
     spotty_direkt,
@@ -415,7 +413,7 @@ function calculateCosts(h0Sheet, feedin) {
         monthsH0Norm[monthKey] = monthsH0Norm[monthKey].plus(sumH0NormPrice);
         monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
     }
-    var tariffs = [awattar_alt, awattar_neu, smartcontrol_alt, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
+    var tariffs = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
     if (feedin) {
         tariffs = [smartcontrol_sunny];
     }
@@ -488,13 +486,9 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const daysForMonth = getDaysForMonth(currentMonth, daysForYear == 366);
         const monthlyFeeFactor = 12 * daysForMonth / daysForYear;
 
-        const firstActiveIndex = tariffs.findIndex(provider => !provider.outdated);
-        var best_price = tariffs[firstActiveIndex].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
-        var i_best_price = firstActiveIndex;
+        var best_price = tariffs[0].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
+        var i_best_price = 0;
         for (var i in tariffs) {
-            if(tariffs[i].outdated){
-                continue;
-            }
             let price = tariffs[i].calculate(tframe[e], tframeKwh[e], includeMonthlyFee, monthlyFeeFactor);
             console.log(typeof(best_price));
             if (feedin) {
