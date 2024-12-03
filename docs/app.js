@@ -124,13 +124,7 @@ function genTableInit(datefmt, tariffs, feedin) {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
         content += "<th colspan=2>"+ description + "</br>(<a href=\"" + t.tarifflink + "\">" + t.name + "</a>)</th>";
     })
-    content += "</tr></thead>";
-    content += "<td></td><td>kWh</td><td>ct/kWh</td><td>ct/kWh</td><td>Euro</td><td class=\"tablethickborderright\">Euro</td>"
-    tariffs.forEach (t => {
-        content += `<td>Euro</td><td class="tablethickborderrightabit">ct/kWh</td>`;
-    })
-
-    return content;
+    return content + "</tr></thead>";
 }
 
 prevBtn.addEventListener('click', e => {
@@ -466,18 +460,18 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
         const currentDate = format(parse(e, tframeFmt1, new Date()), tframeFmt2);
         content += "<tr>";
         content += "<td><b>" + currentDate + "<b></td>";
-        content += "<td>" + tframeKwh[e].toFixed(2) + "</td>";
-        content += "<td>" + timeframePrice + "</td>";
+        content += "<td>" + tframeKwh[e].toFixed(2) + " kWh</td>";
+        content += "<td>" + timeframePrice + " ct/kWh</td>";
         if (!feedin) {
             const h0Norm = h0NormPrice[e].dividedBy(h0NormKwh[e]).toFixed(2);
             const h0NormDiff = (timeframePrice - h0Norm);
-            content += "<td>" + h0Norm + "<span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
+            content += "<td>" + h0Norm + " ct/kWh <span class=" + getPriceDiffClass(h0NormDiff) + ">(" + h0NormDiff.toFixed(2) + ")</span></td>";
         }
         if (!feedin) {
-            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + "</td>";
-            content += `<td class="tablethickborderright">${tframe[e].times(1.2).dividedBy(100).toFixed(2)}</td>`;
+            content += "<td>" + tframe[e].dividedBy(100).toFixed(2) + " &euro;</td>";
+            content += `<td class="tablethickborderright">${tframe[e].times(1.2).dividedBy(100).toFixed(2)} &euro;</td>`;
         } else {
-            content += `<td class="tablethickborderright">${tframe[e].dividedBy(100).toFixed(2)}</td>`;
+            content += `<td class="tablethickborderright">${tframe[e].dividedBy(100).toFixed(2)} &euro;</td>`;
         }
 
         const currentYear = parseInt(currentDate.slice(0, 4), 10);
@@ -510,7 +504,7 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
             if (isBestPrice) {
                 content += "<b>";
             }
-            content += price.dividedBy(100).toFixed(2);
+            content += price.dividedBy(100).toFixed(2) + " &euro;";
             if (isBestPrice) {
                 content += "</b>";
             }
@@ -520,7 +514,7 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
                 content += "<b>";
             }
 
-            content += price.dividedBy(tframeKwh[e]).toFixed(2);
+            content += price.dividedBy(tframeKwh[e]).toFixed(2) + " ct/kWh";
             if (isBestPrice) {
                 content += "</b>";
             }
