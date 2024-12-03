@@ -115,10 +115,10 @@ function genTableInit(datefmt, tariffs, feedin) {
         content += "<td>H0 Lastprofil Ø <sup>1</sup></td>";
     }
     if (!feedin) {
-        content += "<td>Netto</td>";
-        content += "<td class=\"tablethickborderright\">+20% MwSt</td>";
+        content += "<td>Gesamt Netto</td>";
+        content += "<td class=\"tablethickborderright\">Gesamt +20% MwSt</td>";
     } else {
-        content += "<td class=\"tablethickborderright\">Netto</td>";
+        content += "<td class=\"tablethickborderright\">Gesamt Netto</td>";
     }
     tariffs.forEach (t => {
         let description = (datefmt == "Monat") ? t.description : t.description_day;
