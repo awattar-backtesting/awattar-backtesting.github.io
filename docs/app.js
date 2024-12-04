@@ -149,14 +149,30 @@ document.addEventListener("DOMContentLoaded", function() {
     var coll = document.getElementsByClassName("collapsible");
     var i;
 
+    /* respect potential x-scrollbar in height */
+    const resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+            var content = entry.target;
+            if (content.style.maxHeight && !content.resizedByHook) {
+                var scrollbarHeight = content.offsetHeight - content.clientHeight;
+                if (scrollbarHeight > 0) {
+                    content.style.maxHeight = (content.scrollHeight + scrollbarHeight) + "px";
+                    content.resizedByHook = true;
+                }
+            }
+        }
+    });
+
     for (i = 0; i < coll.length; i++) {
+      resizeObserver.observe(coll[i].nextElementSibling);
       coll[i].addEventListener("click", function() {
         this.classList.toggle("active");
         var content = this.nextElementSibling;
-        if (content.style.maxHeight){
+        if (content.style.maxHeight) {
           content.style.maxHeight = null;
         } else {
           content.style.maxHeight = content.scrollHeight + "px";
+          content.resizedByHook = false;
         }
       });
     }
