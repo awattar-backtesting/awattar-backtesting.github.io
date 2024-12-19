@@ -85,6 +85,7 @@ function storeAwattarCache(a) {
 
 var tracker = null;
 var marketdata= null;
+var usageavg = null;
 
 const prevBtn = document.getElementById('prevBtn');
 const graphDescr = document.getElementById('graphDescr');
@@ -233,6 +234,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
                             costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
                             calculateCosts(h0Sheet, feedin);
+                            calculateDailyAvg();
                             displayDay(dayIndex);
                         });
                     })();
@@ -541,6 +543,49 @@ function drawTableTframe(includeMonthlyFee, tframe, tframeKwh, h0NormPrice, h0No
     return content + "</tbody>";
 }
 
+class DailyUsageAvg {
+    dailyUsageSum = new Array(24);
+    daysIngested = 0;
+
+    constructor() {
+        for (let i = 0; i<24; i++) {
+            this.dailyUsageSum[i] = new Decimal(0.0);
+        }
+    }
+
+    addNewFullday(fullday) {
+        // Check values exist
+        for (let i = 0; i<24; i++) {
+            if(!Decimal.isDecimal(fullday[i]))
+                // Not ingesting if not all 24 elements are Decimal types to keep avg consistent
+                return
+        }
+
+        // Add them to our array
+        for (let i = 0; i<24; i++) {
+            this.dailyUsageSum[i] = Decimal.add(this.dailyUsageSum[i], fullday[i]);
+        }
+
+        // Increase number of days ingested
+        this.daysIngested++;
+    }
+
+    getDailyUsageAvgArray() {
+        let dailyUsageAvg = {};
+        for (let i = 0; i<24; i++) {
+            dailyUsageAvg[i] = this.dailyUsageSum[i].dividedBy(this.daysIngested);
+        }
+        return dailyUsageAvg;
+    }
+}
+
+function calculateDailyAvg() {
+    usageavg = new DailyUsageAvg();
+    for (const [key, value] of Object.entries(tracker.data)) {
+        usageavg.addNewFullday(value);
+    }
+}
+
 function displayDay(index) {
     var fullday = Array.from(tracker.days)[index];
     graphDescr.innerHTML = '' + format(parse(fullday, 'yyyyMMdd', new Date()), 'yyyy-MM-dd');
@@ -569,6 +614,14 @@ function displayDay(index) {
                 fill: false,
                 borderColor: 'rgb(192, 75, 75)',
                 yAxisID: 'y2',
+                tension: 0.1
+            },
+            {
+                label: 'Durchschnittsverbrauch/Einspeisung in kWh (' + usageavg.daysIngested + ' Tage)',
+                data: usageavg.getDailyUsageAvgArray(),
+                fill: false,
+                borderColor: 'rgb(240, 230, 140))',
+                yAxisID: 'y1',
                 tension: 0.1
             },
         ]
