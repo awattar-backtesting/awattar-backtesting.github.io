@@ -138,6 +138,43 @@ button {
   background-color: #555;
 }
 
+/* New styles for the header container and download button */
+.collapsible-header {
+    display: flex;
+    width: 100%;
+    align-items: stretch; /* Make buttons the same height */
+}
+
+.collapsible {
+    flex-grow: 1; /* Make the main button take available space */
+}
+
+.download-btn {
+    background-color: #777;
+    color: white;
+    border: none;
+    padding: 18px;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+/* Sync hover color for the entire header */
+.collapsible-header:hover .collapsible,
+.collapsible-header:hover .download-btn {
+    background-color: #555;
+}
+
+/* Sync active color for the download button when the collapsible is active */
+.collapsible.active,
+.collapsible.active + .download-btn {
+    background-color: #555;
+}
+
+
 .collapsible:after {
   content: '\002B';
   color: white;
@@ -213,12 +250,32 @@ button {
 			<button id="nextBtn">next</button>
 		</div>
 
-        <button class="collapsible" id="costslblMonthly">&Uuml;bersicht Energiekosten/Einspeisung monatlich →</button>
+        <!-- Modified structure for monthly costs table header -->
+        <div class="collapsible-header">
+            <button class="collapsible" id="costslblMonthly" data-table-header="true">&Uuml;bersicht Energiekosten/Einspeisung monatlich →</button>
+            <button class="download-btn" id="downloadMonthlyBtn" title="Download als Excel-Datei">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"></path>
+                </svg>
+                <span style="margin-left: 8px; vertical-align: middle;">Excel Download</span>
+            </button>
+        </div>
         <div class="content">
             <table id="costsMonthly"></table>
         </div>
 
-        <button class="collapsible" id="costslblDaily">&Uuml;bersicht Energiekosten/Einspeisung t&auml;glich →</button>
+        <!-- Modified structure for daily costs table header -->
+        <div class="collapsible-header">
+            <button class="collapsible" id="costslblDaily" data-table-header="true">&Uuml;bersicht Energiekosten/Einspeisung t&auml;glich →</button>
+            <button class="download-btn" id="downloadDailyBtn" title="Download als Excel-Datei">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"></path>
+                </svg>
+                 <span style="margin-left: 8px; vertical-align: middle;">Excel Download</span>
+            </button>
+        </div>
         <div class="content">
             <table id="costsDaily"></table>
         </div>
