@@ -95,6 +95,10 @@ const costsDaily = document.getElementById('costsDaily');
 const costslblMonthly = document.getElementById('costslblMonthly');
 const costslblDaily= document.getElementById('costslblDaily');
 const warningholder = document.getElementById('warningHolder');
+// Get new download buttons
+const downloadMonthlyBtn = document.getElementById('downloadMonthlyBtn');
+const downloadDailyBtn = document.getElementById('downloadDailyBtn');
+
 prevBtn.style.visibility = 'hidden';
 graphDescr.style.visibility = 'hidden';
 nextBtn.style.visibility = 'hidden';
@@ -103,6 +107,10 @@ costsDaily.style.visibility = 'hidden';
 costslblMonthly.style.visibility = 'hidden';
 costslblDaily.style.visibility = 'hidden';
 warningHolder.style.visibility = 'hidden';
+// Hide download buttons initially
+downloadMonthlyBtn.style.visibility = 'hidden';
+downloadDailyBtn.style.visibility = 'hidden';
+
 var dayIndex = 0;
 var oldChart = null;
 
@@ -145,6 +153,278 @@ nextBtn.addEventListener('click', e => {
     displayDay(dayIndex);
 });
 
+// New function to handle complex table export to Excel
+function exportTableToExcel(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+        console.error(`Table with id ${tableId} not found.`);
+        return;
+    }
+
+    const ws_data = [];
+    const merges = [];
+    // Check all header cells, not just the first one
+    const headerCells = table.querySelectorAll('thead tr td');
+    let feedin = true;
+    headerCells.forEach(cell => {
+        if (cell.innerHTML.includes('H0 Lastprofil')) {
+            feedin = false;
+        }
+    });
+    
+    console.log(`Exporting table ${tableId}, feedin mode: ${feedin}`);
+
+    // 1. Process header
+    const headerRows = table.querySelectorAll('thead tr');
+    let headerRowIndex = 0;
+    let deltaColumnInserted = false;
+    let deltaInsertPosition = -1;
+    
+    headerRows.forEach(headerRow => {
+        const rowData = [];
+        const headerCells = headerRow.querySelectorAll('th, td');
+        let colIndex = 0;
+        let h0ColumnIndex = -1;
+        
+        // First pass: collect all headers
+        headerCells.forEach((cell, cellIdx) => {
+            // Extract text more carefully, preserving structure
+            let cellHTML = cell.innerHTML;
+            // Replace <br> with newlines
+            cellHTML = cellHTML.replace(/<br\s*\/?>/gi, '\n');
+            // Remove sup tags but keep their content
+            cellHTML = cellHTML.replace(/<sup[^>]*>/g, '').replace(/<\/sup>/g, '');
+            // Remove anchor tags but keep their content
+            cellHTML = cellHTML.replace(/<a[^>]*>/g, '').replace(/<\/a>/g, '');
+            // Remove any remaining HTML tags
+            cellHTML = cellHTML.replace(/<[^>]+>/g, ' ');
+            // Clean up whitespace
+            const text = cellHTML.replace(/\s+/g, ' ').trim();
+            
+            const colspan = parseInt(cell.getAttribute('colspan') || 1);
+            
+            // Track where H0 column is
+            if (!feedin && text.includes('H0 Lastprofil')) {
+                h0ColumnIndex = rowData.length;
+            }
+            
+            rowData.push(text);
+            
+            // Debug logging for merged cells
+            if (colspan > 1 && text.length > 20) {
+                console.log(`Found merged header at col ${colIndex}: "${text.substring(0, 50)}..." (colspan=${colspan})`);
+            }
+            
+            if (colspan > 1) {
+                merges.push({ 
+                    s: { r: headerRowIndex, c: colIndex }, 
+                    e: { r: headerRowIndex, c: colIndex + colspan - 1 },
+                    rowIndex: headerRowIndex,
+                    startCol: colIndex
+                });
+                // Fill null values for merged cells
+                for (let i = 1; i < colspan; i++) rowData.push(null);
+            }
+            colIndex += colspan;
+        });
+        
+        //Insert delta header after H0 column
+        if (!feedin && h0ColumnIndex >= 0) {
+            rowData.splice(h0ColumnIndex + 1, 0, 'Δ H0 Lastprofil');
+            deltaColumnInserted = true;
+            deltaInsertPosition = h0ColumnIndex + 1;
+        }
+        
+        ws_data.push(rowData);
+        headerRowIndex++;
+    });
+    
+    // Adjust merge ranges if delta column was inserted
+    if (deltaColumnInserted && deltaInsertPosition >= 0) {
+        merges.forEach(merge => {
+            // If the merge starts after or at the delta position, shift it right
+            if (merge.startCol >= deltaInsertPosition) {
+                merge.s.c += 1;
+                merge.e.c += 1;
+            }
+            // If the merge ends after the delta position but starts before, extend it
+            else if (merge.e.c >= deltaInsertPosition) {
+                merge.e.c += 1;
+            }
+        });
+    }
+    
+    // Clean up merge objects (remove temporary properties)
+    const finalMerges = merges.map(m => ({ s: m.s, e: m.e }));
+
+    // 2. Process body
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(bodyRow => {
+        const rowData = [];
+        const bodyCells = bodyRow.querySelectorAll('td');
+        let deltaValue = null;
+
+        // First pass: collect all cell data
+        bodyCells.forEach((cell, cellIndex) => {
+            let cellText = cell.innerText.trim();
+            
+            // Date formatting
+            if (cellIndex === 0) {
+                // Parse the date string and create proper Date object
+                const dateStr = cellText;
+                let dateObj;
+                
+                if (dateStr.includes('-')) {
+                    // Already formatted date (yyyy-MM-dd or yyyy-MM)
+                    const parts = dateStr.split('-');
+                    if (parts.length === 2) {
+                        // Monthly view: yyyy-MM -> first day of month
+                        dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                    } else if (parts.length === 3) {
+                        // Daily view: yyyy-MM-dd
+                        dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    }
+                } else {
+                    // Fallback if date format is unexpected
+                    dateObj = new Date(cellText);
+                }
+                
+                rowData.push(dateObj);
+            } else {
+                // Handle other cells
+                let cleanedText = cellText;
+                
+                // Special handling for H0 column which contains both value and delta span
+                if (!feedin && cellIndex === 3) {
+                    // Extract delta value for later insertion
+                    const deltaSpan = cell.querySelector('span.diff-price-good, span.diff-price-bad');
+                    if (deltaSpan) {
+                        // Extract value from span, remove parentheses and convert to number
+                        let deltaText = deltaSpan.innerText.replace('(', '').replace(')', '').replace(',', '.');
+                        deltaValue = parseFloat(deltaText);
+                    }
+                    
+                    // Extract only the first part before the span element
+                    const spanElement = cell.querySelector('span');
+                    if (spanElement) {
+                        // Get the text content before the span
+                        const textNode = cell.childNodes[0];
+                        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                            cleanedText = textNode.textContent.trim();
+                        }
+                    }
+                }
+                
+                // Clean and parse the text
+                cleanedText = cleanedText.replace('kWh', '').replace('ct/kWh', '').replace('€', '').trim().replace(',', '.');
+                let numericValue = parseFloat(cleanedText);
+
+                if (!isNaN(numericValue)) {
+                    rowData.push(numericValue);
+                } else {
+                    rowData.push(cellText); // Fallback for non-numeric values
+                }
+            }
+        });
+
+        // Insert delta column after H0 column (position 4) if not feedin
+        if (!feedin) {
+            // Insert delta value at position 4 (after Date, Energie, Erzielter Ø, H0)
+            rowData.splice(4, 0, deltaValue);
+            //console.log('Inserted delta value:', deltaValue, 'at position 4. Row length:', rowData.length);
+        }
+        
+        ws_data.push(rowData);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    if (finalMerges.length > 0) ws['!merges'] = finalMerges;
+
+    // 3. Apply formatting
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        // Skip header rows
+        if (R < headerRows.length) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_ref = XLSX.utils.encode_cell({c:C, r:R});
+                if(!ws[cell_ref]) continue;
+                ws[cell_ref].s = { 
+                    font: { bold: true }, 
+                    alignment: { wrapText: true, vertical: 'center', horizontal: 'center' } 
+                };
+            }
+            continue;
+        }
+
+        // Format data rows
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_ref = XLSX.utils.encode_cell({c:C, r:R});
+            if(!ws[cell_ref] || ws[cell_ref].t !== 'n') continue;
+
+            let format_string = null;
+            if (feedin) {
+                // Feedin format strings
+                const feedin_formats = [
+                    'yyyy-mm-dd',           // A: Date
+                    '0.00 "kWh"',          // B: Energie
+                    '0.00 "ct/kWh"',       // C: Erzielter Ø Preis
+                    '#,##0.00 "€"',        // D: Gesamt Netto
+                ];
+                if (C < feedin_formats.length) {
+                    format_string = feedin_formats[C];
+                } else {
+                    // For tariff columns
+                    format_string = (C - 4) % 2 === 0 ? '#,##0.00 "€"' : '0.00 "ct/kWh"';
+                }
+            } else {
+                // CHANGE (1): Define formats for all columns including the new Delta column
+                const formats = [
+                    'yyyy-mm-dd',           // A: Date
+                    '0.00 "kWh"',          // B: Energie
+                    '0.00 "ct/kWh"',       // C: Erzielter Ø Preis
+                    '0.00 "ct/kWh"',       // D: H0 Lastprofil Ø
+                    '[Green][<0]-0.00" ct/kWh";[Red][>0]+0.00" ct/kWh";0.00" ct/kWh"', // E: Δ H0 Lastprofil
+                    '#,##0.00 "€"',        // F: Gesamt Netto
+                    '#,##0.00 "€"',        // G: Gesamt +20% MwSt
+                ];
+                if (C < formats.length) {
+                    format_string = formats[C];
+                } else {
+                    // For tariff columns after the standard columns
+                    format_string = (C - 7) % 2 === 0 ? '#,##0.00 "€"' : '0.00 "ct/kWh"';
+                }
+            }
+            if (format_string) {
+                ws[cell_ref].z = format_string;
+            }
+        }
+    }
+
+    // 4. Auto-calculate column widths
+    const colWidths = ws_data.reduce((acc, row) => {
+        row.forEach((cell, i) => {
+            let len;
+            if (cell instanceof Date) {
+                len = 12; // Fixed width for dates
+            } else if (cell === null || cell === undefined) {
+                len = 15; // Default width for null cells
+            } else {
+                len = (cell || '').toString().length + 2;
+            }
+            if (!acc[i] || len > acc[i].wch) {
+                acc[i] = { wch: Math.max(len, 12) }; // Minimum width of 12
+            }
+        });
+        return acc;
+    }, []);
+    ws['!cols'] = colWidths;
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daten');
+    XLSX.writeFile(wb, filename);
+}
+
+
 document.addEventListener("DOMContentLoaded", function() {
     /* <Collapsible support> */
     var coll = document.getElementsByClassName("collapsible");
@@ -165,19 +445,53 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     for (i = 0; i < coll.length; i++) {
-      resizeObserver.observe(coll[i].nextElementSibling);
+      // Modified logic to find the content element
+      // This handles both the original and the new structure with a wrapper div
+      let contentElement;
+      if (coll[i].dataset.tableHeader) {
+          contentElement = coll[i].parentElement.nextElementSibling;
+      } else {
+          contentElement = coll[i].nextElementSibling;
+      }
+
+      if (contentElement && contentElement.classList.contains('content')) {
+        resizeObserver.observe(contentElement);
+      }
+      
       coll[i].addEventListener("click", function() {
         this.classList.toggle("active");
-        var content = this.nextElementSibling;
-        if (content.style.maxHeight) {
-          content.style.maxHeight = null;
+        
+        // Modified logic to find the content element to expand/collapse
+        var content;
+        if (this.dataset.tableHeader) {
+            // New structure: the content is the next sibling of the parent header
+            content = this.parentElement.nextElementSibling;
         } else {
+            // Original structure: the content is the next sibling
+            content = this.nextElementSibling;
+        }
+        
+        if (content && content.style.maxHeight) {
+          content.style.maxHeight = null;
+        } else if (content) {
           content.style.maxHeight = content.scrollHeight + "px";
           content.resizedByHook = false;
         }
       });
     }
     /* </Collapsible support> */
+
+    // Add event listeners for the new download buttons
+    downloadMonthlyBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent the collapsible from triggering
+        exportTableToExcel('costsMonthly', 'monatsuebersicht.xlsx');
+    });
+
+    downloadDailyBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent the collapsible from triggering
+        exportTableToExcel('costsDaily', 'tagesuebersicht.xlsx');
+    });
+
 
     const fileInputs = document.getElementById('file-form');
 
@@ -191,8 +505,11 @@ document.addEventListener("DOMContentLoaded", function() {
             tracker = new Tracker();
 
             var fileContent = event.target.result;
-            // console.log("fileContent: ", fileContent);
             fileContent = stripPlain(fileContent);
+            // Add a guard against null return from stripPlain
+            if (fileContent === null) {
+                return;
+            }
             console.log("fileContent after strip: ", fileContent);
 
             const bytes = new Uint8Array(fileContent);
@@ -209,7 +526,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 header: true,
                 complete: (results) => {
                     var d = results.data;
+                    // Add a guard for empty or invalid CSV data
+                    if (!d || d.length === 0 || (d.length === 1 && Object.keys(d[0]).length <= 1)) {
+                        displayWarning("Die hochgeladene CSV-Datei ist leer oder enthält keine gültigen Daten.");
+                        return;
+                    }
+
                     var netzbetreiber = selectBetreiber(d[0]);
+                    // Add a guard in case the provider is not identified
+                    if (netzbetreiber === null) {
+                        // displayWarning is already called inside selectBetreiber
+                        return;
+                    }
+
                     var feedin = netzbetreiber.feedin;
                     var i = 0;
                     var entries = [];
@@ -225,6 +554,12 @@ document.addEventListener("DOMContentLoaded", function() {
                         const lastprofile_sheets = XLSX.read(lastprofile_array);
                         const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
                         await Promise.all(entries).then(data => {
+                            // Add a guard to check if any valid data was processed
+                            if (tracker.days.size === 0) {
+                                displayWarning("Keine gültigen 15-Minuten-Verbrauchsdaten in der Datei gefunden. Bitte prüfen Sie die Datei.");
+                                return;
+                            }
+
                             hideWarning();
                             storeAwattarCache(marketdata);
                             console.log("final marketdata", marketdata);
@@ -235,6 +570,8 @@ document.addEventListener("DOMContentLoaded", function() {
                             costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
                             calculateCosts(h0Sheet, feedin);
                             calculateDailyAvg();
+                            // Reset dayIndex to show the first day of the new data
+                            dayIndex = 0;
                             displayDay(dayIndex);
                         });
                     })();
@@ -436,6 +773,7 @@ function calculateCosts(h0Sheet, feedin) {
     costsMonthly.innerHTML = content
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
+    downloadMonthlyBtn.style.visibility = 'visible'; // Show download button
 
     content = genTableInit("Datum", tariffs, feedin);
     includeMonthlyFee = false;
@@ -443,6 +781,7 @@ function calculateCosts(h0Sheet, feedin) {
     costsDaily.innerHTML = content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
+    downloadDailyBtn.style.visibility = 'visible'; // Show download button
 
     /* monthly should be opened by default */
     /* click each one at least once, in order to force refresh */
