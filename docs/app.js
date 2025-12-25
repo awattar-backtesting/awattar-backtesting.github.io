@@ -6,7 +6,9 @@ import {
     spotty_direkt,
     naturstrom_spot_stunde_ii,
     oekostrom_spot,
-    smartcontrol_sunny } from "./tariffs.js";
+    smartcontrol_sunny,
+    awattar_sunny_spot_60,
+    naturstrom_marktpreis_spot_25} from "./tariffs.js";
 import {
     listOfNetzbetreiber,
 } from "./netzbetreiber.js";
@@ -764,7 +766,7 @@ function calculateCosts(h0Sheet, feedin) {
     }
     var tariffs = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
     if (feedin) {
-        tariffs = [smartcontrol_sunny];
+        tariffs = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25];
     }
 
     var content = genTableInit("Monat", tariffs, feedin);
