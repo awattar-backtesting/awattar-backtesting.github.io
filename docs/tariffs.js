@@ -111,3 +111,31 @@ export const smartcontrol_sunny = new Tarif (
     }),
     true
 );
+
+export const awattar_sunny_spot_60 = new Tarif (
+    "aWATTar Sunny Spot 60",
+    "https://api.awattar.at/v1/templates/21331573-7a91-46ef-97da-60a5dcd6295a/content?accept-override=application/pdf",
+    "-19%<br/>-5,75 EUR Grundpreis<br/>inkl. 20% USt",
+    "-19%",
+    575,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.times(1-0.19);
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
+
+export const naturstrom_marktpreis_spot_25 = new Tarif (
+    "Naturstrom Marktpreis SPOT 25",
+    "https://aae.at/wp-content/uploads/2025/10/Sammelmappe_Einspeisung_SPOT_25.pdf",
+    "-1.55 ct/kWh<br/>-5,4 EUR Grundpreis inkl. 20% USt",
+    "-1,55 ct/kWh",
+    540,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.minus(kwh.times(1.55));
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
