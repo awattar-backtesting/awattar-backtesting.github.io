@@ -164,7 +164,7 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
 	let amount = 0;
         let amount_p = price.times(1-0.2);
 	let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
-	if (amount_absolut < amount_p)
+	if (amount_absolut > amount_p)
 	    amount = amount_p;
 	else
 	    amount = amount_absolut;
