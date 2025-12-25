@@ -139,3 +139,38 @@ export const naturstrom_marktpreis_spot_25 = new Tarif (
     }),
     true
 );
+
+export const wels_strom_sonnenstrom_spot = new Tarif (
+    "Wels Strom Sonnenstrom SPOT",
+    "https://www.eww.at/fileadmin/user_upload/downloads/strom/tarife/einspeisetarife/Wels-Strom-Preisblatt-Einspeisetarife.pdf",
+    "-15%<br/>-1,8 EUR Grundpreis inkl. 20% USt",
+    "-15%",
+    180,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.times(1-0.15);
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
+
+export const energie_steiermark_sonnenstrom_spot = new Tarif (
+    "Energie Steiermark Sonnenstrom SPOT",
+    "https://www.e-steiermark.com/fileadmin/user_upload/downloads/E-Steiermark_Tarifblatt_SonnenStrom_Spot.pdf",
+    "-20%, mind -1,2 ct/kWh<br/>kein Grundpreis",
+    "-20%, mind -1,2 ct/kWh",
+    0,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+	let amount = 0;
+        let amount_p = price.times(1-0.2);
+	let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
+	if (amount_absolut < amount_p)
+	    amount = amount_p;
+	else
+	    amount = amount_absolut;
+
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
