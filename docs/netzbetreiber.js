@@ -156,6 +156,10 @@ export const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM
     return parseFloat(usage.replace(",", "."));
 }), ["kW", "Status"], null, false);
 
+export const NetzOOEEinspeiser = new Netzbetreiber("NetzOÖ", "Einspeisung kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["kW", "Status"], null, false, true);
+
 export const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - Gesamtverbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Ende"], null, false);

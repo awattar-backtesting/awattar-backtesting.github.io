@@ -111,3 +111,66 @@ export const smartcontrol_sunny = new Tarif (
     }),
     true
 );
+
+export const awattar_sunny_spot_60 = new Tarif (
+    "aWATTar Sunny Spot 60",
+    "https://api.awattar.at/v1/templates/21331573-7a91-46ef-97da-60a5dcd6295a/content?accept-override=application/pdf",
+    "-19%<br/>-5,75 EUR Grundpreis<br/>inkl. 20% USt",
+    "-19%",
+    575,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.times(1-0.19);
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
+
+export const naturstrom_marktpreis_spot_25 = new Tarif (
+    "Naturstrom Marktpreis SPOT 25",
+    "https://aae.at/wp-content/uploads/2025/10/Sammelmappe_Einspeisung_SPOT_25.pdf",
+    "-1.55 ct/kWh<br/>-5,4 EUR Grundpreis inkl. 20% USt",
+    "-1,55 ct/kWh",
+    540,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.minus(kwh.times(1.55));
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
+
+export const wels_strom_sonnenstrom_spot = new Tarif (
+    "Wels Strom Sonnenstrom SPOT",
+    "https://www.eww.at/fileadmin/user_upload/downloads/strom/tarife/einspeisetarife/Wels-Strom-Preisblatt-Einspeisetarife.pdf",
+    "-15%<br/>-1,8 EUR Grundpreis inkl. 20% USt",
+    "-15%",
+    180,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        let amount = price.times(1-0.15);
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
+
+export const energie_steiermark_sonnenstrom_spot = new Tarif (
+    "Energie Steiermark Sonnenstrom SPOT",
+    "https://www.e-steiermark.com/fileadmin/user_upload/downloads/E-Steiermark_Tarifblatt_SonnenStrom_Spot.pdf",
+    "-20%, mind -1,2 ct/kWh<br/>kein Grundpreis",
+    "-20%, mind -1,2 ct/kWh",
+    0,
+    (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+	let amount = 0;
+        let amount_p = price.times(1-0.2);
+	let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
+	if (amount_absolut > amount_p)
+	    amount = amount_p;
+	else
+	    amount = amount_absolut;
+
+	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	return amount;
+    }),
+    true
+);
