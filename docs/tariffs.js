@@ -120,8 +120,8 @@ export const awattar_sunny_spot_60 = new Tarif (
     575,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.19);
-	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
-	return amount;
+        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
     }),
     true
 );
@@ -134,8 +134,8 @@ export const naturstrom_marktpreis_spot_25 = new Tarif (
     540,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.minus(kwh.times(1.55));
-	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
-	return amount;
+        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
     }),
     true
 );
@@ -148,8 +148,8 @@ export const wels_strom_sonnenstrom_spot = new Tarif (
     180,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.15);
-	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
-	return amount;
+        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
     }),
     true
 );
@@ -161,16 +161,16 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
     "-20%, mind -1,2 ct/kWh",
     0,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
-	let amount = 0;
+        let amount = 0;
         let amount_p = price.times(1-0.2);
-	let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
-	if (amount_absolut > amount_p)
-	    amount = amount_p;
-	else
-	    amount = amount_absolut;
+        let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
+        if (amount_absolut > amount_p)
+            amount = amount_p;
+        else
+            amount = amount_absolut;
 
-	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
-	return amount;
+        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
     }),
     true
 );
