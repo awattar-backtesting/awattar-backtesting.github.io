@@ -9,6 +9,29 @@ import pytz
 def _unix_time_stamp_ms(arg):
     return str(int(arg.timestamp() * 1000))
 
+def _get_timestamp(day, month, year, timezoneinfo):
+    return _unix_time_stamp_ms(_get_timestamp0(day, month, year, timezoneinfo))
+
+def _get_timestamp0(day, month, year, timezoneinfo):
+    dt = datetime.datetime(year = year, month = month, day = day, minute = 0)
+    if timezoneinfo:
+        return timezoneinfo.localize(dt)
+    return dt
+
+
+class EnergyCharts:
+    def __init__(self):
+        self.addr = "https://api.energy-charts.info/price"
+
+    def _fetch_day(self, day, month, year, timezoneinfo):
+        if day is None or month is None or year is None:
+            raise Exception("awattar fetch: day/month/year not specified")
+
+        dt = _get_timestamp0(day, month, year, timezoneinfo)
+        bidding_zone = "AT"
+        u = self.addr + "?start=" + dt.isoformat()
+        print("u: " + str(u))
+
 
 class AwattarState:
     _disk_cache = "awattar_state.pickle"
@@ -19,12 +42,6 @@ class AwattarState:
             self.day_cache = pickle.load(open(self._disk_cache, 'rb'))
         else:
             self.day_cache = {}
-
-    def _get_timestamp(self, day, month, year, timezoneinfo):
-        dt = datetime.datetime(year = year, month = month, day = day, minute = 0)
-        if timezoneinfo:
-            dt = timezoneinfo.localize(dt)
-        return _unix_time_stamp_ms(dt)
 
 
     def _fetch_awattar_day(self, day, month, year, timezoneinfo):
@@ -37,7 +54,7 @@ class AwattarState:
             if isinstance(v, str):
                 return (timestamp, v)
 
-        timestamp = self._get_timestamp(day, month, year, timezoneinfo)
+        timestamp = _get_timestamp(day, month, year, timezoneinfo)
         u = self.addr + "?start=" + timestamp
         while True:
             try:
@@ -62,12 +79,27 @@ startDate = dtoday - datetime.timedelta(days=7*356)
 
 iDate = startDate
 
-while iDate < endDate:
-    timestamp = awattarState._get_timestamp(iDate.day, iDate.month, iDate.year, cet_timezone)
-    cachefile = "./docs/cache60/" + timestamp
-    if not os.path.isfile(cachefile):
-        timestamp2, jsondump = awattarState._fetch_awattar_day(iDate.day, iDate.month, iDate.year, cet_timezone)
-        assert timestamp == timestamp2, f"iDate: {iDate}, timestamp: {timestamp}, timetamp2: {timestamp2}"
-        with open(cachefile, 'w') as f:
-            f.write(jsondump)
-    iDate = iDate + datetime.timedelta(days=1)
+# 60min cache
+if False:
+    while iDate < endDate:
+        timestamp = _get_timestamp(iDate.day, iDate.month, iDate.year, cet_timezone)
+        cachefile = "./docs/cache60/" + timestamp
+        if not os.path.isfile(cachefile):
+            timestamp2, jsondump = awattarState._fetch_awattar_day(iDate.day, iDate.month, iDate.year, cet_timezone)
+            assert timestamp == timestamp2, f"iDate: {iDate}, timestamp: {timestamp}, timetamp2: {timestamp2}"
+            with open(cachefile, 'w') as f:
+                f.write(jsondump)
+        iDate = iDate + datetime.timedelta(days=1)
+
+
+# 15min cache
+endDate = dtoday = cet_timezone.localize(datetime.datetime.now()) - datetime.timedelta(days=1)
+startDate = dtoday - datetime.timedelta(days=2)
+
+iDate = startDate
+
+if True:
+    while iDate < endDate:
+        EnergyCharts()._fetch_day(iDate.day, iDate.month, iDate.year, cet_timezone)
+        iDate = iDate + datetime.timedelta(days=1)
+
