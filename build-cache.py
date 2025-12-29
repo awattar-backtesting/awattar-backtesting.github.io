@@ -5,6 +5,7 @@ import pickle
 import os
 import time
 import pytz
+import json
 
 def _unix_time_stamp_ms(arg):
     return str(int(arg.timestamp() * 1000))
@@ -29,8 +30,24 @@ class EnergyCharts:
 
         dt = _get_timestamp0(day, month, year, timezoneinfo)
         bidding_zone = "AT"
-        u = self.addr + "?start=" + dt.isoformat()
+        u = self.addr + "?start=" + dt.date().isoformat()
         print("u: " + str(u))
+        with urllib.request.urlopen(u) as url:
+            data = json.loads(url.read().decode())
+            print("len price:" + str(len(data['price'])))
+            o = {}
+            o['license_info'] = data['license_info']
+            payload = []
+            for ts, price in zip(data['unix_seconds'], data['price']):
+                tss = int(ts)
+                payload.append({
+                    'start_timestamp': tss * 1000,
+                    'end_timestamp': (tss + 15*60) * 1000,
+                    'marketprice': price,
+                    'unit': data['unit']
+                  })
+            o['data'] = payload
+            return o
 
 
 class AwattarState:
@@ -100,6 +117,10 @@ iDate = startDate
 
 if True:
     while iDate < endDate:
-        EnergyCharts()._fetch_day(iDate.day, iDate.month, iDate.year, cet_timezone)
+        timestamp = _get_timestamp(iDate.day, iDate.month, iDate.year, cet_timezone)
+        cachefile = "./docs/cache15/" + timestamp
+        if not os.path.isfile(cachefile):
+            jsondump = EnergyCharts()._fetch_day(iDate.day, iDate.month, iDate.year, cet_timezone)
+            with open(cachefile, 'w') as f:
+                json.dump(jsondump, f, indent=2)
         iDate = iDate + datetime.timedelta(days=1)
-
