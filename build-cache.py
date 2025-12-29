@@ -21,6 +21,7 @@ def _get_timestamp0(day, month, year, timezoneinfo):
 
 
 class EnergyCharts:
+    _delay = 6 # seconds
     def __init__(self):
         self.addr = "https://api.energy-charts.info/price"
 
@@ -32,22 +33,29 @@ class EnergyCharts:
         bidding_zone = "AT"
         u = self.addr + "?start=" + dt.date().isoformat()
         print("u: " + str(u))
-        with urllib.request.urlopen(u) as url:
-            data = json.loads(url.read().decode())
-            print("len price:" + str(len(data['price'])))
-            o = {}
-            o['license_info'] = data['license_info']
-            payload = []
-            for ts, price in zip(data['unix_seconds'], data['price']):
-                tss = int(ts)
-                payload.append({
-                    'start_timestamp': tss * 1000,
-                    'end_timestamp': (tss + 15*60) * 1000,
-                    'marketprice': price,
-                    'unit': data['unit']
-                  })
-            o['data'] = payload
-            return o
+        while True:
+            try:
+                with urllib.request.urlopen(u) as url:
+                    data = json.loads(url.read().decode())
+                    len_data = len(data['price'])
+                    duration_entry = 24 if len_data < (24 + 2) else 15
+                    print("len price:" + str(len(data['price'])))
+                    o = {}
+                    o['license_info'] = data['license_info']
+                    payload = []
+                    for ts, price in zip(data['unix_seconds'], data['price']):
+                        tss = int(ts)
+                        payload.append({
+                            'start_timestamp': tss * 1000,
+                            'end_timestamp': (tss + duration_entry * 60) * 1000,
+                            'marketprice': price,
+                            'unit': data['unit']
+                          })
+                    o['data'] = payload
+                    return o
+            except:
+                print("too many requests")
+                time.sleep(self._delay)
 
 
 class AwattarState:
@@ -111,7 +119,7 @@ if False:
 
 # 15min cache
 endDate = dtoday = cet_timezone.localize(datetime.datetime.now()) - datetime.timedelta(days=1)
-startDate = dtoday - datetime.timedelta(days=2)
+startDate = cet_timezone.localize(datetime.datetime(2025, 9, 30, 0, 0))
 
 iDate = startDate
 
@@ -124,3 +132,4 @@ if True:
             with open(cachefile, 'w') as f:
                 json.dump(jsondump, f, indent=2)
         iDate = iDate + datetime.timedelta(days=1)
+
