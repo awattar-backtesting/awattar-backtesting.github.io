@@ -175,6 +175,7 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
     "-20%, min. -1,2 ct/kWh",
     0,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        // TODO: we need to calculate the fee based on each EPEX hour.
         let amount = new Decimal(Math.max(price.times(1 - 0.2), price.minus(kwh.times(1.2))));
         if (include_monthly_fee) {
             amount = amount.minus(this.grundgebuehr_ct);
