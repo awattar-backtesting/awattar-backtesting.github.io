@@ -1,3 +1,4 @@
+const EINSPEISUNG = true;
 export class Tarif {
     name = "name";
     tarifflink = "link";
@@ -113,7 +114,7 @@ export const smartcontrol_sunny = new Tarif (
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) { 
         return price.times(0.8); 
     }),
-    true
+    EINSPEISUNG
 );
 
 export const awattar_sunny_spot_60 = new Tarif (
@@ -129,7 +130,7 @@ export const awattar_sunny_spot_60 = new Tarif (
         }
         return amount;
     }),
-    true
+    EINSPEISUNG
 );
 
 export const naturstrom_marktpreis_spot_25 = new Tarif (
@@ -145,7 +146,7 @@ export const naturstrom_marktpreis_spot_25 = new Tarif (
         }
         return amount;
     }),
-    true
+    EINSPEISUNG
 );
 
 export const wels_strom_sonnenstrom_spot = new Tarif (
@@ -161,7 +162,7 @@ export const wels_strom_sonnenstrom_spot = new Tarif (
         }
         return amount;
     }),
-    true
+    EINSPEISUNG
 );
 
 export const energie_steiermark_sonnenstrom_spot = new Tarif (
@@ -185,5 +186,5 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
         }
         return amount;
     }),
-    true
+    EINSPEISUNG
 );
