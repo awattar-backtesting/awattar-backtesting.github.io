@@ -64,7 +64,7 @@ iDate = startDate
 
 while iDate < endDate:
     timestamp = awattarState._get_timestamp(iDate.day, iDate.month, iDate.year, cet_timezone)
-    cachefile = "./docs/cache/" + timestamp
+    cachefile = "./docs/cache60/" + timestamp
     if not os.path.isfile(cachefile):
         timestamp2, jsondump = awattarState._fetch_awattar_day(iDate.day, iDate.month, iDate.year, cet_timezone)
         assert timestamp == timestamp2, f"iDate: {iDate}, timestamp: {timestamp}, timetamp2: {timestamp2}"

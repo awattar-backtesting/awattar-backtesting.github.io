@@ -35,7 +35,7 @@ async function fetchAwattarMarketdata(unixStamp) {
     /* try cache popluated at github.io first */
     var response;
     try {
-        response = await fetch('/cache/' + unixStamp)
+        response = await fetch('/cache60/' + unixStamp)
     } catch (error) { }
     if (response && response.ok) {
         return response;
