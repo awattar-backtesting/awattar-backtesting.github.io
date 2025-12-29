@@ -120,7 +120,7 @@ export const awattar_sunny_spot_60 = new Tarif (
     575,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.19);
-	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
 	return amount;
     }),
     true
@@ -134,7 +134,7 @@ export const naturstrom_marktpreis_spot_25 = new Tarif (
     540,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.minus(kwh.times(1.55));
-	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
 	return amount;
     }),
     true
@@ -148,7 +148,7 @@ export const wels_strom_sonnenstrom_spot = new Tarif (
     180,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.15);
-	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
 	return amount;
     }),
     true
@@ -169,7 +169,7 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
 	else
 	    amount = amount_absolut;
 
-	if (include_monthly_fee) amount.minus(this.grundgebuehr_ct);
+	if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
 	return amount;
     }),
     true
