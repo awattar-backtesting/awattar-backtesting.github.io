@@ -81,7 +81,9 @@ export const naturstrom_spot_stunde_ii = new Tarif(
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         // Calculate the total cost
         let amount = price.plus(kwh.times(1.3)).times(1.2); // 1.30 ct/kWh and 20% VAT
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.plus(this.grundgebuehr_ct);
+        }
         return amount;
     })
 );
@@ -94,7 +96,9 @@ export const oekostrom_spot = new Tarif(
     216,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.plus(kwh.times(1.5)).times(1.2); 
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.plus(this.grundgebuehr_ct);
+        }
         return amount;
     })
 );
@@ -120,7 +124,9 @@ export const awattar_sunny_spot_60 = new Tarif (
     575,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.19);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.minus(this.grundgebuehr_ct);
+        }
         return amount;
     }),
     true
@@ -134,7 +140,9 @@ export const naturstrom_marktpreis_spot_25 = new Tarif (
     540,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.minus(kwh.times(1.55));
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.minus(this.grundgebuehr_ct);
+        }
         return amount;
     }),
     true
@@ -148,7 +156,9 @@ export const wels_strom_sonnenstrom_spot = new Tarif (
     180,
     (function (price, kwh, include_monthly_fee, monthly_fee_factor) {
         let amount = price.times(1-0.15);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.minus(this.grundgebuehr_ct);
+        }
         return amount;
     }),
     true
@@ -164,12 +174,15 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif (
         let amount = 0;
         let amount_p = price.times(1-0.2);
         let amount_absolut = price.minus(kwh.times(1.2)); // min 1.2 ct / kWh
-        if (amount_absolut > amount_p)
+        if (amount_absolut > amount_p) {
             amount = amount_p;
-        else
+        } else {
             amount = amount_absolut;
+        }
 
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (include_monthly_fee) {
+            amount = amount.minus(this.grundgebuehr_ct);
+        }
         return amount;
     }),
     true
