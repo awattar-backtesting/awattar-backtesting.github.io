@@ -23,7 +23,7 @@ jobs:
         python3 build-cache.py
         git config --global user.name "API cache bump bot"
         git config --global user.email "lewurm+bot@gmail.com"
-        git add docs/cache
+        git add docs/cache60
         git commit -m "api cache: update"
         git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/awattar-backtesting/awattar-backtesting.github.io.git main
       env:
