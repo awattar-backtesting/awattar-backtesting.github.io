@@ -1209,5 +1209,15 @@ function stripXls(xls) {
         /* delete "Zaehlpunkt" row, it confuses the CSV parser */
         delete_row(first_ws, 1);
     }
+    
+    // kwg.at
+    // > Lastprofil
+    // > Daten 1:  Verbrauch lt. Messung IME
+    // > Datum  Daten 1
+    if (first_ws.A1.v.includes("Lastprofil") && first_ws.A2.v.includes("Daten 1:  Verbrauch lt. Messung IME")) {
+        delete_row(first_ws, 0);
+        /* after deleting first row, the second row jumps up; so we need to delete again row 0 to actually delete the second row */
+        delete_row(first_ws, 0);
+    }
     return xls;
 }

@@ -257,3 +257,7 @@ export const EWWWels = new Netzbetreiber("eww Wels", "!Netztarif", "BeginDate", 
 export const EWWWelsv2 = new Netzbetreiber("eww Wels V2", "!Restnetzbezug", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
+
+export const KWG = new Netzbetreiber("NetzKWG", "Daten 1", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), [], null, true);
