@@ -172,6 +172,10 @@ export const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Z
     return parseFloat(usage.replace(",", "."));
 }), ["Status"], null, false);
 
+export const KaerntenNetz2025 = new Netzbetreiber("KaerntenNetz2025", "Wert", "Startdatum", null, "dd.MM.yyyy HH:mm", (function (usage) {
+    return parseFloat(usage.replace(",", "."));
+}), ["Startdatum", "Enddatum", "Zählpunktbezeichnung", "OBIS", "OBIS Kurzbeschreibung", "Wert", "Einheit"], null, false);
+
 export const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel String", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage);
 }), ["Angezeigter Zeitraum"], (function (row) {
