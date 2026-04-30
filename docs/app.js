@@ -1,7 +1,6 @@
 import { format, parse } from "date-fns";
 import Decimal from "decimal.js";
 import * as XLSX from "xlsx";
-import Papa from "papaparse";
 import {
     awattar_neu,
     smartcontrol_neu,
@@ -15,19 +14,10 @@ import {
     wels_strom_sonnenstrom_spot,
     energie_steiermark_sonnenstrom_spot} from "./tariffs.js";
 import {
-    listOfNetzbetreiber,
-} from "./netzbetreiber.js";
-import {
     Marketdata,
     createBrowserFetcher,
 } from "./marketdata.js";
-import {
-    stripPlain,
-    stripXls,
-} from "./calc/preprocess.js";
-import { Tracker } from "./calc/tracker.js";
-import { computeH0Day } from "./calc/h0.js";
-import { aggregateCosts } from "./calc/costs.js";
+import { runPipeline } from "./calc/pipeline.js";
 
 
 function loadAwattarCache() {
@@ -471,80 +461,43 @@ document.addEventListener("DOMContentLoaded", function() {
         const reader = new FileReader();
 
         reader.onload = (event) => {
-            /* reset state */
             marketdata = loadAwattarCache();
-            tracker = new Tracker();
+            const bytes = event.target.result;
 
-            var fileContent = event.target.result;
-            fileContent = stripPlain(fileContent, displayWarning);
-            // Add a guard against null return from stripPlain
-            if (fileContent === null) {
-                return;
-            }
-            console.log("fileContent after strip: ", fileContent);
+            (async () => {
+                const lastprofile_array = await (await fetch('./lastprofile.xls')).arrayBuffer();
+                const lastprofile_sheets = XLSX.read(lastprofile_array);
+                const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
 
-            const bytes = new Uint8Array(fileContent);
-            var xls = XLSX.read(bytes, {
-                raw: 'true'
-            });
-            console.log("xls: ", xls);
-            xls = stripXls(xls);
-            console.log("after strip, xls: ", xls);
-            fileContent = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
-            console.log("csv: ", fileContent);
-
-            Papa.parse(fileContent, {
-                header: true,
-                complete: (results) => {
-                    var d = results.data;
-                    // Add a guard for empty or invalid CSV data
-                    if (!d || d.length === 0 || (d.length === 1 && Object.keys(d[0]).length <= 1)) {
-                        displayWarning("Die hochgeladene CSV-Datei ist leer oder enthält keine gültigen Daten.");
-                        return;
+                const result = await runPipeline({
+                    bytes,
+                    h0Sheet,
+                    marketdata,
+                    onWarning: displayWarning,
+                });
+                if (!result.ok) {
+                    if (result.reason === "unknown netzbetreiber") {
+                        console.log("sample: ", result.sample);
                     }
-
-                    var netzbetreiber = selectBetreiber(d[0]);
-                    // Add a guard in case the provider is not identified
-                    if (netzbetreiber === null) {
-                        // displayWarning is already called inside selectBetreiber
-                        return;
-                    }
-
-                    var feedin = netzbetreiber.feedin;
-                    for (var i = 0; i < d.length; i++) {
-                        tracker.addEntry(netzbetreiber, d[i]);
-                    }
-                    tracker.postProcess();
-
-                    (async () => {
-                        const lastprofile_array = await (await fetch('./lastprofile.xls')).arrayBuffer();
-                        const lastprofile_sheets = XLSX.read(lastprofile_array);
-                        const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
-                        const dayFetches = Array.from(tracker.days).map(d => marketdata.addDay(d));
-                        await Promise.all(dayFetches);
-
-                        // Add a guard to check if any valid data was processed
-                        if (tracker.days.size === 0) {
-                            displayWarning("Keine gültigen 15-Minuten-Verbrauchsdaten in der Datei gefunden. Bitte prüfen Sie die Datei.");
-                            return;
-                        }
-
-                        hideWarning();
-                        storeAwattarCache(marketdata);
-                        console.log("final marketdata", marketdata);
-                        prevBtn.style.visibility = 'visible';
-                        graphDescr.style.visibility = 'visible';
-                        nextBtn.style.visibility = 'visible';
-                        costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
-                        costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
-                        calculateCosts(h0Sheet, feedin);
-                        calculateDailyAvg();
-                        // Reset dayIndex to show the first day of the new data
-                        dayIndex = 0;
-                        displayDay(dayIndex);
-                    })();
+                    return;
                 }
-            });
+
+                tracker = result.tracker;
+                const feedin = result.feedin;
+
+                hideWarning();
+                storeAwattarCache(marketdata);
+                console.log("final marketdata", marketdata);
+                prevBtn.style.visibility = 'visible';
+                graphDescr.style.visibility = 'visible';
+                nextBtn.style.visibility = 'visible';
+                costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
+                costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
+                renderCostTables(result.daily, result.monthly, feedin);
+                calculateDailyAvg();
+                dayIndex = 0;
+                displayDay(dayIndex);
+            })();
         };
         for (let file of fileInputs[0].files) {
             reader.readAsArrayBuffer(file)
@@ -553,8 +506,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-function calculateCosts(h0Sheet, feedin) {
-    const { daily, monthly } = aggregateCosts(tracker, marketdata, h0Sheet);
+function renderCostTables(daily, monthly, feedin) {
     const monthlyMaps = bucketsToFlatMaps(monthly);
     const dailyMaps = bucketsToFlatMaps(daily);
 
@@ -821,17 +773,3 @@ function displayWarning(warning) {
 function hideWarning() {
     warningHolder.style.visibility = 'hidden';
 }
-
-function selectBetreiber(sample) {
-    for (var idx = 0; idx < listOfNetzbetreiber.length; idx++) {
-        var betreiber = listOfNetzbetreiber[idx];
-        if (betreiber.probe(sample)) {
-            return betreiber;
-        }
-    }
-
-    displayWarning("Netzbetreiber fuer Upload unbekannt, check console");
-    console.log("sample: ", sample);
-    return null;
-}
-
