@@ -27,6 +27,7 @@ import {
 } from "./calc/preprocess.js";
 import { Tracker } from "./calc/tracker.js";
 import { computeH0Day } from "./calc/h0.js";
+import { aggregateCosts } from "./calc/costs.js";
 
 
 function loadAwattarCache() {
@@ -553,86 +554,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 function calculateCosts(h0Sheet, feedin) {
-    console.log("tracker: ", tracker);
-    var months = {}
-    var monthsKwh = {}
-    var monthsH0Norm = {}
-    var monthsH0NormKwh = {}
+    const { daily, monthly } = aggregateCosts(tracker, marketdata, h0Sheet);
+    const monthlyMaps = bucketsToFlatMaps(monthly);
+    const dailyMaps = bucketsToFlatMaps(daily);
 
-    let daily = {}
-    let dailyKwh = {}
-    let dailyH0Norm = {}
-    let dailyH0NormKwh = {}
-
-    var days = Array.from(tracker.days);
-    for (var idx = 0; idx < days.length; idx++) {
-        var day = days[idx];
-        var monthKey = day.substring(0, 6);
-
-        let dayKey = day;
-        if (!(dayKey in daily)) {
-            daily[dayKey] = new Decimal(0.0);
-        }
-        if (!(dayKey in dailyKwh)) {
-            dailyKwh[dayKey] = new Decimal(0.0);
-        }
-        if (!(dayKey in dailyH0Norm)) {
-            dailyH0Norm[dayKey] = new Decimal(0.0);
-        }
-        if (!(dayKey in dailyH0NormKwh)) {
-            dailyH0NormKwh[dayKey] = new Decimal(0.0);
-        }
-
-        if (!(monthKey in months)) {
-            months[monthKey] = new Decimal(0.0);
-        }
-        if (!(monthKey in monthsKwh)) {
-            monthsKwh[monthKey] = new Decimal(0.0);
-        }
-        if (!(monthKey in monthsH0Norm)) {
-            monthsH0Norm[monthKey] = new Decimal(0.0);
-        }
-        if (!(monthKey in monthsH0NormKwh)) {
-            monthsH0NormKwh[monthKey] = new Decimal(0.0);
-        }
-
-        var len = Array.from(Object.keys(tracker.data[day])).length;
-        var usages = tracker.data[day];
-        var prices = marketdata.data[day];
-        var sumPrice = new Decimal(0.0);
-        var sumKwh = new Decimal(0.0);
-        var sumH0NormPrice = new Decimal(0.0);
-        var sumH0NormKwh = new Decimal(0.0);
-
-        const h0DayProfile = computeH0Day(h0Sheet, day);
-
-        Object.keys(tracker.data[day]).forEach(hour => {
-            var dUsage = usages[hour];
-            var dPrice = new Decimal(prices[hour]);
-
-            sumPrice = sumPrice.plus(dUsage.times(dPrice));
-            sumKwh = sumKwh.plus(dUsage);
-            // console.log("dPrice: ", dPrice.toFixed(2));
-            // console.log("sumPrice: ", sumPrice.toFixed(2));
-
-            const h0KwhInHour = new Decimal(h0DayProfile[hour]);
-            sumH0NormKwh = sumH0NormKwh.plus(h0KwhInHour);
-            const h0PriceOfHour = h0KwhInHour.times(prices[hour]);
-            sumH0NormPrice = sumH0NormPrice.plus(h0PriceOfHour);
-        });
-
-        daily[dayKey] = daily[dayKey].plus(sumPrice);
-        dailyKwh[dayKey] = dailyKwh[dayKey].plus(sumKwh);
-
-        dailyH0Norm[dayKey] = dailyH0Norm[dayKey].plus(sumH0NormPrice);
-        dailyH0NormKwh[dayKey] = dailyH0NormKwh[dayKey].plus(sumH0NormKwh);
-
-        months[monthKey] = months[monthKey].plus(sumPrice);
-        monthsKwh[monthKey] = monthsKwh[monthKey].plus(sumKwh);
-
-        monthsH0Norm[monthKey] = monthsH0Norm[monthKey].plus(sumH0NormPrice);
-        monthsH0NormKwh[monthKey] = monthsH0NormKwh[monthKey].plus(sumH0NormKwh);
-    }
     var tariffs = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
     if (feedin) {
         tariffs = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot/* , energie_steiermark_sonnenstrom_spot */];
@@ -640,7 +565,7 @@ function calculateCosts(h0Sheet, feedin) {
 
     var content = genTableInit("Monat", tariffs, feedin);
     let includeMonthlyFee = true;
-    content += drawTableTframe(includeMonthlyFee, months, monthsKwh, monthsH0Norm, monthsH0NormKwh, "yyyyMM", "yyyy-MM", tariffs, feedin);
+    content += drawTableTframe(includeMonthlyFee, monthlyMaps.price, monthlyMaps.kwh, monthlyMaps.h0Price, monthlyMaps.h0Kwh, "yyyyMM", "yyyy-MM", tariffs, feedin);
     costsMonthly.innerHTML = content
     costsMonthly.style.visibility = 'visible';
     costslblMonthly.style.visibility = 'visible';
@@ -648,7 +573,7 @@ function calculateCosts(h0Sheet, feedin) {
 
     content = genTableInit("Datum", tariffs, feedin);
     includeMonthlyFee = false;
-    content += drawTableTframe(includeMonthlyFee, daily, dailyKwh, dailyH0Norm, dailyH0NormKwh, "yyyyMMdd", "yyyy-MM-dd", tariffs, feedin, false);
+    content += drawTableTframe(includeMonthlyFee, dailyMaps.price, dailyMaps.kwh, dailyMaps.h0Price, dailyMaps.h0Kwh, "yyyyMMdd", "yyyy-MM-dd", tariffs, feedin, false);
     costsDaily.innerHTML = content;
     costsDaily.style.visibility = 'visible';
     costslblDaily.style.visibility = 'visible';
@@ -664,6 +589,17 @@ function calculateCosts(h0Sheet, feedin) {
     if (costslblDaily.classList.contains("active")) {
         costslblDaily.click();
     }
+}
+
+function bucketsToFlatMaps(buckets) {
+    const price = {}, kwh = {}, h0Price = {}, h0Kwh = {};
+    for (const [key, b] of Object.entries(buckets)) {
+        price[key] = b.priceCents;
+        kwh[key] = b.kwh;
+        h0Price[key] = b.h0NormPriceCents;
+        h0Kwh[key] = b.h0NormKwh;
+    }
+    return { price, kwh, h0Price, h0Kwh };
 }
 
 const getPriceDiffClass = (diff) => diff < 0 ? 'diff-price-good' : 'diff-price-bad';
