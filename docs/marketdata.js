@@ -1,4 +1,5 @@
-import { parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
+import { parse } from "date-fns";
+import Decimal from "decimal.js";
 
 export class Marketdata {
     data = {}

@@ -1,4 +1,4 @@
-import { parse, parseISO } from "https://cdn.skypack.dev/date-fns@2.16.1";
+import { parse, parseISO } from "date-fns";
 
 export var listOfNetzbetreiber = [];
 

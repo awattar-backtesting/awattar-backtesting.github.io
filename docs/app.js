@@ -1,4 +1,7 @@
-import { format, parse } from "https://cdn.skypack.dev/date-fns@2.16.1";
+import { format, parse } from "date-fns";
+import Decimal from "decimal.js";
+import * as XLSX from "xlsx";
+import Papa from "papaparse";
 import {
     awattar_neu,
     smartcontrol_neu,

@@ -1,3 +1,5 @@
+import Decimal from "decimal.js";
+
 const EINSPEISUNG = true;
 export class Tarif {
     name = "name";
