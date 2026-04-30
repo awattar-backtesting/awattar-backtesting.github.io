@@ -19,6 +19,7 @@ import {
 } from "./netzbetreiber.js";
 import {
     Marketdata,
+    createBrowserFetcher,
 } from "./marketdata.js";
 import {
     stripPlain,
@@ -29,7 +30,7 @@ import { computeH0Day } from "./calc/h0.js";
 
 
 function loadAwattarCache() {
-    var a = new Marketdata();
+    var a = new Marketdata(createBrowserFetcher(displayWarning));
     var cache = localStorage.getItem('awattarCache');
     if (cache === null) {
         return a;
