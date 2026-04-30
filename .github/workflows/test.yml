@@ -8,6 +8,11 @@ on:
 jobs:
   vitest:
     runs-on: ubuntu-latest
+    env:
+      # Cache files in docs/cache60/ are keyed by the local-midnight unix
+      # timestamp on a CET/CEST system. Pin the runner TZ so date parsing
+      # produces the same keys.
+      TZ: Europe/Vienna
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
