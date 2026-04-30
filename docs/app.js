@@ -24,51 +24,9 @@ import {
     stripPlain,
     stripXls,
 } from "./calc/preprocess.js";
+import { Tracker } from "./calc/tracker.js";
+import { computeH0Day } from "./calc/h0.js";
 
-
-class Tracker {
-    data = {}
-    days = new Set();
-    addEntry(netzbetreiber, entry) {
-        var res = netzbetreiber.processEntry(entry);
-        if (res === null) {
-            // skip
-            return;
-        }
-        var hour = format(res.timestamp, "H");
-        var fullday = format(res.timestamp, "yyyyMMdd")
-        this.days.add(fullday);
-
-        if (!(fullday in this.data)) {
-            this.data[fullday] = {};
-        }
-        if (!(hour in this.data[fullday])) {
-            this.data[fullday][hour] = new Decimal(0.0);
-        }
-        this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
-        return marketdata.addDay(fullday);
-    }
-
-    postProcess() {
-        /* remove incomplete entries, e.g. if 15-interval is not activated some
-         * Netzbetreiber put one entry for each day. This kind of data is not
-         * useful for our purpose. */
-        var entries = Object.entries(this.data);
-        for (var i = 0; i < entries.length; i++) {
-            var e = entries[i];
-            if (Object.keys(e[1]).length < 2) {
-                // console.log("e: ", e);
-                // console.log("e[1]: ", e[1]);
-                // console.log("e[1].length: ", Object.keys(e[1]).length);
-                // console.log("removing this entry: ", e);
-                // console.log("removing this entry via: ", e[0]);
-
-                this.days.delete(e[0])
-                delete this.data[e[0]];
-            }
-        }
-    }
-}
 
 function loadAwattarCache() {
     var a = new Marketdata();
@@ -551,12 +509,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
 
                     var feedin = netzbetreiber.feedin;
-                    var i = 0;
-                    var entries = [];
-
-                    while (i < d.length) {
-                        entries.push(tracker.addEntry(netzbetreiber, d[i]));
-                        i++;
+                    for (var i = 0; i < d.length; i++) {
+                        tracker.addEntry(netzbetreiber, d[i]);
                     }
                     tracker.postProcess();
 
@@ -564,27 +518,28 @@ document.addEventListener("DOMContentLoaded", function() {
                         const lastprofile_array = await (await fetch('./lastprofile.xls')).arrayBuffer();
                         const lastprofile_sheets = XLSX.read(lastprofile_array);
                         const h0Sheet = lastprofile_sheets.Sheets[lastprofile_sheets.SheetNames[0]];
-                        await Promise.all(entries).then(data => {
-                            // Add a guard to check if any valid data was processed
-                            if (tracker.days.size === 0) {
-                                displayWarning("Keine gültigen 15-Minuten-Verbrauchsdaten in der Datei gefunden. Bitte prüfen Sie die Datei.");
-                                return;
-                            }
+                        const dayFetches = Array.from(tracker.days).map(d => marketdata.addDay(d));
+                        await Promise.all(dayFetches);
 
-                            hideWarning();
-                            storeAwattarCache(marketdata);
-                            console.log("final marketdata", marketdata);
-                            prevBtn.style.visibility = 'visible';
-                            graphDescr.style.visibility = 'visible';
-                            nextBtn.style.visibility = 'visible';
-                            costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
-                            costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
-                            calculateCosts(h0Sheet, feedin);
-                            calculateDailyAvg();
-                            // Reset dayIndex to show the first day of the new data
-                            dayIndex = 0;
-                            displayDay(dayIndex);
-                        });
+                        // Add a guard to check if any valid data was processed
+                        if (tracker.days.size === 0) {
+                            displayWarning("Keine gültigen 15-Minuten-Verbrauchsdaten in der Datei gefunden. Bitte prüfen Sie die Datei.");
+                            return;
+                        }
+
+                        hideWarning();
+                        storeAwattarCache(marketdata);
+                        console.log("final marketdata", marketdata);
+                        prevBtn.style.visibility = 'visible';
+                        graphDescr.style.visibility = 'visible';
+                        nextBtn.style.visibility = 'visible';
+                        costslblMonthly.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' monatlich →';
+                        costslblDaily.innerHTML = '&Uuml;bersicht ' + (feedin ? 'Einspeisung' : 'Energiekosten') + ' t&auml;glich →';
+                        calculateCosts(h0Sheet, feedin);
+                        calculateDailyAvg();
+                        // Reset dayIndex to show the first day of the new data
+                        dayIndex = 0;
+                        displayDay(dayIndex);
                     })();
                 }
             });
@@ -595,102 +550,6 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 });
 
-
-const Zeitzone = {
-	Sommer: 0,
-	Winter: 1,
-	Uebergang: 2,
-};
-
-function computeZeitzone(date) {
-    /*
-     * Ein Jahreslastprofil besteht aus drei Zeitzonen,
-     * → Winter: 1.11.-20.03.,
-     * → Sommer: 15.05.-14.09. und
-     * → Übergang: 21.03.-14.05. bzw. 15.09.-31.10
-     */
-
-    const year = Number(date.substring(0, 4));
-    const month = Number(date.substring(4, 6));
-    const day = Number(date.substring(6, 8));
-
-    if (month <= 2 || (month <= 3 && day <= 20)) {
-        return Zeitzone.Winter;
-    } else if (month >= 11) {
-        return Zeitzone.Winter;
-    } else if ((month >= 6 && month <= 8) || (month == 5 && day >= 15) || (month == 9 && day <= 14)) {
-        return Zeitzone.Sommer;
-    }
-    return Zeitzone.Uebergang;
-}
-
-function computeSheetIndex(zeitzone, dayIndex) {
-    /* layout:
-     * B = Winter_Samstag
-     * C = Winter_Sonntag
-     * D = Winter_Werktag
-     *
-     * E = Sommer_Samstag
-     * F = Sommer_Sonntag
-     * G = Sommer_Werktag
-     *
-     * H = Übergang_Samstag
-     * I = Übergang_Sonntag
-     * J = Übergang_Werktag
-     */
-    switch (zeitzone) {
-        case Zeitzone.Winter:
-            if (dayIndex == 6) {
-                return 'B';
-            } else if (dayIndex == 0) {
-                return 'C';
-            } else {
-                return 'D';
-            }
-            break;
-        case Zeitzone.Sommer:
-            if (dayIndex == 6) {
-                return 'E';
-            } else if (dayIndex == 0) {
-                return 'F';
-            } else {
-                return 'G';
-            }
-            break;
-        case Zeitzone.Uebergang:
-            if (dayIndex == 6) {
-                return 'H';
-            } else if (dayIndex == 0) {
-                return 'I';
-            } else {
-                return 'J';
-            }
-            break;
-    }
-}
-
-function computeH0Day(h0Sheet, day) {
-    const zeitzone = computeZeitzone(day);
-    const dayAsDate = new Date(day.substring(0, 4), day.substring(4, 6) - 1, day.substring(6,8), day.substring(8, 10));
-    const dayIndex = dayAsDate.getDay();  // 0 == Sonntag, 6 == Samstag
-
-    var sheetIndex = computeSheetIndex(zeitzone, dayIndex);
-
-    var h0DayProfile = new Array(24).fill(0);
-
-    for (let i = 0; i < 24; i++) {
-        // Werte in 15min Takte, startet in Zeile 4
-        const offset = 4;
-
-        for (let j = 0; j < 4; j++) {
-            h0DayProfile[i] += h0Sheet['' + sheetIndex + (offset + i*4 + j)].v;
-        }
-    }
-    // console.log("computed zeitzone for day=" + day + " -> " + zeitzone + ", dayIndex = " + dayIndex);
-    // console.log("h0DayProfile: " + h0DayProfile);
-
-    return h0DayProfile;
-}
 
 function calculateCosts(h0Sheet, feedin) {
     console.log("tracker: ", tracker);
