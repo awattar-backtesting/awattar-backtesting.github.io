@@ -1,0 +1,16 @@
+{
+  "name": "awattar-backtesting",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "date-fns": "2.16.1",
+    "decimal.js": "9.0.0",
+    "papaparse": "^5.5.3",
+    "vitest": "^3.2.4",
+    "xlsx": "^0.18.5"
+  }
+}
