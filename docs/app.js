@@ -76,6 +76,9 @@ const els = {
     customTariffForm: $("customTariffForm"),
     viewBtns: document.querySelectorAll(".view-btn"),
     sidebarToggles: document.querySelectorAll("[data-toggle]"),
+    menuBtn: $("menuBtn"),
+    sidebar: $("sidebar"),
+    sidebarBackdrop: $("sidebarBackdrop"),
 };
 
 // ── Marketdata cache (preserved from original) ──────────────────────────────
@@ -660,8 +663,27 @@ function init() {
     els.helpModal.addEventListener("click", (e) => {
         if (e.target === els.helpModal) closeModal();
     });
+
+    // Mobile sidebar drawer
+    const openSidebar = () => {
+        els.sidebar.classList.add("open");
+        els.sidebarBackdrop.classList.add("show");
+    };
+    const closeSidebar = () => {
+        els.sidebar.classList.remove("open");
+        els.sidebarBackdrop.classList.remove("show");
+    };
+    els.menuBtn.addEventListener("click", openSidebar);
+    els.sidebarBackdrop.addEventListener("click", closeSidebar);
+    window.addEventListener("resize", () => {
+        if (window.innerWidth > 768) closeSidebar();
+    });
+
     document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeModal();
+        if (e.key === "Escape") {
+            closeModal();
+            closeSidebar();
+        }
     });
 
     // Initial render

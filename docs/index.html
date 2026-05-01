@@ -366,6 +366,84 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .modal-collapsible[open] summary::after { content: '−'; }
 .modal-collapsible summary:hover { background: oklch(97% 0.005 240); }
 .modal-collapsible-body { padding: 12px 14px; border-top: 1px solid var(--border); }
+
+/* MENU BUTTON + DRAWER (mobile only) */
+.menu-btn {
+  display: none;
+  background: oklch(28% 0.03 240); border: 1px solid oklch(35% 0.03 240);
+  color: white; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 6px;
+  align-items: center; justify-content: center;
+  font-family: inherit; padding: 0; flex-shrink: 0;
+  transition: background 0.15s;
+}
+.menu-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.menu-btn:hover { background: oklch(32% 0.03 240); }
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15, 20, 30, 0.45);
+  z-index: 240;
+}
+.sidebar-backdrop.show { display: block; }
+
+/* MOBILE LAYOUT */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  .app { height: auto; min-height: 100vh; overflow: visible; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 150;
+    padding: 0 10px; gap: 8px;
+  }
+  .menu-btn { display: flex; }
+  .topbar-title { display: none; }
+  .topbar-divider { display: none; }
+  .upload-btn { padding: 7px 9px; }
+  .upload-btn span { display: none; }
+  .date-nav { padding: 0; gap: 4px; }
+  .date-nav-btn { width: 30px; height: 30px; }
+  .date-label { min-width: 64px; font-size: 12px; }
+  .help-btn { width: 30px; height: 30px; }
+
+  .body { flex-direction: column; overflow: visible; flex: none; }
+
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: min(86vw, 320px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease-out;
+    z-index: 250;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+    border-right: none;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .main { overflow: visible; }
+  .summary-bar { padding: 8px 12px; gap: 6px; min-height: 0; }
+  .summary-chip { font-size: 11px; padding: 4px 9px; }
+  .table-area { overflow-x: auto; overflow-y: visible; padding: 12px 12px 14px; flex: none; }
+  .section-header-row { flex-wrap: wrap; gap: 8px; }
+  .compare thead th { padding: 6px 10px; }
+  .compare tbody td { padding: 8px 10px; }
+  .chart-area { padding: 12px 12px 8px; flex: none; }
+  .chart-wrap { height: 160px; }
+  .chart-x-row { padding-left: 30px; padding-right: 30px; }
+  .chart-axis { width: 30px; }
+  .chart-legend { padding-left: 30px; flex-wrap: wrap; }
+
+  .modal-backdrop { padding: 12px 8px; }
+  .modal { padding: 18px 16px; max-height: 96vh; border-radius: 8px; }
+  .modal-title { font-size: 15px; }
+  .modal h3 { font-size: 13px; }
+  .modal p, .modal ol, .modal ul { font-size: 12.5px; }
+}
+
+@media (max-width: 420px) {
+  .topbar { gap: 6px; padding: 0 8px; }
+  .date-label { min-width: 56px; font-size: 11px; }
+  .upload-btn { padding: 7px 8px; }
+}
 </style>
 <script type="importmap">
 {
@@ -384,6 +462,9 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 
     <!-- TOPBAR -->
     <div class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Menü öffnen">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <div class="topbar-logo">
             <div class="topbar-logo-icon">
                 <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -408,8 +489,9 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
     <div id="warningHolder" class="warning-banner"></div>
 
     <div class="body">
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
         <!-- SIDEBAR -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-section-header" data-toggle="providers">
                     <span class="sidebar-section-title">Anbieter wählen</span>
