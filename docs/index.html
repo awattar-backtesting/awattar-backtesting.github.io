@@ -262,9 +262,25 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
-.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; }
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
 .chart-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .chart-info { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.chart-day-nav { display: flex; align-items: center; gap: 4px; }
+.chart-day-nav.hidden { display: none; }
+.chart-day-btn {
+  width: 24px; height: 24px; border-radius: 5px;
+  background: white; border: 1px solid var(--border);
+  color: oklch(35% 0.02 240); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 12px; padding: 0;
+  transition: background 0.15s;
+}
+.chart-day-btn:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.chart-day-label {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: oklch(30% 0.02 240); min-width: 78px; text-align: center;
+  white-space: nowrap; padding: 0 4px;
+}
 .chart-wrap { height: 180px; position: relative; user-select: none; }
 .chart-row { display: flex; gap: 0; }
 .chart-axis {
@@ -580,6 +596,7 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
             <div class="chart-area">
                 <div class="chart-header">
                     <span class="chart-title" id="chartTitle">EPEX SPOT — Stündliche Preise</span>
+                    <div class="chart-day-nav hidden" id="chartDayNav"></div>
                     <span class="chart-info" id="chartInfo"></span>
                 </div>
                 <div class="chart-wrap" id="chartWrap"></div>

@@ -40,6 +40,7 @@ const state = {
     selectedIds: new Set(DEFAULT_SELECTED_CONSUMPTION),
     view: "monthly",
     dateKey: null,
+    chartDay: null,
     feedin: false,
     tracker: null,
     marketdata: null,
@@ -69,6 +70,7 @@ const els = {
     chartTitle: $("chartTitle"),
     chartInfo: $("chartInfo"),
     chartWrap: $("chartWrap"),
+    chartDayNav: $("chartDayNav"),
     providersList: $("providersList"),
     toggleProviders: $("toggleProviders"),
     toggleCustom: $("toggleCustom"),
@@ -387,6 +389,8 @@ function renderChart() {
     const wrap = els.chartWrap;
     const sample = !state.tracker;
 
+    ensureChartDay();
+
     let prices, consumption, label;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
@@ -402,10 +406,14 @@ function renderChart() {
     const priceRange = (priceMax - priceMin) || 1;
     const consMax = Math.max(...consumption, 0.1);
 
-    const dateText = state.dateKey ? formatDateKey(state.dateKey) : "";
-    els.chartTitle.textContent = `EPEX SPOT — Stündliche Preise${dateText ? " " + dateText : ""}`;
+    let chartDateText = "";
+    if (state.chartDay) chartDateText = formatDateKey(state.chartDay);
+    else if (state.dateKey) chartDateText = formatDateKey(state.dateKey);
+    els.chartTitle.textContent = `EPEX SPOT — Stündliche Preise${chartDateText ? " " + chartDateText : ""}`;
     const avgPrice = prices.reduce((s, v) => s + v, 0) / prices.length;
     els.chartInfo.textContent = `Ø ${avgPrice.toFixed(2)} ct/kWh`;
+
+    renderChartDayNav();
 
     const yAxisLeft = [priceMax, (priceMax + priceMin) / 2, priceMin];
     const yAxisRight = [consMax, consMax / 2, 0];
@@ -484,7 +492,9 @@ function collectHourly() {
     const sumPrice = new Array(24).fill(null);
     const sumCons = new Array(24).fill(null);
     const days = [];
-    if (state.view === "monthly") {
+    if (state.chartDay && tracker.days.has(state.chartDay)) {
+        days.push(state.chartDay);
+    } else if (state.view === "monthly") {
         for (const d of tracker.days) if (d.startsWith(state.dateKey)) days.push(d);
     } else {
         if (tracker.days.has(state.dateKey)) days.push(state.dateKey);
@@ -525,6 +535,7 @@ function shiftDate(delta) {
     const idx = keys.indexOf(state.dateKey);
     const next = Math.max(0, Math.min(keys.length - 1, idx + delta));
     state.dateKey = keys[next];
+    state.chartDay = null;
     renderDate();
     renderChart();
 }
@@ -540,6 +551,61 @@ function renderDate() {
     const idx = keys.indexOf(state.dateKey);
     els.prevBtn.disabled = idx <= 0;
     els.nextBtn.disabled = idx >= keys.length - 1;
+}
+
+// ── Chart day nav ───────────────────────────────────────────────────────────
+function activeChartDays() {
+    const tracker = state.tracker;
+    if (!tracker || !state.dateKey) return [];
+    const all = [...tracker.days].sort();
+    if (state.view === "monthly") return all.filter((d) => d.startsWith(state.dateKey));
+    return all.includes(state.dateKey) ? [state.dateKey] : [];
+}
+function ensureChartDay() {
+    if (state.view === "daily") {
+        state.chartDay = null;
+        return;
+    }
+    if (state.chartDay) {
+        const days = activeChartDays();
+        if (!days.includes(state.chartDay)) state.chartDay = null;
+    }
+}
+function shiftChartDay(delta) {
+    const days = activeChartDays();
+    if (days.length === 0) return;
+    if (state.chartDay === null) {
+        state.chartDay = delta > 0 ? days[0] : days[days.length - 1];
+    } else {
+        const idx = days.indexOf(state.chartDay);
+        const next = idx + delta;
+        if (next < 0 || next >= days.length) {
+            state.chartDay = null;
+        } else {
+            state.chartDay = days[next];
+        }
+    }
+    renderChart();
+}
+function renderChartDayNav() {
+    const nav = els.chartDayNav;
+    if (state.view !== "monthly" || !state.tracker) {
+        nav.classList.add("hidden");
+        nav.innerHTML = "";
+        return;
+    }
+    const days = activeChartDays();
+    if (days.length === 0) {
+        nav.classList.add("hidden");
+        nav.innerHTML = "";
+        return;
+    }
+    const label = state.chartDay ? formatDateKey(state.chartDay) : "Ø Monat";
+    nav.classList.remove("hidden");
+    nav.innerHTML = `
+        <button class="chart-day-btn" data-chart-shift="-1" title="Vorheriger Tag">‹</button>
+        <span class="chart-day-label">${escapeHTML(label)}</span>
+        <button class="chart-day-btn" data-chart-shift="1" title="Nächster Tag">›</button>`;
 }
 
 // ── Sections / view toggle ──────────────────────────────────────────────────
@@ -561,6 +627,7 @@ function setView(view) {
         const candidate = availableKeys().find((d) => d.startsWith(state.dateKey));
         if (candidate) state.dateKey = candidate;
     }
+    state.chartDay = null;
     ensureDateKey();
     renderDate();
     renderTable();
@@ -609,6 +676,7 @@ async function handleUpload(file) {
     const defaults = result.feedin ? DEFAULT_SELECTED_FEEDIN : DEFAULT_SELECTED_CONSUMPTION;
     state.selectedIds = new Set([...defaults, ...previousCustomIds]);
     state.dateKey = null;
+    state.chartDay = null;
     ensureDateKey();
     els.uploadBtn.classList.add("upload-active");
     els.uploadBtnLabel.textContent = "Andere Datei laden";
@@ -635,6 +703,13 @@ function init() {
     // Date nav
     els.prevBtn.addEventListener("click", () => shiftDate(-1));
     els.nextBtn.addEventListener("click", () => shiftDate(1));
+
+    // Chart day nav (delegated)
+    els.chartDayNav.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-chart-shift]");
+        if (!btn) return;
+        shiftChartDay(parseInt(btn.dataset.chartShift, 10));
+    });
 
     // Upload
     els.uploadBtn.addEventListener("click", () => els.fileInput.click());
