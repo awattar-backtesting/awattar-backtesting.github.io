@@ -391,18 +391,23 @@ function renderChart() {
 
     ensureChartDay();
 
-    let prices, consumption, label;
+    let prices, consumption, priceStd, daysCount;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
         consumption = SAMPLE_HOURLY_CONS;
-        label = "Beispieldaten";
+        priceStd = null;
+        daysCount = 0;
     } else {
-        const { prices: p, consumption: c, label: l } = collectHourly();
-        prices = p; consumption = c; label = l;
+        const r = collectHourly();
+        prices = r.prices; consumption = r.consumption;
+        priceStd = r.priceStd; daysCount = r.days.length;
     }
+    const showStd = priceStd && state.view === "monthly" && state.chartDay === null && daysCount >= 2;
 
-    const priceMin = Math.min(...prices, 0);
-    const priceMax = Math.max(...prices, 0.1);
+    const stdHi = showStd ? prices.map((p, i) => p + priceStd[i]) : prices;
+    const stdLo = showStd ? prices.map((p, i) => p - priceStd[i]) : prices;
+    const priceMin = Math.min(...prices, ...stdLo, 0);
+    const priceMax = Math.max(...prices, ...stdHi, 0.1);
     const priceRange = (priceMax - priceMin) || 1;
     const consMax = Math.max(...consumption, 0.1);
 
@@ -419,15 +424,26 @@ function renderChart() {
     const yAxisRight = [consMax, consMax / 2, 0];
     const zeroTopPct = (priceMax / priceRange) * 100;
 
+    const toPct = (v) => ((v - priceMin) / priceRange) * 85 + 8;
+    const clampPct = (v) => Math.max(0, Math.min(100, v));
     const bars = prices.map((p, i) => {
-        const heightPct = ((p - priceMin) / priceRange) * 85 + 8;
+        const heightPct = toPct(p);
         const isNeg = p < 0;
+        let stdHTML = "";
+        let priceTooltip = `⚡ ${p.toFixed(2)} ct/kWh`;
+        if (showStd && priceStd[i] > 0) {
+            const lo = clampPct(toPct(p - priceStd[i]));
+            const hi = clampPct(toPct(p + priceStd[i]));
+            stdHTML = `<div class="chart-bar-stddev" style="bottom:${lo.toFixed(2)}%; height:${(hi - lo).toFixed(2)}%"></div>`;
+            priceTooltip = `⚡ ${p.toFixed(2)} ± ${priceStd[i].toFixed(2)} ct/kWh`;
+        }
         return `
             <div class="chart-bar-wrap">
                 <div class="chart-bar ${isNeg ? "neg" : "pos"}" style="height:${heightPct}%"></div>
+                ${stdHTML}
                 <div class="chart-tooltip">
                     <span class="tooltip-title">${i}:00–${i + 1}:00</span><br>
-                    <span class="tooltip-price">⚡ ${p.toFixed(2)} ct/kWh</span><br>
+                    <span class="tooltip-price">${priceTooltip}</span><br>
                     <span class="tooltip-cons">~ ${consumption[i].toFixed(2)} kWh</span>
                 </div>
             </div>`;
@@ -477,6 +493,7 @@ function renderChart() {
         <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-swatch-bar"></span>EPEX SPOT (ct/kWh)</span>
             <span class="chart-legend-item"><span class="chart-legend-swatch-line"></span>Verbrauch (kWh)</span>
+            ${showStd ? `<span class="chart-legend-item"><span class="chart-legend-swatch-stddev"></span>± 1σ über ${daysCount} Tage</span>` : ""}
         </div>`;
 }
 
@@ -486,11 +503,9 @@ function formatDateKey(key) {
 }
 
 function collectHourly() {
-    // Aggregate hourly prices (kWh-weighted) and consumption for the active dateKey.
+    // Aggregate hourly prices and consumption across the days the chart covers.
     const tracker = state.tracker;
     const md = state.marketdata;
-    const sumPrice = new Array(24).fill(null);
-    const sumCons = new Array(24).fill(null);
     const days = [];
     if (state.chartDay && tracker.days.has(state.chartDay)) {
         days.push(state.chartDay);
@@ -500,7 +515,8 @@ function collectHourly() {
         if (tracker.days.has(state.dateKey)) days.push(state.dateKey);
     }
 
-    for (let h = 0; h < 24; h++) { sumPrice[h] = new Decimal(0); sumCons[h] = new Decimal(0); }
+    const pricesPerHour = Array.from({ length: 24 }, () => []);
+    const consPerHour = Array.from({ length: 24 }, () => []);
     for (const d of days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
@@ -508,14 +524,19 @@ function collectHourly() {
         for (let h = 0; h < 24; h++) {
             const u = usages[h];
             const p = prices[h];
-            if (u !== undefined) sumCons[h] = sumCons[h].plus(u);
-            if (p !== undefined) sumPrice[h] = sumPrice[h].plus(new Decimal(p));
+            if (u !== undefined) consPerHour[h].push(Number(u));
+            if (p !== undefined) pricesPerHour[h].push(Number(p));
         }
     }
-    const n = Math.max(1, days.length);
-    const prices = sumPrice.map((d) => Number(d) / n);
-    const consumption = sumCons.map((d) => Number(d) / n);
-    return { prices, consumption, label: days.join(",") };
+    const mean = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+    const stddev = (arr, m) => {
+        if (arr.length < 2) return 0;
+        return Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / arr.length);
+    };
+    const prices = pricesPerHour.map(mean);
+    const priceStd = pricesPerHour.map((arr, i) => stddev(arr, prices[i]));
+    const consumption = consPerHour.map(mean);
+    return { prices, priceStd, consumption, days };
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────

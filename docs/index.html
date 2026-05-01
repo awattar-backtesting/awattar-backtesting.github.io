@@ -309,6 +309,20 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .chart-bar.neg { background: oklch(62% 0.18 25 / 0.7); }
 .chart-bar-wrap:hover .chart-bar.pos { background: oklch(52% 0.18 145); }
 .chart-bar-wrap:hover .chart-bar.neg { background: oklch(62% 0.18 25 / 1); }
+.chart-bar-stddev {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  width: 2px; min-height: 2px;
+  background: oklch(28% 0.06 145 / 0.75);
+  pointer-events: none; z-index: 2;
+}
+.chart-bar-stddev::before, .chart-bar-stddev::after {
+  content: ''; position: absolute; left: -3px;
+  width: 8px; height: 2px;
+  background: oklch(28% 0.06 145 / 0.75);
+}
+.chart-bar-stddev::before { top: 0; }
+.chart-bar-stddev::after { bottom: 0; }
 .chart-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .chart-tooltip {
   position: absolute; bottom: 105%; left: 50%;
@@ -334,6 +348,18 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .chart-legend-item { display: flex; align-items: center; gap: 5px; }
 .chart-legend-swatch-bar { width: 12px; height: 8px; background: oklch(72% 0.12 145); border-radius: 2px; display: inline-block; }
 .chart-legend-swatch-line { width: 12px; height: 2px; background: oklch(62% 0.18 260); display: inline-block; border-radius: 1px; }
+.chart-legend-swatch-stddev {
+  position: relative; display: inline-block;
+  width: 2px; height: 10px;
+  background: oklch(28% 0.06 145 / 0.75);
+}
+.chart-legend-swatch-stddev::before, .chart-legend-swatch-stddev::after {
+  content: ''; position: absolute; left: -3px;
+  width: 8px; height: 2px;
+  background: oklch(28% 0.06 145 / 0.75);
+}
+.chart-legend-swatch-stddev::before { top: 0; }
+.chart-legend-swatch-stddev::after { bottom: 0; }
 
 .chart-placeholder {
   position: absolute; top: 0; right: 0;
