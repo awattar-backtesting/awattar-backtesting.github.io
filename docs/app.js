@@ -365,14 +365,14 @@ function renderTable() {
         const h0Cell = h0Avg === null
             ? `<td class="num td-price">—</td>`
             : `<td class="num td-price">
-                ${fmtNum(h0Avg, 2)} ct
+                ${fmtNum(h0Avg, 2)} ct/kWh
                 <span class="h0-diff ${h0Diff < 0 ? "diff-good" : "diff-bad"}">(${h0Diff > 0 ? "+" : ""}${fmtNum(h0Diff, 2)})</span>
               </td>`;
 
         return `<tr>
             <td class="td-month">${escapeHTML(dateOut)}</td>
             <td class="num td-energy">${fmtNum(energyKwh, 0)} kWh</td>
-            <td class="num td-price">${fmtNum(epexAvg, 2)} ct</td>
+            <td class="num td-price">${fmtNum(epexAvg, 2)} ct/kWh</td>
             ${state.feedin ? "" : h0Cell}
             ${providerCells}
         </tr>`;
