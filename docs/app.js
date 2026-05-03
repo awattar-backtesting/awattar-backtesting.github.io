@@ -345,15 +345,13 @@ function renderTable() {
         const costs = computed[k];
         const grossNumbers = selected.map((p) => Number(costs[p.meta.id]));
         const best = Math.min(...grossNumbers);
-        const worst = Math.max(...grossNumbers);
 
         const providerCells = selected.map((p, i) => {
             const cents = costs[p.meta.id];
             const grossEur = Number(cents) / 100;
             const avgCt = b.kwh.equals(0) ? 0 : Number(cents.dividedBy(b.kwh));
-            const isBest = grossNumbers[i] === best;
-            const isWorst = grossNumbers[i] === worst && selected.length > 1 && best !== worst;
-            const cls = isBest ? "best-cell" : isWorst ? "worst-cell" : "";
+            const isBest = grossNumbers[i] === best && selected.length > 1;
+            const cls = isBest ? "best-cell" : "";
             return `<td class="num">
                 <div class="cost-cell">
                     <span class="cost-gross ${cls}">
@@ -364,7 +362,6 @@ function renderTable() {
             </td>`;
         }).join("");
 
-        const epexClass = epexAvg < 0 ? "diff-bad" : "";
         const h0Cell = h0Avg === null
             ? `<td class="num td-price">—</td>`
             : `<td class="num td-price">
@@ -375,7 +372,7 @@ function renderTable() {
         return `<tr>
             <td class="td-month">${escapeHTML(dateOut)}</td>
             <td class="num td-energy">${fmtNum(energyKwh, 0)} kWh</td>
-            <td class="num td-price ${epexClass}">${fmtNum(epexAvg, 2)} ct</td>
+            <td class="num td-price">${fmtNum(epexAvg, 2)} ct</td>
             ${state.feedin ? "" : h0Cell}
             ${providerCells}
         </tr>`;
