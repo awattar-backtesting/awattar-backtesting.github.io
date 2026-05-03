@@ -21,9 +21,6 @@ import { runPipeline } from "./calc/pipeline.js";
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
 const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot];
 
-const DEFAULT_SELECTED_CONSUMPTION = new Set(["awattar", "steirerstrom", "spotty"]);
-const DEFAULT_SELECTED_FEEDIN = new Set(["smartcontrol_sunny", "awattar_sunny", "naturstrom_sunny", "wels_sunny"]);
-
 const SAMPLE_HOURLY_PRICES = Array.from({ length: 24 }, (_, h) => {
     const base = 8 + 4 * Math.sin((h - 6) * Math.PI / 12);
     const noise = (Math.sin(h * 17.3) - 0.5) * 6;
@@ -37,7 +34,7 @@ const SAMPLE_HOURLY_CONS = Array.from({ length: 24 }, (_, h) => {
 
 const state = {
     providers: CONSUMPTION_PROVIDERS.slice(),
-    selectedIds: new Set(DEFAULT_SELECTED_CONSUMPTION),
+    selectedIds: new Set(),
     view: "monthly",
     dateKey: null,
     chartDay: null,
@@ -133,6 +130,36 @@ function providerTotalEur(p) {
         sum = sum.plus(p.calculate(b.priceCents, b.kwh, true, monthlyFeeFactorFor(key)));
     }
     return sum.dividedBy(100);
+}
+
+// Picks a default selection of providers:
+//   ≤4 providers → all of them
+//   >4 providers → the cheapest, the most expensive, and 2 random others
+//                  (falls back to 4 random if no monthly data is loaded yet)
+function pickDefaultSelection() {
+    const providers = state.providers;
+    if (providers.length <= 4) {
+        return new Set(providers.map((p) => p.meta.id));
+    }
+    const indices = providers.map((_, i) => i);
+    const picked = new Set();
+    if (state.monthly) {
+        const totals = providers.map((p) => Number(providerTotalEur(p)));
+        let minIdx = 0, maxIdx = 0;
+        totals.forEach((v, i) => {
+            if (v < totals[minIdx]) minIdx = i;
+            if (v > totals[maxIdx]) maxIdx = i;
+        });
+        picked.add(minIdx);
+        picked.add(maxIdx);
+    }
+    const rest = indices.filter((i) => !picked.has(i));
+    for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    rest.slice(0, 4 - picked.size).forEach((i) => picked.add(i));
+    return new Set([...picked].map((i) => providers[i].meta.id));
 }
 
 function renderSidebar() {
@@ -732,8 +759,7 @@ async function handleUpload(file) {
     state.monthly = result.monthly;
     state.feedin = result.feedin;
     state.providers = (result.feedin ? FEEDIN_PROVIDERS : CONSUMPTION_PROVIDERS).slice().concat(previousCustom);
-    const defaults = result.feedin ? DEFAULT_SELECTED_FEEDIN : DEFAULT_SELECTED_CONSUMPTION;
-    state.selectedIds = new Set([...defaults, ...previousCustomIds]);
+    state.selectedIds = new Set([...pickDefaultSelection(), ...previousCustomIds]);
     state.dateKey = null;
     state.chartDay = null;
     ensureDateKey();
@@ -821,6 +847,7 @@ function init() {
     });
 
     // Initial render
+    state.selectedIds = pickDefaultSelection();
     renderSidebar();
     renderSummary();
     renderTable();
