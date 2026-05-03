@@ -134,12 +134,17 @@ function renderSidebar() {
         if (m.addFixedGross !== 0) markupBits.push(`${m.addFixedGross > 0 ? "+" : ""}${m.addFixedGross.toFixed(2)} ct/kWh`);
         markupBits.push(`${m.baseMonthly.toFixed(2)} €/Mon.`);
         const meta = markupBits.join(" · ");
+        const linkHTML = m.url
+            ? `<a class="provider-link" href="${escapeHTML(m.url)}" target="_blank" rel="noopener noreferrer" title="Tarifblatt öffnen">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-9 9M19 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6"/></svg>
+              </a>`
+            : "";
         return `
             <div class="provider-card${selected ? " selected" : ""}" data-id="${escapeHTML(m.id)}">
                 <span class="provider-color-dot" style="background:${m.color}"></span>
                 <span class="provider-toggle${selected ? " on" : ""}"></span>
                 <div class="provider-info">
-                    <div class="provider-name${selected ? " selected" : ""}">${escapeHTML(m.shortName)}${m.isCustom ? '<span class="tag-custom">Custom</span>' : ""}</div>
+                    <div class="provider-name${selected ? " selected" : ""}">${escapeHTML(m.shortName)}${linkHTML}${m.isCustom ? '<span class="tag-custom">Custom</span>' : ""}</div>
                     <div class="provider-meta">${escapeHTML(meta)}</div>
                 </div>
                 ${m.isCustom ? `<button class="provider-remove" data-remove="${escapeHTML(m.id)}" title="Entfernen">×</button>` : ""}
@@ -150,7 +155,7 @@ function renderSidebar() {
 
     wrap.querySelectorAll(".provider-card").forEach((el) => {
         el.addEventListener("click", (e) => {
-            if (e.target.closest("[data-remove]")) return;
+            if (e.target.closest("[data-remove], a")) return;
             toggleProvider(el.dataset.id);
         });
     });
