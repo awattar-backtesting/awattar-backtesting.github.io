@@ -496,9 +496,12 @@ function renderChart() {
         return `<circle cx="${x.toFixed(2)}%" cy="${y.toFixed(2)}%" r="3" fill="oklch(62% 0.18 260)" stroke="white" stroke-width="1" />`;
     }).join("");
 
-    const xLabels = [0, 4, 8, 12, 16, 20, 23].map((h) => {
-        const left = (h / 23) * 100;
-        return `<span class="chart-x-label" style="left:${left}%">${h}h</span>`;
+    const xLabels = [0, 4, 8, 12, 16, 20, 24].map((h) => {
+        let style;
+        if (h === 0) style = "left:0; transform:none";
+        else if (h === 24) style = "left:auto; right:0; transform:none";
+        else style = `left:${(h / 24) * 100}%`;
+        return `<span class="chart-x-label" style="${style}">${h}h</span>`;
     }).join("");
 
     const CHART_H = 120;
