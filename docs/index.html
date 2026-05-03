@@ -200,23 +200,6 @@ body {
 /* MAIN */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* SUMMARY CHIPS */
-.summary-bar {
-  display: flex; gap: 8px; padding: 10px 20px;
-  background: white; border-bottom: 1px solid var(--border);
-  flex-wrap: wrap; flex-shrink: 0; min-height: 44px; align-items: center;
-}
-.summary-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 20px;
-  background: oklch(96% 0.006 240); border: 1px solid var(--border);
-  font-size: 12px;
-}
-.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.chip-label { color: var(--text-muted); }
-.chip-value { font-family: 'DM Mono', monospace; font-weight: 500; color: oklch(20% 0.02 240); }
-.summary-empty { font-size: 12px; color: var(--text-muted); }
-
 /* TABLE AREA */
 .table-area { flex: 1; overflow: auto; padding: 16px 20px 20px; }
 .section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
@@ -480,8 +463,6 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   .sidebar.open { transform: translateX(0); }
 
   .main { overflow: visible; }
-  .summary-bar { padding: 8px 12px; gap: 6px; min-height: 0; }
-  .summary-chip { font-size: 11px; padding: 4px 9px; }
   .table-area { overflow-x: auto; overflow-y: visible; padding: 12px 12px 14px; flex: none; }
   .section-header-row { flex-wrap: wrap; gap: 8px; }
   .compare thead th { padding: 6px 10px; }
@@ -616,8 +597,6 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 
         <!-- MAIN -->
         <div class="main">
-            <div class="summary-bar" id="summaryBar"></div>
-
             <div class="table-area">
                 <div class="section-header-row">
                     <div>

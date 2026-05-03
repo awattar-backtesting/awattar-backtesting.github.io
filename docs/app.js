@@ -60,7 +60,6 @@ const els = {
     closeHelp: $("closeHelp"),
     helpModal: $("helpModal"),
     warningHolder: $("warningHolder"),
-    summaryBar: $("summaryBar"),
     tableContainer: $("tableContainer"),
     tableTitle: $("tableTitle"),
     tableSub: $("tableSub"),
@@ -228,7 +227,6 @@ function toggleProvider(id) {
     if (state.selectedIds.has(id)) state.selectedIds.delete(id);
     else state.selectedIds.add(id);
     renderSidebar();
-    renderSummary();
     renderTable();
 }
 
@@ -236,7 +234,6 @@ function removeProvider(id) {
     state.providers = state.providers.filter((p) => p.meta.id !== id);
     state.selectedIds.delete(id);
     renderSidebar();
-    renderSummary();
     renderTable();
 }
 
@@ -260,39 +257,8 @@ function addCustomProvider(form) {
     state.selectedIds.add(id);
     state.sections.custom = false;
     renderSidebar();
-    renderSummary();
     renderTable();
     syncSectionToggles();
-}
-
-// ── Summary chips ───────────────────────────────────────────────────────────
-function renderSummary() {
-    if (state.selectedIds.size === 0) {
-        els.summaryBar.innerHTML = `<span class="summary-empty">Bitte mindestens einen Anbieter wählen.</span>`;
-        return;
-    }
-    const buckets = state.monthly;
-    const selected = state.providers.filter((p) => state.selectedIds.has(p.meta.id));
-    const chips = selected.map((p) => {
-        let totalGrossEur = null;
-        if (buckets) {
-            let sum = new Decimal(0);
-            for (const key of Object.keys(buckets)) {
-                const b = buckets[key];
-                const factor = monthlyFeeFactorFor(key);
-                const cents = p.calculate(b.priceCents, b.kwh, true, factor);
-                sum = sum.plus(cents);
-            }
-            totalGrossEur = sum.dividedBy(100);
-        }
-        const valueText = totalGrossEur === null ? "—" : `${totalGrossEur.toFixed(0)} €`;
-        return `<div class="summary-chip">
-            <span class="chip-dot" style="background:${p.meta.color}"></span>
-            <span class="chip-label">${escapeHTML(p.meta.shortName)}</span>
-            <span class="chip-value">${valueText}</span>
-        </div>`;
-    }).join("");
-    els.summaryBar.innerHTML = chips;
 }
 
 // ── Comparison table ────────────────────────────────────────────────────────
@@ -768,7 +734,6 @@ async function handleUpload(file) {
 
     renderDate();
     renderSidebar();
-    renderSummary();
     renderTable();
     renderChart();
 }
@@ -849,7 +814,6 @@ function init() {
     // Initial render
     state.selectedIds = pickDefaultSelection();
     renderSidebar();
-    renderSummary();
     renderTable();
     renderChart();
     renderDate();
