@@ -124,9 +124,32 @@ function makeNetzbetreiberLabel(name) {
 }
 
 // ── Sidebar rendering ───────────────────────────────────────────────────────
+function providerTotalEur(p) {
+    const buckets = state.monthly;
+    if (!buckets) return null;
+    let sum = new Decimal(0);
+    for (const key of Object.keys(buckets)) {
+        const b = buckets[key];
+        sum = sum.plus(p.calculate(b.priceCents, b.kwh, true, monthlyFeeFactorFor(key)));
+    }
+    return sum.dividedBy(100);
+}
+
 function renderSidebar() {
     const wrap = els.providersList;
-    const items = state.providers.map((p) => {
+    const totals = state.monthly ? state.providers.map(providerTotalEur) : null;
+    let cheapestIdx = -1, dearestIdx = -1;
+    if (totals && totals.length > 1) {
+        let cheapest = null, dearest = null;
+        totals.forEach((t, i) => {
+            if (t === null) return;
+            const v = Number(t);
+            if (cheapest === null || v < cheapest) { cheapest = v; cheapestIdx = i; }
+            if (dearest === null || v > dearest) { dearest = v; dearestIdx = i; }
+        });
+        if (cheapestIdx === dearestIdx) dearestIdx = -1;
+    }
+    const items = state.providers.map((p, i) => {
         const m = p.meta;
         const selected = state.selectedIds.has(m.id);
         const markupBits = [];
@@ -139,14 +162,21 @@ function renderSidebar() {
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-9 9M19 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6"/></svg>
               </a>`
             : "";
+        let totalHTML = "";
+        if (totals) {
+            const t = totals[i];
+            const cls = i === cheapestIdx ? " best" : (i === dearestIdx ? " worst" : "");
+            totalHTML = `<div class="provider-total${cls}">${t === null ? "—" : `${t.toFixed(0)} €`}</div>`;
+        }
         return `
-            <div class="provider-card${selected ? " selected" : ""}" data-id="${escapeHTML(m.id)}">
+            <div class="provider-card${selected ? " selected" : ""}${m.isCustom ? " has-remove" : ""}" data-id="${escapeHTML(m.id)}">
                 <span class="provider-color-dot" style="background:${m.color}"></span>
                 <span class="provider-toggle${selected ? " on" : ""}"></span>
                 <div class="provider-info">
                     <div class="provider-name${selected ? " selected" : ""}">${escapeHTML(m.shortName)}${linkHTML}${m.isCustom ? '<span class="tag-custom">Custom</span>' : ""}</div>
                     <div class="provider-meta">${escapeHTML(meta)}</div>
                 </div>
+                ${totalHTML}
                 ${m.isCustom ? `<button class="provider-remove" data-remove="${escapeHTML(m.id)}" title="Entfernen">×</button>` : ""}
             </div>`;
     }).join("");

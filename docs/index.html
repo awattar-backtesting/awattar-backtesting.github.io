@@ -151,6 +151,15 @@ body {
   font-family: inherit;
 }
 .provider-remove:hover { background: oklch(92% 0.02 240); color: var(--red); }
+.provider-total {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  color: oklch(20% 0.02 240);
+  align-self: center; flex-shrink: 0;
+  white-space: nowrap; padding-left: 8px;
+}
+.provider-total.best { color: var(--green); }
+.provider-total.worst { color: var(--red); }
+.provider-card.has-remove .provider-total { padding-right: 20px; }
 .provider-counter { padding: 8px 16px; font-size: 11px; color: var(--text-muted); }
 
 /* CUSTOM TARIFF FORM */
