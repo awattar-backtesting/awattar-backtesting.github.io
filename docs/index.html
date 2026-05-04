@@ -1,428 +1,807 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta charset="UTF-8">
-        <title>aWATTar Backtesting</title>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>aWATTar Backtesting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 body {
-	background-color: #fff;
-	margin: 20px;
-	padding: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: oklch(97% 0.006 240);
+  color: oklch(20% 0.02 240);
+  overflow: hidden;
+  height: 100vh;
+}
+:root {
+  --green: oklch(58% 0.18 145);
+  --green-light: oklch(94% 0.06 145);
+  --green-mid: oklch(78% 0.12 145);
+  --amber: oklch(72% 0.16 75);
+  --amber-light: oklch(95% 0.05 75);
+  --red: oklch(62% 0.18 25);
+  --navy: oklch(18% 0.03 240);
+  --navy2: oklch(22% 0.03 240);
+  --border: oklch(88% 0.01 240);
+  --text-muted: oklch(55% 0.01 240);
+  --surface: #ffffff;
+  --sidebar-w: 300px;
 }
 
-body {
-	font-family: verdana;
-	font-size: 13px;
-	line-height: 18px;
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px; height: 52px;
+  background: var(--navy);
+  color: white;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.topbar-logo { display: flex; align-items: center; gap: 10px; }
+.topbar-logo-icon {
+  width: 28px; height: 28px; background: var(--green);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+}
+.topbar-logo-icon svg { width: 16px; height: 16px; fill: white; }
+.topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.topbar-divider { width: 1px; height: 24px; background: oklch(35% 0.02 240); margin: 0 4px; }
+.topbar-spacer { flex: 1; }
+.upload-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border-radius: 7px;
+  background: oklch(28% 0.03 240); border: 1px solid oklch(35% 0.03 240);
+  color: white; font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.upload-btn:hover { background: oklch(32% 0.03 240); }
+.upload-btn svg { width: 14px; height: 14px; }
+.upload-active { background: var(--green) !important; border-color: transparent !important; }
+.help-btn {
+  background: transparent; border: 1px solid oklch(35% 0.03 240);
+  color: white; cursor: pointer;
+  width: 26px; height: 26px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  transition: background 0.15s;
+}
+.help-btn:hover { background: oklch(28% 0.03 240); }
+
+/* DATE NAV (lives in chart header) */
+.chart-date-nav { display: flex; align-items: center; gap: 4px; }
+.chart-date-btn {
+  width: 24px; height: 24px; border-radius: 5px;
+  background: white; border: 1px solid var(--border);
+  color: oklch(35% 0.02 240); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 12px; padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chart-date-btn:hover:not(:disabled) { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.chart-date-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.chart-date-label {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: oklch(25% 0.02 240); min-width: 110px; text-align: center;
+  background: white; border: 1px solid var(--border); border-radius: 5px;
+  padding: 4px 10px; cursor: pointer; font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chart-date-label:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.chart-date-label.day-mode { background: var(--green-light); border-color: oklch(78% 0.06 145); color: oklch(35% 0.16 145); }
+
+/* DATE POPUP */
+.date-popup {
+  position: fixed; z-index: 100;
+  background: white; border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px oklch(20% 0.02 240 / 0.18);
+  padding: 10px; max-height: 60vh; overflow: auto;
+  min-width: 260px; max-width: 360px;
+}
+.date-popup.hidden { display: none; }
+.date-popup-month { margin-bottom: 8px; }
+.date-popup-month:last-child { margin-bottom: 0; }
+.date-popup-month-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.date-popup-month-name {
+  font-size: 12px; font-weight: 600; color: oklch(25% 0.02 240);
+  background: transparent; border: none; padding: 4px 6px; border-radius: 4px;
+  cursor: pointer; font-family: inherit; flex: 1; text-align: left;
+}
+.date-popup-month-name:hover { background: oklch(96% 0.006 240); }
+.date-popup-month-name.active { color: var(--green); }
+.date-popup-month-name.current { background: var(--green-light); color: oklch(35% 0.16 145); }
+.date-popup-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.date-popup-day {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  background: white; border: 1px solid oklch(94% 0.005 240); border-radius: 3px;
+  padding: 3px 0; cursor: pointer; color: oklch(35% 0.02 240);
+  transition: all 0.1s; font-weight: 500;
+}
+.date-popup-day:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.date-popup-day.current { background: var(--green); color: white; border-color: var(--green); }
+.date-popup-day.empty { background: transparent; border-color: transparent; color: transparent; cursor: default; pointer-events: none; }
+.date-popup-empty { font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; }
+
+/* BODY */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-section { border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+}
+.sidebar-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-muted); }
+.sidebar-section-toggle { font-size: 10px; color: var(--text-muted); transition: transform 0.2s; }
+.sidebar-section-toggle.open { transform: rotate(180deg); }
+.providers-scroll { overflow-y: auto; flex: 1; }
+.providers-empty { padding: 14px 16px; font-size: 12px; color: var(--text-muted); }
+
+/* PROVIDER CARD */
+.provider-card {
+  position: relative;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px; cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid oklch(94% 0.005 240);
+}
+.provider-card:hover { background: oklch(97% 0.005 240); }
+.provider-card.selected { background: var(--green-light); }
+.provider-toggle {
+  width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+  border: 2px solid var(--border); background: white;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.provider-toggle.on { background: var(--green); border-color: var(--green); }
+.provider-toggle.on::after { content: ''; width: 8px; height: 5px; border-left: 2px solid white; border-bottom: 2px solid white; transform: rotate(-45deg) translateY(-1px); display: block; }
+.provider-info { flex: 1; min-width: 0; }
+.provider-name { font-size: 13px; font-weight: 500; color: oklch(18% 0.02 240); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.provider-name.selected { color: oklch(38% 0.16 145); }
+.provider-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+.provider-color-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.provider-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 4px;
+  color: var(--text-muted); border-radius: 4px;
+  transition: background 0.15s, color 0.15s; vertical-align: -3px;
+  text-decoration: none;
+}
+.provider-link:hover { background: oklch(92% 0.02 240); color: oklch(35% 0.02 240); }
+.provider-link svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.provider-remove {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px;
+  font-family: inherit;
+}
+.provider-remove:hover { background: oklch(92% 0.02 240); color: var(--red); }
+.provider-total {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  color: oklch(20% 0.02 240);
+  align-self: center; flex-shrink: 0;
+  white-space: nowrap; padding-left: 8px;
+}
+.provider-total.best { color: var(--green); }
+.provider-total.worst { color: var(--red); }
+.provider-card.has-remove .provider-total { padding-right: 20px; }
+.provider-counter { padding: 8px 16px; font-size: 11px; color: var(--text-muted); }
+
+/* CUSTOM TARIFF FORM */
+.custom-form { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.form-input-row { display: flex; align-items: center; gap: 6px; }
+.form-input {
+  flex: 1; padding: 6px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: oklch(98% 0.005 240);
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  color: oklch(20% 0.02 240); outline: none; transition: border-color 0.15s;
+  min-width: 0;
+}
+.form-input:focus { border-color: var(--green); background: white; }
+.form-unit { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.custom-add-btn {
+  padding: 8px; border-radius: 7px; background: var(--green);
+  color: white; font-family: inherit; font-size: 13px; font-weight: 500;
+  border: none; cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.custom-add-btn:hover { background: oklch(52% 0.18 145); }
+
+/* SIDEBAR LEGEND */
+.sidebar-spacer { flex: 1; }
+.sidebar-legend { padding: 10px 16px; border-top: 1px solid var(--border); }
+.sidebar-legend-row { display: flex; gap: 12px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend-link {
+  display: block; margin-top: 8px;
+  font-size: 11px; color: var(--text-muted); text-decoration: underline;
+  cursor: pointer; background: none; border: none; padding: 0;
+  font-family: inherit;
+}
+.legend-link:hover { color: var(--green); }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TABLE AREA */
+.table-area { flex: 1 1 0; overflow: auto; padding: 16px 20px 20px; min-height: 0; }
+.section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+.section-title { font-size: 13px; font-weight: 600; color: oklch(30% 0.02 240); }
+.section-sub { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+.view-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.section-actions { display: flex; align-items: center; gap: 8px; }
+.export-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border-radius: 7px;
+  background: white; border: 1px solid var(--border); color: oklch(30% 0.02 240);
+  font: 500 12px/1 'DM Sans', sans-serif; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.export-btn:hover:not(:disabled) { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.export-btn svg { width: 14px; height: 14px; }
+.view-btn { padding: 5px 12px; font-size: 12px; font-weight: 500; border: none; background: white; color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.view-btn.active { background: var(--navy); color: white; }
+
+table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
+.compare thead th {
+  text-align: left; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  white-space: nowrap; position: sticky; top: 0; background: oklch(97% 0.006 240);
+  z-index: 10;
+}
+.compare thead th.num { text-align: right; }
+.compare tbody tr { transition: background 0.1s; }
+.compare tbody tr:hover { background: oklch(96% 0.006 240); }
+.compare tbody td { padding: 9px 12px; border-bottom: 1px solid oklch(94% 0.005 240); white-space: nowrap; }
+.compare tbody td.num { text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; }
+.td-month { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: oklch(30% 0.02 240); }
+.td-energy { font-family: 'DM Mono', monospace; font-size: 12px; }
+.td-price { font-family: 'DM Mono', monospace; font-size: 12px; color: oklch(30% 0.02 240); }
+.cost-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.cost-gross { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+.cost-cent { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.h0-diff { font-size: 10px; margin-left: 4px; opacity: 0.7; font-family: 'DM Mono', monospace; }
+
+.provider-col-header { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; }
+.provider-col-name-row { display: flex; align-items: center; gap: 5px; }
+.provider-col-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.provider-col-name { font-size: 11px; font-weight: 600; color: oklch(25% 0.02 240); }
+.provider-col-markup { font-size: 10px; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; font-family: 'DM Mono', monospace; }
+
+.best-cell { color: var(--green) !important; }
+.best-indicator { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-left: 4px; vertical-align: middle; }
+
+.tag-custom {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 600;
+  background: var(--amber-light); color: oklch(45% 0.14 75);
+  margin-left: 6px; letter-spacing: 0.3px; text-transform: uppercase;
 }
 
-td {
-	font-family: verdana;
-	font-size: 13px;
-	line-height: 18px;
-	white-space: nowrap;
+.totals-row td { background: oklch(96% 0.01 145); font-weight: 600; border-top: 2px solid oklch(88% 0.06 145); }
+.totals-row .cost-gross { color: oklch(38% 0.16 145); }
+
+.diff-good { color: var(--green); }
+.diff-bad { color: var(--red); }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 12px; color: var(--text-muted); }
+.empty-icon { font-size: 32px; opacity: 0.4; }
+.empty-text { font-size: 14px; }
+
+.chart-resize-handle {
+  flex: 0 0 6px; cursor: ns-resize; position: relative; z-index: 5;
+  background: var(--border); transition: background 0.15s;
+}
+.chart-resize-handle:hover, .chart-resize-handle.dragging {
+  background: oklch(78% 0.02 240);
+}
+.chart-resize-handle::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px; height: 2px; border-radius: 1px;
+  background: oklch(60% 0.02 240);
 }
 
-table {
-    margin-left: 3em;
-    text-align: left;
-    padding: 2px;
+/* CHART */
+.chart-area {
+  flex: 0 0 auto; height: clamp(220px, 36vh, 520px);
+  display: flex; flex-direction: column;
+  padding: 14px 20px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
-table, th, td {
-  border: 1px solid black;
-  border-collapse: collapse;
-  padding: 5px;
-  text-align: right;
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
+.chart-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.chart-info { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.chart-wrap { flex: 1 1 auto; min-height: 180px; position: relative; user-select: none; }
+.chart-row { display: flex; gap: 0; height: 100%; }
+.chart-axis {
+  width: 36px; flex-shrink: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding-bottom: 2px;
+}
+.chart-axis span {
+  font-size: 9px; font-family: 'DM Mono', monospace;
+  display: block; line-height: 1;
+}
+.chart-axis-left span { color: var(--green); text-align: right; }
+.chart-axis-right span { color: oklch(62% 0.18 260); text-align: left; padding-left: 4px; }
+.chart-canvas { flex: 1; position: relative; }
+.chart-zero-line {
+  position: absolute; left: 0; right: 0; z-index: 1;
+  border-top: 1px dashed oklch(80% 0.05 240);
+}
+.chart-bars { display: flex; align-items: flex-end; gap: 1px; height: 100%; position: absolute; inset: 0; }
+.chart-bar-wrap { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; }
+.chart-bar {
+  width: 100%; border-radius: 2px 2px 0 0;
+  transition: background 0.1s;
+}
+.chart-bar.pos { background: oklch(72% 0.12 145 / 0.6); }
+.chart-bar.neg { background: oklch(62% 0.18 25 / 0.7); }
+.chart-bar-wrap:hover .chart-bar.pos { background: oklch(52% 0.18 145); }
+.chart-bar-wrap:hover .chart-bar.neg { background: oklch(62% 0.18 25 / 1); }
+.chart-bar-boxplot {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 2;
+}
+.chart-bar-boxplot .bp-box {
+  position: absolute; left: 20%; right: 20%;
+  background: oklch(28% 0.06 145 / 0.3);
+  border: 1px solid oklch(28% 0.06 145 / 0.85);
+}
+.chart-bar-boxplot .bp-median {
+  position: absolute; left: 20%; right: 20%; height: 1.5px;
+  margin-bottom: -0.75px;
+  background: oklch(20% 0.04 145 / 0.95);
+}
+.chart-bar-boxplot .bp-whisker {
+  position: absolute; left: 50%; width: 1px;
+  margin-left: -0.5px;
+  background: oklch(28% 0.06 145 / 0.85);
+}
+.chart-bar-boxplot .bp-cap {
+  position: absolute; left: 38%; right: 38%; height: 1px;
+  margin-bottom: -0.5px;
+  background: oklch(28% 0.06 145 / 0.85);
+}
+.chart-bar-boxplot .bp-outlier {
+  position: absolute; left: 50%; width: 4px; height: 4px;
+  margin-left: -2px; margin-bottom: -2px; border-radius: 50%;
+  background: oklch(28% 0.06 145 / 0.85);
+}
+.chart-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.chart-tooltip {
+  position: absolute; bottom: 105%; left: 50%;
+  transform: translateX(-50%);
+  background: oklch(15% 0.02 240); color: white;
+  padding: 5px 9px; border-radius: 6px; font-size: 11px;
+  font-family: 'DM Mono', monospace; z-index: 99; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1.6;
+  display: none;
+}
+.chart-bar-wrap:hover .chart-tooltip { display: block; }
+.tooltip-title { font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.tooltip-price { color: var(--green-mid); }
+.tooltip-cons { color: oklch(75% 0.1 260); }
+
+.chart-x-row { position: relative; height: 14px; margin: 4px 36px 0 36px; }
+.chart-x-label { position: absolute; font-size: 9px; color: var(--text-muted); font-family: 'DM Mono', monospace; transform: translateX(-50%); }
+.chart-legend {
+  display: flex; gap: 14px; align-items: center;
+  font-size: 10px; color: var(--text-muted); padding-left: 36px;
+}
+.chart-legend-item { display: flex; align-items: center; gap: 5px; }
+.chart-legend-swatch-bar { width: 12px; height: 8px; background: oklch(72% 0.12 145); border-radius: 2px; display: inline-block; }
+.chart-legend-swatch-line { width: 12px; height: 2px; background: oklch(62% 0.18 260); display: inline-block; border-radius: 1px; }
+.chart-legend-swatch-stddev {
+  position: relative; display: inline-block;
+  width: 10px; height: 10px;
+  background: oklch(28% 0.06 145 / 0.3);
+  border: 1px solid oklch(28% 0.06 145 / 0.85);
+}
+.chart-legend-swatch-stddev::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1.5px; margin-top: -0.75px;
+  background: oklch(20% 0.04 145 / 0.95);
 }
 
-th {
-	font-family: verdana;
-	font-size: 13px;
-        padding-left: 5px;
-        padding-right: 5px;
-	line-height: 18px;
+.chart-placeholder {
+  position: absolute; top: 0; right: 0;
+  background: oklch(92% 0.04 75); border: 1px solid oklch(82% 0.08 75);
+  color: oklch(45% 0.12 75); border-radius: 5px;
+  padding: 2px 8px; font-size: 11px; font-weight: 500; z-index: 10;
 }
 
-.athead {
-	font-family: verdana;
-	font-size: 18px;
-        padding-left: 5px;
-        padding-right: 5px;
-        padding-bottom: 8px;
+/* WARNING */
+.warning-banner {
+  padding: 8px 20px; background: oklch(95% 0.05 75); border-bottom: 1px solid oklch(82% 0.08 75);
+  color: oklch(40% 0.14 75); font-size: 12px; flex-shrink: 0;
+  display: none;
 }
+.warning-banner.show { display: block; }
 
-a {
-	text-decoration: none;
-	color: #777;
+/* MODAL */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 20, 30, 0.4);
+  z-index: 1000; display: none; align-items: flex-start; justify-content: center;
+  padding: 40px 20px; overflow-y: auto;
 }
-
-a:hover {
-	color: #999;
+.modal-backdrop.show { display: flex; }
+.modal {
+  background: white; border-radius: 10px; max-width: 760px; width: 100%;
+  padding: 24px 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  max-height: 90vh; overflow-y: auto;
 }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+.modal-title { font-size: 16px; font-weight: 600; color: oklch(20% 0.02 240); }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 4px 8px; border-radius: 4px; font-family: inherit; }
+.modal-close:hover { background: oklch(95% 0.005 240); color: oklch(20% 0.02 240); }
+.modal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: oklch(25% 0.02 240); }
+.modal h3:first-child { margin-top: 0; }
+.modal h4 { font-size: 13px; font-weight: 600; margin: 14px 0 6px; color: oklch(28% 0.02 240); }
+.modal p { font-size: 13px; line-height: 1.55; color: oklch(28% 0.02 240); margin-bottom: 8px; }
+.modal ol, .modal ul { padding-left: 20px; font-size: 13px; line-height: 1.55; color: oklch(28% 0.02 240); }
+.modal li { margin-bottom: 4px; }
+.modal a { color: var(--green); text-decoration: none; }
+.modal a:hover { text-decoration: underline; }
+.modal img { max-width: 100%; height: auto; border-radius: 4px; margin-top: 6px; }
+.modal-collapsible { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; overflow: hidden; }
+.modal-collapsible summary { padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 500; color: oklch(25% 0.02 240); list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.modal-collapsible summary::-webkit-details-marker { display: none; }
+.modal-collapsible summary::after { content: '+'; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+.modal-collapsible[open] summary::after { content: '−'; }
+.modal-collapsible summary:hover { background: oklch(97% 0.005 240); }
+.modal-collapsible-body { padding: 12px 14px; border-top: 1px solid var(--border); }
 
-p {
-	margin-bottom: 12px;
-	margin-top: 12px;
+/* MENU BUTTON + DRAWER (mobile only) */
+.menu-btn {
+  display: none;
+  background: oklch(28% 0.03 240); border: 1px solid oklch(35% 0.03 240);
+  color: white; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 6px;
+  align-items: center; justify-content: center;
+  font-family: inherit; padding: 0; flex-shrink: 0;
+  transition: background 0.15s;
 }
-
-form p {
-	margin-bottom: 8px;
-	margin-top: 8px;
+.menu-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.menu-btn:hover { background: oklch(32% 0.03 240); }
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15, 20, 30, 0.45);
+  z-index: 240;
 }
+.sidebar-backdrop.show { display: block; }
 
-li p {
-	margin-bottom: 6px;
-	margin-top: 6px;
-}
+/* MOBILE LAYOUT */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  .app { height: auto; min-height: 100vh; overflow: visible; }
 
-form, h1, h2 {
-	margin: 0px;
-}
-
-h1 {
-	font-size: 18px;
-	line-height: 28px;
-}
-
-h2 {
-	font-size: 15px;
-	line-height: 25px;
-}
-
-.spacer_right {
-    margin-left: 70%;
-    margin-right: 10px;
-	float: right;
-}
-
-.container a {
-  padding: .2em;
-}
-
-@media (pointer: coarse) {
-  .container a {
-    padding: .8em;
+  .topbar {
+    position: sticky; top: 0; z-index: 150;
+    padding: 0 10px; gap: 8px;
   }
-}
-.controls {
-	display: flex;
-	margin-top: 30px;
-	margin-bottom: 30px;
-    display: flex;
-    justify-content: center;
-}
-button {
-	background-color: #333;
-	color: #fff;
-	padding: 10px 20px;
-	border: none;
-	border-radius: 5px;
-	cursor: pointer;
-	margin: 0 10px;
+  .menu-btn { display: flex; }
+  .topbar-title { display: none; }
+  .topbar-divider { display: none; }
+  .upload-btn { padding: 7px 9px; }
+  .upload-btn span { display: none; }
+  .chart-date-btn { width: 30px; height: 30px; }
+  .chart-date-label { min-width: 90px; font-size: 12px; padding: 6px 10px; }
+  .help-btn { width: 30px; height: 30px; }
+
+  .body { flex-direction: column; overflow: visible; flex: none; }
+
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: min(86vw, 320px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease-out;
+    z-index: 250;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+    border-right: none;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .main { overflow: visible; }
+  .chart-resize-handle { display: none; }
+  .table-area { overflow-x: auto; overflow-y: visible; padding: 12px 12px 14px; flex: none; }
+  .section-header-row { flex-wrap: wrap; gap: 8px; }
+  .compare thead th { padding: 6px 10px; }
+  .compare tbody td { padding: 8px 10px; }
+  .chart-area { padding: 12px 12px 8px; flex: none; }
+  .chart-wrap { height: 200px; }
+  .chart-x-row { margin: 4px 30px 0 30px; }
+  .chart-axis { width: 30px; }
+  .chart-legend { padding-left: 30px; flex-wrap: wrap; }
+
+  .modal-backdrop { padding: 12px 8px; }
+  .modal { padding: 18px 16px; max-height: 96vh; border-radius: 8px; }
+  .modal-title { font-size: 15px; }
+  .modal h3 { font-size: 13px; }
+  .modal p, .modal ol, .modal ul { font-size: 12.5px; }
 }
 
-.collapsible {
-  background-color: #777;
-  color: white;
-  cursor: pointer;
-  padding: 18px;
-  width: 100%;
-  border: none;
-  text-align: left;
-  outline: none;
-  font-size: 15px;
-}
-
-.active, .collapsible:hover {
-  background-color: #555;
-}
-
-/* New styles for the header container and download button */
-.collapsible-header {
-    display: flex;
-    width: 100%;
-    align-items: stretch; /* Make buttons the same height */
-}
-
-.collapsible {
-    flex-grow: 1; /* Make the main button take available space */
-}
-
-.download-btn {
-    background-color: #777;
-    color: white;
-    border: none;
-    padding: 18px;
-    cursor: pointer;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0; /* Prevent button from shrinking */
-}
-
-/* Sync hover color for the entire header */
-.collapsible-header:hover .collapsible,
-.collapsible-header:hover .download-btn {
-    background-color: #555;
-}
-
-/* Sync active color for the download button when the collapsible is active */
-.collapsible.active,
-.collapsible.active + .download-btn {
-    background-color: #555;
-}
-
-
-.collapsible:after {
-  content: '\002B';
-  color: white;
-  font-weight: bold;
-  float: right;
-  margin-left: 5px;
-}
-
-.active:after {
-  content: "\2212";
-}
-
-.content {
-  padding: 0 18px;
-  max-height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  box-sizing: border-box;
-  transition: max-height 0.2s ease-out;
-  background-color: #f1f1f1;
-}
-
-.tablethickborderright {
-   border-right: 3px solid;
-}
-
-.tablethickborderrightabit {
-   border-right: 2px solid;
-}
-
-
-.tablethickborderbottom {
-   border-bottom: 4px solid;
-}
-.diff-price-good {
-    color: darkgreen;
-}
-.diff-price-bad {
-    color: darkred;
+@media (max-width: 420px) {
+  .topbar { gap: 6px; padding: 0 8px; }
+  .chart-date-label { min-width: 70px; font-size: 11px; padding: 5px 8px; }
+  .upload-btn { padding: 7px 8px; }
 }
 </style>
-        <script src="chart.js"></script>
-        <script type="importmap">
-        {
-            "imports": {
-                "date-fns": "./vendor/date-fns.mjs",
-                "decimal.js": "./vendor/decimal.mjs",
-                "papaparse": "./vendor/papaparse.mjs",
-                "xlsx": "./vendor/xlsx.mjs"
-            }
-        }
-        </script>
-        <script type="module" src="app.js"></script>
-    </head>
-    <body>
-        <h3>aWATTar Backtesting</h3>
-        <p></p>
-        <button class="collapsible">Um was geht es hier? →</button>
-        <div class="content">
-            <p>Dynamische Stromtarife haben keinen fixen Preis sondern einen Stunden variierenden Preis der sich nach den Ergebnissen der Stromb&ouml;rse EPEX SPOT ergibt.</p>
-            <p>Durch bewusstes Anwenden von Haushaltsger&auml;ten wie Waschmaschine oder Geschirrsp&uuml;ler mittels Zeitvorwahl kann man damit seinen pers&ouml;nlichen Strompreis verringern. Noch besser funktioniert das mit gro&szlig;en Verbraucher wie Elektroauto oder <a href='https://twitter.com/lewurm/status/1739194991832903936'>W&auml;rmepumpe</a>.
-            Der B&ouml;rsenpreis ist in der Regel niedriger wenn viele erneuerbare Energien im Netz verf&uuml;gbar sind, aber keine Abnehmer finden.
-            Dynamische Stromtarife sind daher eines der vielen Puzzlesteine die wir f&uuml;r die Energiewende ben&ouml;tigen.</p>
-            <p>Backtesting ist ein Vorgang um ein Modell auf historische Daten zu testen. Mit diesem Tool kann man die Verbrauchsdaten seines Netzanbieters uploaden (siehe Anleitungen weiter unten), welches dann den erzielten Strompreis berechnet. Dabei wird zuerst der Preis anhand EPEX SPOT errechnet, und danach verschiedene Anbieter und deren Geb&uuml;hren/Aufschl&auml;ge ber&uuml;cksichtigt. Netzgeb&uuml;hren werden nicht ber&uuml;cksichtigt.</p>
-            <p>Hier ein Beispiel wie sowas aussieht:</p>
-            <p><img style="max-width: 100%; height: auto;" src="img/example.webp"></li> </p>
+<script type="importmap">
+{
+    "imports": {
+        "date-fns": "./vendor/date-fns.mjs",
+        "decimal.js": "./vendor/decimal.mjs",
+        "papaparse": "./vendor/papaparse.mjs",
+        "xlsx": "./vendor/xlsx.mjs"
+    }
+}
+</script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<div class="app">
 
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Menü öffnen">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="topbar-logo">
+            <div class="topbar-logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <div class="topbar-title">aWATTar Backtesting</div>
         </div>
-        <p>Verbrauchsdaten vom Netzbetreiber uploaden (Beispieldatens&auml;tze gibt es <a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/tree/main/samples">hier</a> zum Herunterladen):</p>
-        <form id="file-form">
-            <input type="file" id="file-input" name="file-input">
-        </form>
-        <p style="color:red" id="warningHolder">warning place holder.</p>
+        <div class="topbar-spacer"></div>
+        <button class="upload-btn" id="uploadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <span id="uploadBtnLabel">Verbrauchsdaten laden</span>
+        </button>
+        <button class="help-btn" id="helpBtn" title="Anleitungen / FAQ">?</button>
+        <input type="file" id="fileInput" style="display:none" accept=".csv,.xls,.xlsx">
+    </div>
 
-        <canvas id="awattarChart"></canvas>
+    <div id="warningHolder" class="warning-banner"></div>
 
-		<div class="controls">
-			<button id="prevBtn">prev</button>
-            <p id="graphDescr">nothing</p>
-			<button id="nextBtn">next</button>
-		</div>
+    <div class="body">
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+        <!-- SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" data-toggle="providers">
+                    <span class="sidebar-section-title">Anbieter wählen</span>
+                    <span class="sidebar-section-toggle open" id="toggleProviders">▲</span>
+                </div>
+            </div>
+            <div class="providers-scroll" id="providersList"></div>
 
-        <!-- Modified structure for monthly costs table header -->
-        <div class="collapsible-header">
-            <button class="collapsible" id="costslblMonthly" data-table-header="true">&Uuml;bersicht Energiekosten/Einspeisung monatlich →</button>
-            <button class="download-btn" id="downloadMonthlyBtn" title="Download als Excel-Datei">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"></path>
-                </svg>
-                <span style="margin-left: 8px; vertical-align: middle;">Excel Download</span>
-            </button>
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" data-toggle="custom">
+                    <span class="sidebar-section-title">Custom Tarif</span>
+                    <span class="sidebar-section-toggle" id="toggleCustom">▲</span>
+                </div>
+            </div>
+            <div id="customForm" style="display:none">
+                <form class="custom-form" id="customTariffForm">
+                    <div class="form-row">
+                        <label class="form-label">Name</label>
+                        <input class="form-input" name="name" value="Mein Tarif" required>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Aufschlag %</label>
+                        <div class="form-input-row">
+                            <input class="form-input" type="number" step="0.1" name="markupPct" value="0">
+                            <span class="form-unit">%</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Fixaufschlag</label>
+                        <div class="form-input-row">
+                            <input class="form-input" type="number" step="0.01" name="addFixed" value="1.50">
+                            <span class="form-unit">ct/kWh</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Grundpreis</label>
+                        <div class="form-input-row">
+                            <input class="form-input" type="number" step="0.01" name="baseMonthly" value="3.00">
+                            <span class="form-unit">€/Mon.</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">MwSt.</label>
+                        <div class="form-input-row">
+                            <input class="form-input" type="number" step="1" name="vat" value="20">
+                            <span class="form-unit">%</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="custom-add-btn">+ Tarif hinzufügen</button>
+                </form>
+            </div>
+
+            <div class="sidebar-spacer"></div>
+            <div class="sidebar-legend">
+                <div class="sidebar-legend-row">
+                    <span class="legend-item"><span class="legend-dot" style="background: var(--green);"></span>günstigster</span>
+                    <span class="legend-item"><span class="legend-dot" style="background: var(--red);"></span>teuerster</span>
+                </div>
+                <button class="legend-link" id="openHelp">Anleitungen &amp; FAQ →</button>
+            </div>
         </div>
-        <div class="content">
-            <table id="costsMonthly"></table>
-        </div>
 
-        <!-- Modified structure for daily costs table header -->
-        <div class="collapsible-header">
-            <button class="collapsible" id="costslblDaily" data-table-header="true">&Uuml;bersicht Energiekosten/Einspeisung t&auml;glich →</button>
-            <button class="download-btn" id="downloadDailyBtn" title="Download als Excel-Datei">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"></path>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"></path>
-                </svg>
-                 <span style="margin-left: 8px; vertical-align: middle;">Excel Download</span>
-            </button>
-        </div>
-        <div class="content">
-            <table id="costsDaily"></table>
-        </div>
+        <!-- MAIN -->
+        <div class="main">
+            <div class="table-area">
+                <div class="section-header-row">
+                    <div>
+                        <span class="section-title" id="tableTitle">Energiekosten monatlich</span>
+                        <span class="section-sub" id="tableSub">inkl. 20% MwSt.</span>
+                    </div>
+                    <div class="section-actions">
+                        <button class="export-btn" id="exportBtn" title="Excel-Export" disabled>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            <span>Excel</span>
+                        </button>
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="monthly">Monatlich</button>
+                            <button class="view-btn" data-view="daily">Täglich</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tableContainer">
+                    <div class="empty-state">
+                        <div class="empty-icon">⚡</div>
+                        <div class="empty-text">Lade deine Verbrauchsdaten, um die Übersicht zu sehen.</div>
+                    </div>
+                </div>
+            </div>
 
-        <p><sup>1</sup> Der H0-Durchschnittspreis ergibt sich aus dem Verbrauch laut dem <a href='https://de.wikipedia.org/wiki/Standardlastprofil'>H0 Standardprofil</a> im selben Zeitraum und dient somit als Benchmark. Erzielt man einen Durchschnittspreis unter dem H0 Ø hat man <em>sehr</em> gute Vorraussetzungen um von einem dynamischen Stromtarif zu profitieren, ist aber nicht notwendig um generell davon zu profitieren.</p>
-        <h4>Disclaimer</h4>
-        Keine Garantie auf Richtigkeit der dargestellten Daten.
+            <div class="chart-resize-handle" id="chartResizeHandle" title="Höhe ziehen"></div>
+            <div class="chart-area" id="chartArea">
+                <div class="chart-header">
+                    <span class="chart-title" id="chartTitle">EPEX SPOT — Stündliche Preise</span>
+                    <div class="chart-date-nav" id="chartDateNav">
+                        <button class="chart-date-btn" id="datePrev" title="Zurück">‹</button>
+                        <button class="chart-date-label" id="dateLabel" title="Datum wählen">—</button>
+                        <button class="chart-date-btn" id="dateNext" title="Vor">›</button>
+                    </div>
+                    <span class="chart-info" id="chartInfo"></span>
+                </div>
+                <div class="chart-wrap" id="chartWrap"></div>
+                <div class="date-popup hidden" id="datePopup" role="dialog" aria-label="Datum wählen"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-backdrop" id="helpModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="modal-title">Anleitungen &amp; FAQ</div>
+            <button class="modal-close" id="closeHelp">×</button>
+        </div>
+        <h3>Um was geht es hier?</h3>
+        <p>Dynamische Stromtarife haben keinen fixen Preis sondern einen Stunden variierenden Preis der sich nach den Ergebnissen der Strombörse EPEX SPOT ergibt.</p>
+        <p>Durch bewusstes Anwenden von Haushaltsgeräten wie Waschmaschine oder Geschirrspüler mittels Zeitvorwahl kann man damit seinen persönlichen Strompreis verringern. Noch besser funktioniert das mit großen Verbraucher wie Elektroauto oder <a href='https://twitter.com/lewurm/status/1739194991832903936'>Wärmepumpe</a>. Der Börsenpreis ist in der Regel niedriger wenn viele erneuerbare Energien im Netz verfügbar sind, aber keine Abnehmer finden. Dynamische Stromtarife sind daher eines der vielen Puzzlesteine die wir für die Energiewende benötigen.</p>
+        <p>Backtesting ist ein Vorgang um ein Modell auf historische Daten zu testen. Mit diesem Tool kann man die Verbrauchsdaten seines Netzanbieters uploaden, welches dann den erzielten Strompreis berechnet. Dabei wird zuerst der Preis anhand EPEX SPOT errechnet, und danach verschiedene Anbieter und deren Gebühren/Aufschläge berücksichtigt. Netzgebühren werden nicht berücksichtigt.</p>
+
         <h3>Netzbetreiber Anleitungen</h3>
+        <p style="font-size: 12px; color: var(--text-muted);">Beispieldatensätze gibt es <a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/tree/main/samples">hier</a> zum Herunterladen.</p>
 
-        <button class="collapsible">Netz N&Ouml; →</button>
-        <div class="content">
+        <details class="modal-collapsible"><summary>Netz NÖ</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Gehe auf <a href="https://smartmeter.netz-noe.at/">https://smartmeter.netz-noe.at</a></p></li>
-                <li><p>Einloggen</p></li>
-                <li><p>Tab <i>Verbrauch</i> ausw&auml;hlen</p></li>
-                <li><p>Richtigen Z&auml;hler ausw&auml;hlen unter <i>Vertragskonto</i>. Achtung, nicht den Einspeisepunkt w&auml;hlen.</p></li>
-                <li><p>Tab <i>Jahr</i> ausw&auml;hlen</p></li>
-                <li><p>Dann unter <i>Download</i> die Variante <i>Als Tabelle Tages-/15min Werte (CSV)</i> herunterladen.</p> <img src="img/netznoe/download.webp"></li>
-                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
+                <li>Gehe auf <a href="https://smartmeter.netz-noe.at/">smartmeter.netz-noe.at</a></li>
+                <li>Einloggen</li>
+                <li>Tab <i>Verbrauch</i> auswählen</li>
+                <li>Richtigen Zähler auswählen unter <i>Vertragskonto</i>. Achtung, nicht den Einspeisepunkt wählen.</li>
+                <li>Tab <i>Jahr</i> auswählen</li>
+                <li>Dann unter <i>Download</i> die Variante <i>Als Tabelle Tages-/15min Werte (CSV)</i> herunterladen. <img src="img/netznoe/download.webp"></li>
+                <li>Diese Datei dann oben auswählen.</li>
             </ol>
-            <p>
-                <b>Hinweis</b>: Die 15-min-Profilwerte m&uuml;ssen explizit aktiviert werden, siehe Spalte "Opt-in" im Screenshot.
-                Ist das nicht der Fall, kann die heruntergeladene CSV trotzdem nur Tageswerte enthalten. Solche Eintr&auml;ge werden von diesem Tool ignoriert.
-                Es kann auch sein, dass der Inhalt gemischt ist.
-                Beispiel: Opt-In wurde am 15. September gemacht, dann ist der Verbrauch bis zum Stichtag als Tageswerte enthalt, danach folgen erst die 15-min-Profilwerte. Ersteres wird vom Tool ignoriert.
-                <br/>
-                <img src="img/netznoe/hinweis.webp">
-            </p>
-        </div>
-
-        <button class="collapsible">Netz O&Ouml; →</button>
-        <div class="content">
+            <p><b>Hinweis:</b> Die 15-min-Profilwerte müssen explizit aktiviert werden, siehe Spalte „Opt-in" im Screenshot. Ist das nicht der Fall, kann die heruntergeladene CSV trotzdem nur Tageswerte enthalten. Solche Einträge werden von diesem Tool ignoriert.</p>
+            <img src="img/netznoe/hinweis.webp">
+        </div></details>
+        <details class="modal-collapsible"><summary>Netz OÖ</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Download der 15-Minutenwerte &uuml;ber das <a href="https://eservice.netzooe.at/app/login">NetzO&Ouml; e-Service-Portal</a></p></li>
-                <li><p>Vertrag ausw&auml;hlen</p></li>
-                <li><p>Verbrauchs&uuml;bersicht</p></li>
-                <li><p>Zeitraum ausw&auml;hlen</p></li>
-                <li><p>Ausgew&auml;hlte Daten herunterladen:</p> <img src="img/netzooe/download.webp"></li>
-                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
+                <li>Download der 15-Minutenwerte über das <a href="https://eservice.netzooe.at/app/login">NetzOÖ e-Service-Portal</a></li>
+                <li>Vertrag auswählen</li>
+                <li>Verbrauchsübersicht</li>
+                <li>Zeitraum auswählen</li>
+                <li>Ausgewählte Daten herunterladen: <img src="img/netzooe/download.webp"></li>
             </ol>
-        </div>
-
-        <button class="collapsible">K&auml;rnten Netz →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>Kärnten Netz</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Gehe auf <a href="https://kaerntennetz.at/">kaerntennetz.at</a></p></li>
-                <li><p>Kundenportal</p></li>
-                <li><p>Einloggen</p></li>
-                <li><p>"Profildownload" unter "meine.messwerte" ausw&auml;hlen</p></li>
-                <li><p>Richtigen Z&auml;hler ausw&auml;hlen. Achtung, nicht den Einspeisepunkt w&auml;hlen.</p></li>
-                <li><p>Download (es kann kein Zeitraum ausgew&auml;hlt werden)</p> <img src="img/kaerntennetz/download.webp"></li>
-                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
+                <li>Gehe auf <a href="https://kaerntennetz.at/">kaerntennetz.at</a></li>
+                <li>Kundenportal &rarr; Einloggen</li>
+                <li>„Profildownload" unter „meine.messwerte" auswählen</li>
+                <li>Richtigen Zähler auswählen. Achtung, nicht den Einspeisepunkt wählen.</li>
+                <li>Download (es kann kein Zeitraum ausgewählt werden) <img src="img/kaerntennetz/download.webp"></li>
             </ol>
-        </div>
-
-        <button class="collapsible">Salzburg Netz →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>Salzburg Netz</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Login auf <a href="https://portal.salzburgnetz.at">https://portal.salzburgnetz.at</a></p></li>
-                <li><p>Klick auf Anlagendetails</p></li>
-                <li><p>Anlage bzw. Vertrag ausw&auml;hlen</p></li>
-                <li><p>Daten ausw&auml;hlen und &uuml;ber das "Burger Men&uuml;" den Download ansto&szlig;en</p><img src="img/salzburgnetz/1.webp"></li>
+                <li>Login auf <a href="https://portal.salzburgnetz.at">portal.salzburgnetz.at</a></li>
+                <li>Klick auf Anlagendetails</li>
+                <li>Anlage bzw. Vertrag auswählen</li>
+                <li>Daten auswählen und über das „Burger Menü" den Download anstoßen <img src="img/salzburgnetz/1.webp"></li>
             </ol>
-        </div>
-
-        <button class="collapsible">TINETZ →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>TINETZ</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Einloggen beim Tinetz Kundenportal: <a href="https://kundenportal.tinetz.at/">https://kundenportal.tinetz.at/</a></p></li>
-                <li><p>Unter "Z&auml;hler" auf Verbrauchshistorie gehen</p><img src="img/tinetz/1.webp"></li>
-                <li><p>Zeitraum ausw&auml;hlen</p><img src="img/tinetz/2.webp"></li>
-                <li><p>Herunterladen, "Rohdaten als CSV"</p><img src="img/tinetz/3.webp"></li>
+                <li>Einloggen beim Tinetz Kundenportal: <a href="https://kundenportal.tinetz.at/">kundenportal.tinetz.at</a></li>
+                <li>Unter „Zähler" auf Verbrauchshistorie gehen <img src="img/tinetz/1.webp"></li>
+                <li>Zeitraum auswählen <img src="img/tinetz/2.webp"></li>
+                <li>Herunterladen, „Rohdaten als CSV" <img src="img/tinetz/3.webp"></li>
             </ol>
-        </div>
-
-        <button class="collapsible">Wiener Netze →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>Wiener Netze</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Gehe auf <a href="https://smartmeter-web.wienernetze.at">smartmeter-web.wienernetze.at</a></p></li>
-                <li><p>Klicke auf <i>Datenexport</i></p></li>
-                <li><p>Zeitfenster w&auml;hlen</p></li>
-                <li><p><i>Viertelstundenwerte</i> ausw&auml;hlen</p></li>
-                <li><p>Nur eine Z&auml;hlpunktnummer ausw&auml;hlen, falls mehrere vorhanden</p></li>
-                <li><p>Auf <i>Exportieren</i> klicken</p></li>
-                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
+                <li>Gehe auf <a href="https://smartmeter-web.wienernetze.at">smartmeter-web.wienernetze.at</a></li>
+                <li>Klicke auf <i>Datenexport</i></li>
+                <li>Zeitfenster wählen</li>
+                <li><i>Viertelstundenwerte</i> auswählen</li>
+                <li>Nur eine Zählpunktnummer auswählen, falls mehrere vorhanden</li>
+                <li>Auf <i>Exportieren</i> klicken</li>
             </ol>
-        </div>
-
-        <button class="collapsible">Clam Strom →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>Clam Strom</summary><div class="modal-collapsible-body">
             <ol>
-                <li><p>Gehe auf <a href="https://www.endkundenwebportal.at/enView.Portal/#/home">https://www.endkundenwebportal.at</a></p></li>
-                <li><p>W&auml;hle <i>Strom</i></p></li>
-                <li><p>Zeitfenster auf <i>Tag</i> einstellen (nur so werden 15-Minuten Werte geliefert!)</p></li>
-                <li><p>Auf <i>Angezeigte Werte als CSV-Datei speichern</i> klicken</p></li>
-                <li><p>Diese Datei dann oben auf dieser Webseite ausw&auml;hlen</p></li>
-                <li><p>Da das herunterladen vieler einzelner Dateien m&uuml;hsam ist, wurde hierf&uuml;r ein <i><a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/blob/main/docs/downloader/download_ClamStrom.py">Python-Skript</a></i> bereitgestellt.</p></li>
-                <li><p><i>Cookie</i> mittels <i>DEV-Tools</i> aus Browser kopieren</p><img src="img/clamstrom/cookie.webp"></li>
-                <li><p><i><a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/blob/main/docs/downloader/configuration_sample.yaml">configuration_sample.yaml</a></i> nach <i>configuration.yaml</i> kopieren</p></li>
-                <li><p><i>configuration.yaml</i> entsprechend mit <i>Z&auml;hlpunktnummer</i> und aktuell g&uuml;ltigem Cookie bef&uuml;llen</p></li>
+                <li>Gehe auf <a href="https://www.endkundenwebportal.at/enView.Portal/#/home">endkundenwebportal.at</a></li>
+                <li>Wähle <i>Strom</i></li>
+                <li>Zeitfenster auf <i>Tag</i> einstellen (nur so werden 15-Minuten Werte geliefert!)</li>
+                <li>Auf <i>Angezeigte Werte als CSV-Datei speichern</i> klicken</li>
             </ol>
-        </div>
-
-        <button class="collapsible">Stadtwerke Kufstein →</button>
-        <div class="content">
+        </div></details>
+        <details class="modal-collapsible"><summary>Stadtwerke Kufstein</summary><div class="modal-collapsible-body">
             <ol>
-                <li value="0"><p>Einloggen beim STWK Kundenportal: <a href="https://portal.stwk.at/">portal.stwk.at</a></p></li>
-                <li><p>Klicke auf <i>Verbrauchsübersicht</i></p></li>
-                <li><p>Zeitraum w&auml;hlen</p></li>
-                <li><p>Auflösung <i>Stundenwerte</i> ausw&auml;hlen</p></li>
-                <li><p>Auf <i>Aktualisieren</i> klicken</p></li>
-                <li><p>Nach unten scrollen und auf den Excel Link klicken</p></li>
-                <li><p>(Nur einen Z&auml;hlpunkt ausw&auml;hlen, falls mehrere vorhanden)</p></li>
-                <li><img src="img/stadtwerkeku/stwk.webp"></li>
+                <li>Einloggen beim STWK Kundenportal: <a href="https://portal.stwk.at/">portal.stwk.at</a></li>
+                <li>Klicke auf <i>Verbrauchsübersicht</i></li>
+                <li>Zeitraum wählen</li>
+                <li>Auflösung <i>Stundenwerte</i> auswählen</li>
+                <li>Auf <i>Aktualisieren</i> klicken</li>
+                <li>Nach unten scrollen und auf den Excel Link klicken <img src="img/stadtwerkeku/stwk.webp"></li>
             </ol>
-        </div>
+        </div></details>
 
-        Andere Netzbetreiber die funktionieren, aber keine Anleitung vorhanden:
-        <ol>
-            <li>Ebner Strom</li>
-            <li>Energienetze Steiermark</li>
-            <li>Innsbrucker Kommunalbetriebe (IKB)</li>
-            <li>LinzAG</li>
-            <li>Netz Burgenland</li>
-            <li>Stadtwerke Klagenfurt</li>
-            <li>Stromnetz Graz</li>
-            <li>Vorarlberg Netz</li>
-            <li>kwg.at (Kraftwerk Glatzing-R&uuml;storf)</li>
-        </ol>
-
-        Sollte ein Netzbetreiber der funktioniert nicht hier aufgelistet sein w&uuml;rde ich mich &uuml;ber eine Nachricht freuen (siehe f&uuml;r Kontaktdaten ganz unten).
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 12px;">Andere Netzbetreiber die funktionieren, aber keine Anleitung vorhanden: Ebner Strom, Energienetze Steiermark, Innsbrucker Kommunalbetriebe (IKB), LinzAG, Netz Burgenland, Stadtwerke Klagenfurt, Stromnetz Graz, Vorarlberg Netz, kwg.at.</p>
 
         <h3>F.A.Q.</h3>
-         <ul>
-             <li><b><i>Es funktioniert nicht!</i></b> Bitte ein neues Issue hier &ouml;ffnen: <a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/issues">github.com/awattar-backtesting/awattar-backtesting.github.io/issues</a></li>
-             <li><b><i>Mein Netzbetreiber wird noch nicht unterst&uuml;tzt</i></b> Bitte ebenfalls ein Issue er&ouml;ffnen und die Datei deines Netzbetreibers anh&auml;ngen. Oder am besten gleich ein PR :-)</li>
-             <li><b><i>Was passiert mit die Daten die hier upgeloaded werden?</i></b> Die bleiben lokal, d.h. die verlassen den Computer nicht. Gerne kann das auch im Source Code verifiziert werden.</li>
-             <li><b><i>Wirst Du von aWATTar bezahlt?</i></b> Nein, und auch von keinem anderen Energielieferanten, Netzanbieter oder &auml;hnlichem.</li>
-             <li><b><i>Warum sieht diese Webseite so urig aus? Hast nix gscheids gelernt?</i></b> Jap. PRs sind gerne willkommen :-)</li>
-             <li><b><i>Wer bist Du? </i></b> <a href="http://wien.tomnetworks.com">lewurm (Website mit Kontaktdaten)</a></li>
-         </ul> 
-    </body>
+        <ul>
+            <li><b>Es funktioniert nicht!</b> Bitte ein neues Issue öffnen: <a href="https://github.com/awattar-backtesting/awattar-backtesting.github.io/issues">github.com/awattar-backtesting/awattar-backtesting.github.io/issues</a></li>
+            <li><b>Mein Netzbetreiber wird noch nicht unterstützt</b> — Bitte ebenfalls ein Issue eröffnen und die Datei deines Netzbetreibers anhängen.</li>
+            <li><b>Was passiert mit den Daten die hier upgeloaded werden?</b> Die bleiben lokal, d.h. die verlassen den Computer nicht.</li>
+            <li><b>Wirst Du von aWATTar bezahlt?</b> Nein, und auch von keinem anderen Energielieferanten, Netzanbieter oder ähnlichem.</li>
+            <li><b>Wer bist Du?</b> <a href="http://wien.tomnetworks.com">lewurm</a></li>
+        </ul>
+
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 16px;"><sup>1</sup> Der H0-Durchschnittspreis ergibt sich aus dem Verbrauch laut dem <a href='https://de.wikipedia.org/wiki/Standardlastprofil'>H0 Standardprofil</a> im selben Zeitraum und dient als Benchmark.<br>Keine Garantie auf Richtigkeit der dargestellten Daten.</p>
+    </div>
+</div>
+
+</body>
 </html>

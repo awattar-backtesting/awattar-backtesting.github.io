@@ -1,22 +1,5 @@
 import * as XLSX from "xlsx";
-
-function bufferToString(buf) {
-    return new Uint8Array(buf)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '');
-}
-
-function decodeUTF16LE(buf) {
-    return new TextDecoder('utf-16le').decode(buf);
-}
-
-function stringToBuffer(str) {
-    var buf = new ArrayBuffer(str.length);
-    var bufView = new Uint8Array(buf);
-    for (var i = 0, strLen = str.length; i < strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
+import { bufferToString, decodeUTF16LE, stringToBuffer } from "./encoding.js";
 
 /**
  * Preprocess a raw upload (ArrayBuffer) by stripping provider-specific
@@ -29,7 +12,7 @@ function stringToBuffer(str) {
  * emitted via onWarning).
  */
 export function stripPlain(buf, onWarning = () => {}) {
-    var input = bufferToString(buf);
+    const input = bufferToString(buf);
     // Kaernten Netz
     //
     // v1:
@@ -66,7 +49,7 @@ export function stripPlain(buf, onWarning = () => {}) {
     // VorarlbergNetz
     // > Vertragskonto;XXXXXXXXXXXX
     // > Zählpunkt;ATXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    var input16le = decodeUTF16LE(buf);
+    const input16le = decodeUTF16LE(buf);
     if (input16le.includes("Vertragskonto;") && input16le.includes("Zählpunkt;")) {
         return stringToBuffer(input16le.split("\n").slice(3).join("\n"));
     }
@@ -100,13 +83,12 @@ export function stripPlain(buf, onWarning = () => {}) {
     }
 
     if (isBurgenlandv2Header(input)) {
-        var result = [];
+        const result = [];
 
         // drop first two lines
-        var lines = input.split("\n").slice(2);
+        const lines = input.split("\n").slice(2);
 
-        for (let i = 0; i < lines.length; i++) {
-            var line = lines[i];
+        for (const line of lines) {
             if (isBurgenlandv2Header(line)) {
                 // second header found, drop lines from here on.
                 return stringToBuffer(result.join("\n"));
@@ -128,9 +110,9 @@ export function stripPlain(buf, onWarning = () => {}) {
     }
 
     if (isTinetz(input)) {
-        var lines = input.split("\n");
-        var s = lines.slice(4).join("\n");
-        var lastLine = lines.slice(-2)[0];
+        const lines = input.split("\n");
+        let s = lines.slice(4).join("\n");
+        const lastLine = lines.slice(-2)[0];
 
         /* check if 15min values are on the left or right side (the CSV export also contains daily usages) */
         if (lastLine.startsWith(";;;")) {
@@ -143,7 +125,7 @@ export function stripPlain(buf, onWarning = () => {}) {
         }
 
         /* normalize date format (= remove seconds) */
-        var t = s.replace(/ (\d\d:\d\d):00;/gm, " $1;");
+        const t = s.replace(/ (\d\d:\d\d):00;/gm, " $1;");
 
         return stringToBuffer(t);
     }
@@ -157,20 +139,20 @@ function ec(r, c) {
 }
 
 function delete_row(ws, row_index) {
-    var variable = XLSX.utils.decode_range(ws["!ref"]);
-    for (var R = row_index; R < variable.e.r; ++R) {
-        for (var C = variable.s.c; C <= variable.e.c; ++C) {
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let R = row_index; R < range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
             ws[ec(R, C)] = ws[ec(R + 1, C)];
         }
     }
-    variable.e.r--;
-    ws['!ref'] = XLSX.utils.encode_range(variable.s, variable.e);
+    range.e.r--;
+    ws['!ref'] = XLSX.utils.encode_range(range.s, range.e);
     return ws;
 }
 
 function update_sheet_range(ws) {
-    var range = { s: { r: 20000000, c: 20000000 }, e: { r: 0, c: 0 } };
-    Object.keys(ws).filter(function (x) { return x.charAt(0) != "!"; }).map(XLSX.utils.decode_cell).forEach(function (x) {
+    const range = { s: { r: 20000000, c: 20000000 }, e: { r: 0, c: 0 } };
+    Object.keys(ws).filter(x => x.charAt(0) !== "!").map(XLSX.utils.decode_cell).forEach(x => {
         range.s.c = Math.min(range.s.c, x.c); range.s.r = Math.min(range.s.r, x.r);
         range.e.c = Math.max(range.e.c, x.c); range.e.r = Math.max(range.e.r, x.r);
     });
@@ -182,7 +164,7 @@ function update_sheet_range(ws) {
  * returns the workbook. Pure: no DOM, no I/O.
  */
 export function stripXls(xls) {
-    var first_ws = xls.Sheets[xls.SheetNames[0]];
+    const first_ws = xls.Sheets[xls.SheetNames[0]];
     // Ebner Strom
     // > Zeitstempel String	Obiscode	Wert (kWh)	Angezeigter Zeitraum
     // > Zählpunkt: AT0034600000000000000000XXYYYZZZZ
