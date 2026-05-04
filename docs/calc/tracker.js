@@ -11,12 +11,12 @@ export class Tracker {
     days = new Set();
 
     addEntry(netzbetreiber, entry) {
-        var res = netzbetreiber.processEntry(entry);
+        const res = netzbetreiber.processEntry(entry);
         if (res === null) {
             return false;
         }
-        var hour = format(res.timestamp, "H");
-        var fullday = format(res.timestamp, "yyyyMMdd");
+        const hour = res.timestamp.getHours();
+        const fullday = format(res.timestamp, "yyyyMMdd");
         this.days.add(fullday);
 
         if (!(fullday in this.data)) {
@@ -33,12 +33,10 @@ export class Tracker {
         /* remove incomplete entries, e.g. if 15-interval is not activated some
          * Netzbetreiber put one entry for each day. This kind of data is not
          * useful for our purpose. */
-        var entries = Object.entries(this.data);
-        for (var i = 0; i < entries.length; i++) {
-            var e = entries[i];
-            if (Object.keys(e[1]).length < 2) {
-                this.days.delete(e[0]);
-                delete this.data[e[0]];
+        for (const [day, hours] of Object.entries(this.data)) {
+            if (Object.keys(hours).length < 2) {
+                this.days.delete(day);
+                delete this.data[day];
             }
         }
     }
