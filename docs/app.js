@@ -419,24 +419,27 @@ function renderChart() {
     ensureChartDay();
 
     let prices, consumption, priceBox, daysCount;
+    let priceMin, priceMax, consMax;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
         consumption = SAMPLE_HOURLY_CONS;
         priceBox = null;
         daysCount = 0;
+        priceMin = Math.min(...prices, 0);
+        priceMax = Math.max(...prices, 0.1);
+        consMax = Math.max(...consumption, 0.1);
     } else {
-        const r = collectHourly();
+        const { chartDays, axisDays } = chartDayScope();
+        const r = aggregateHourly(chartDays);
         prices = r.prices; consumption = r.consumption;
-        priceBox = r.priceBox; daysCount = r.days.length;
+        priceBox = r.priceBox; daysCount = chartDays.length;
+        const ab = axisBounds(axisDays);
+        priceMin = Math.min(ab.priceMin, 0);
+        priceMax = Math.max(ab.priceMax, 0.1);
+        consMax = Math.max(ab.consMax, 0.1);
     }
     const showBox = priceBox && state.view === "monthly" && state.chartDay === null && daysCount >= 2;
-
-    const boxLo = showBox ? priceBox.map((b, i) => b ? Math.min(b.whiskerLow, ...b.outliers) : prices[i]) : prices;
-    const boxHi = showBox ? priceBox.map((b, i) => b ? Math.max(b.whiskerHigh, ...b.outliers) : prices[i]) : prices;
-    const priceMin = Math.min(...prices, ...boxLo, 0);
-    const priceMax = Math.max(...prices, ...boxHi, 0.1);
     const priceRange = (priceMax - priceMin) || 1;
-    const consMax = Math.max(...consumption, 0.1);
 
     let chartDateText = "";
     if (state.chartDay) chartDateText = formatDateKey(state.chartDay);
@@ -551,19 +554,62 @@ function formatDateKey(key) {
     return format(parse(key, "yyyyMMdd", new Date()), "yyyy-MM-dd");
 }
 
-function collectHourly() {
-    // Aggregate hourly prices and consumption across the days the chart covers.
+function chartDayScope() {
+    // Returns { chartDays, axisDays }
+    // - chartDays: days the bars/line cover (one day if chartDay is selected)
+    // - axisDays: days that define the y-axis range, kept stable across day-nav
+    const tracker = state.tracker;
+    const monthKey = (state.view === "monthly")
+        ? state.dateKey
+        : (state.dateKey || "").slice(0, 6);
+    const monthDays = [];
+    for (const d of tracker.days) if (d.startsWith(monthKey)) monthDays.push(d);
+
+    let chartDays;
+    if (state.view === "monthly") {
+        chartDays = state.chartDay && tracker.days.has(state.chartDay)
+            ? [state.chartDay]
+            : monthDays;
+    } else {
+        chartDays = tracker.days.has(state.dateKey) ? [state.dateKey] : [];
+    }
+    const axisDays = monthDays.length ? monthDays : chartDays;
+    return { chartDays, axisDays };
+}
+
+function axisBounds(days) {
+    // Min/max raw hourly values across the given days — used for stable axis
+    // labels while the user navigates between days within the same month.
     const tracker = state.tracker;
     const md = state.marketdata;
-    const days = [];
-    if (state.chartDay && tracker.days.has(state.chartDay)) {
-        days.push(state.chartDay);
-    } else if (state.view === "monthly") {
-        for (const d of tracker.days) if (d.startsWith(state.dateKey)) days.push(d);
-    } else {
-        if (tracker.days.has(state.dateKey)) days.push(state.dateKey);
+    let priceMin = Infinity, priceMax = -Infinity, consMax = -Infinity;
+    for (const d of days) {
+        const usages = tracker.data[d];
+        const prices = md.data[d];
+        if (!usages || !prices) continue;
+        for (let h = 0; h < 24; h++) {
+            const u = usages[h];
+            const p = prices[h];
+            if (p !== undefined) {
+                const pn = Number(p);
+                if (pn < priceMin) priceMin = pn;
+                if (pn > priceMax) priceMax = pn;
+            }
+            if (u !== undefined) {
+                const un = Number(u);
+                if (un > consMax) consMax = un;
+            }
+        }
     }
+    if (!Number.isFinite(priceMin)) priceMin = 0;
+    if (!Number.isFinite(priceMax)) priceMax = 0.1;
+    if (!Number.isFinite(consMax)) consMax = 0.1;
+    return { priceMin, priceMax, consMax };
+}
 
+function aggregateHourly(days) {
+    const tracker = state.tracker;
+    const md = state.marketdata;
     const pricesPerHour = Array.from({ length: 24 }, () => []);
     const consPerHour = Array.from({ length: 24 }, () => []);
     for (const d of days) {
