@@ -416,23 +416,23 @@ function renderChart() {
 
     ensureChartDay();
 
-    let prices, consumption, priceStd, daysCount;
+    let prices, consumption, priceBox, daysCount;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
         consumption = SAMPLE_HOURLY_CONS;
-        priceStd = null;
+        priceBox = null;
         daysCount = 0;
     } else {
         const r = collectHourly();
         prices = r.prices; consumption = r.consumption;
-        priceStd = r.priceStd; daysCount = r.days.length;
+        priceBox = r.priceBox; daysCount = r.days.length;
     }
-    const showStd = priceStd && state.view === "monthly" && state.chartDay === null && daysCount >= 2;
+    const showBox = priceBox && state.view === "monthly" && state.chartDay === null && daysCount >= 2;
 
-    const stdHi = showStd ? prices.map((p, i) => p + priceStd[i]) : prices;
-    const stdLo = showStd ? prices.map((p, i) => p - priceStd[i]) : prices;
-    const priceMin = Math.min(...prices, ...stdLo, 0);
-    const priceMax = Math.max(...prices, ...stdHi, 0.1);
+    const boxLo = showBox ? priceBox.map((b, i) => b ? Math.min(b.whiskerLow, ...b.outliers) : prices[i]) : prices;
+    const boxHi = showBox ? priceBox.map((b, i) => b ? Math.max(b.whiskerHigh, ...b.outliers) : prices[i]) : prices;
+    const priceMin = Math.min(...prices, ...boxLo, 0);
+    const priceMax = Math.max(...prices, ...boxHi, 0.1);
     const priceRange = (priceMax - priceMin) || 1;
     const consMax = Math.max(...consumption, 0.1);
 
@@ -454,18 +454,38 @@ function renderChart() {
     const bars = prices.map((p, i) => {
         const heightPct = toPct(p);
         const isNeg = p < 0;
-        let stdHTML = "";
-        let priceTooltip = `⚡ ${p.toFixed(2)} ct/kWh`;
-        if (showStd && priceStd[i] > 0) {
-            const lo = clampPct(toPct(p - priceStd[i]));
-            const hi = clampPct(toPct(p + priceStd[i]));
-            stdHTML = `<div class="chart-bar-stddev" style="bottom:${lo.toFixed(2)}%; height:${(hi - lo).toFixed(2)}%"></div>`;
-            priceTooltip = `⚡ ${p.toFixed(2)} ± ${priceStd[i].toFixed(2)} ct/kWh`;
+        let boxHTML = "";
+        let priceTooltip = `⚡ Ø ${p.toFixed(2)} ct/kWh`;
+        const stats = showBox ? priceBox[i] : null;
+        if (stats) {
+            const q1 = clampPct(toPct(stats.q1));
+            const q3 = clampPct(toPct(stats.q3));
+            const med = clampPct(toPct(stats.median));
+            const wl = clampPct(toPct(stats.whiskerLow));
+            const wh = clampPct(toPct(stats.whiskerHigh));
+            const outliersHTML = stats.outliers.map((v) => {
+                const yp = clampPct(toPct(v));
+                return `<div class="bp-outlier" style="bottom:${yp.toFixed(2)}%"></div>`;
+            }).join("");
+            boxHTML = `<div class="chart-bar-boxplot">
+                <div class="bp-whisker" style="bottom:${wl.toFixed(2)}%; height:${Math.max(0, q1 - wl).toFixed(2)}%"></div>
+                <div class="bp-whisker" style="bottom:${q3.toFixed(2)}%; height:${Math.max(0, wh - q3).toFixed(2)}%"></div>
+                <div class="bp-cap" style="bottom:${wl.toFixed(2)}%"></div>
+                <div class="bp-cap" style="bottom:${wh.toFixed(2)}%"></div>
+                <div class="bp-box" style="bottom:${q1.toFixed(2)}%; height:${Math.max(0.5, q3 - q1).toFixed(2)}%"></div>
+                <div class="bp-median" style="bottom:${med.toFixed(2)}%"></div>
+                ${outliersHTML}
+            </div>`;
+            priceTooltip =
+                `⚡ Ø ${p.toFixed(2)} ct/kWh<br>` +
+                `Median ${stats.median.toFixed(2)} · IQR [${stats.q1.toFixed(2)}, ${stats.q3.toFixed(2)}]<br>` +
+                `Whiskers [${stats.whiskerLow.toFixed(2)}, ${stats.whiskerHigh.toFixed(2)}]` +
+                (stats.outliers.length ? ` · ${stats.outliers.length} Ausreißer` : "");
         }
         return `
             <div class="chart-bar-wrap">
                 <div class="chart-bar ${isNeg ? "neg" : "pos"}" style="height:${heightPct}%"></div>
-                ${stdHTML}
+                ${boxHTML}
                 <div class="chart-tooltip">
                     <span class="tooltip-title">${i}:00–${i + 1}:00</span><br>
                     <span class="tooltip-price">${priceTooltip}</span><br>
@@ -494,7 +514,7 @@ function renderChart() {
         return `<span class="chart-x-label" style="${style}">${h}h</span>`;
     }).join("");
 
-    const CHART_H = 120;
+    const CHART_H = 180;
     wrap.innerHTML = `
         ${sample ? `<div class="chart-placeholder">⚠ Beispieldaten — lade CSV für echte Werte</div>` : ""}
         <div class="chart-row">
@@ -521,7 +541,7 @@ function renderChart() {
         <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-swatch-bar"></span>EPEX SPOT (ct/kWh)</span>
             <span class="chart-legend-item"><span class="chart-legend-swatch-line"></span>Verbrauch (kWh)</span>
-            ${showStd ? `<span class="chart-legend-item"><span class="chart-legend-swatch-stddev"></span>± 1σ über ${daysCount} Tage</span>` : ""}
+            ${showBox ? `<span class="chart-legend-item"><span class="chart-legend-swatch-stddev"></span>Box plot über ${daysCount} Tage</span>` : ""}
         </div>`;
 }
 
@@ -557,14 +577,34 @@ function collectHourly() {
         }
     }
     const mean = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
-    const stddev = (arr, m) => {
-        if (arr.length < 2) return 0;
-        return Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / arr.length);
+    const quantile = (sorted, q) => {
+        const pos = q * (sorted.length - 1);
+        const lo = Math.floor(pos);
+        const hi = Math.ceil(pos);
+        return sorted[lo] + (pos - lo) * (sorted[hi] - sorted[lo]);
+    };
+    const boxStats = (arr) => {
+        if (arr.length < 2) return null;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const q1 = quantile(sorted, 0.25);
+        const median = quantile(sorted, 0.5);
+        const q3 = quantile(sorted, 0.75);
+        const iqr = q3 - q1;
+        const lowBound = q1 - 1.5 * iqr;
+        const highBound = q3 + 1.5 * iqr;
+        const within = sorted.filter((v) => v >= lowBound && v <= highBound);
+        const outliers = sorted.filter((v) => v < lowBound || v > highBound);
+        return {
+            q1, median, q3,
+            whiskerLow: within[0],
+            whiskerHigh: within[within.length - 1],
+            outliers,
+        };
     };
     const prices = pricesPerHour.map(mean);
-    const priceStd = pricesPerHour.map((arr, i) => stddev(arr, prices[i]));
+    const priceBox = pricesPerHour.map(boxStats);
     const consumption = consPerHour.map(mean);
-    return { prices, priceStd, consumption, days };
+    return { prices, priceBox, consumption, days };
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────
