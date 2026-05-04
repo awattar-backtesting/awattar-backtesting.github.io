@@ -49,9 +49,10 @@ const state = {
 // ── DOM ──────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const els = {
-    prevBtn: $("prevBtn"),
-    nextBtn: $("nextBtn"),
+    datePrev: $("datePrev"),
+    dateNext: $("dateNext"),
     dateLabel: $("dateLabel"),
+    datePopup: $("datePopup"),
     uploadBtn: $("uploadBtn"),
     uploadBtnLabel: $("uploadBtnLabel"),
     fileInput: $("fileInput"),
@@ -66,7 +67,6 @@ const els = {
     chartTitle: $("chartTitle"),
     chartInfo: $("chartInfo"),
     chartWrap: $("chartWrap"),
-    chartDayNav: $("chartDayNav"),
     providersList: $("providersList"),
     toggleProviders: $("toggleProviders"),
     toggleCustom: $("toggleCustom"),
@@ -441,14 +441,9 @@ function renderChart() {
     const showBox = priceBox && state.view === "monthly" && state.chartDay === null && daysCount >= 2;
     const priceRange = (priceMax - priceMin) || 1;
 
-    let chartDateText = "";
-    if (state.chartDay) chartDateText = formatDateKey(state.chartDay);
-    else if (state.dateKey) chartDateText = formatDateKey(state.dateKey);
-    els.chartTitle.textContent = `EPEX SPOT — Stündliche Preise${chartDateText ? " " + chartDateText : ""}`;
+    els.chartTitle.textContent = "EPEX SPOT — Stündliche Preise";
     const avgPrice = prices.reduce((s, v) => s + v, 0) / prices.length;
     els.chartInfo.textContent = `Ø ${avgPrice.toFixed(2)} ct/kWh`;
-
-    renderChartDayNav();
 
     const yAxisLeft = [priceMax, (priceMax + priceMin) / 2, priceMin];
     const yAxisRight = [consMax, consMax / 2, 0];
@@ -665,83 +660,170 @@ function ensureDateKey() {
     if (keys.length === 0) { state.dateKey = null; return; }
     if (!keys.includes(state.dateKey)) state.dateKey = keys[0];
 }
-function shiftDate(delta) {
-    const keys = availableKeys();
-    if (keys.length === 0) return;
-    const idx = keys.indexOf(state.dateKey);
-    const next = Math.max(0, Math.min(keys.length - 1, idx + delta));
-    state.dateKey = keys[next];
-    state.chartDay = null;
-    renderDate();
-    renderChart();
-}
-function renderDate() {
-    if (!state.dateKey) {
-        els.dateLabel.textContent = "—";
-        els.prevBtn.disabled = true;
-        els.nextBtn.disabled = true;
-        return;
-    }
-    els.dateLabel.textContent = formatDateKey(state.dateKey);
-    const keys = availableKeys();
-    const idx = keys.indexOf(state.dateKey);
-    els.prevBtn.disabled = idx <= 0;
-    els.nextBtn.disabled = idx >= keys.length - 1;
-}
-
-// ── Chart day nav ───────────────────────────────────────────────────────────
-function activeChartDays() {
-    const tracker = state.tracker;
-    if (!tracker || !state.dateKey) return [];
-    const all = [...tracker.days].sort();
-    if (state.view === "monthly") return all.filter((d) => d.startsWith(state.dateKey));
-    return all.includes(state.dateKey) ? [state.dateKey] : [];
-}
 function ensureChartDay() {
     if (state.view === "daily") {
         state.chartDay = null;
         return;
     }
     if (state.chartDay) {
-        const days = activeChartDays();
+        const days = trackerDaysInMonth(state.dateKey);
         if (!days.includes(state.chartDay)) state.chartDay = null;
     }
 }
-function shiftChartDay(delta) {
-    const days = activeChartDays();
-    if (days.length === 0) return;
-    if (state.chartDay === null) {
-        state.chartDay = delta > 0 ? days[0] : days[days.length - 1];
+
+// ── Unified date nav ────────────────────────────────────────────────────────
+function trackerDaysInMonth(monthKey) {
+    if (!state.tracker || !monthKey) return [];
+    return [...state.tracker.days].sort().filter((d) => d.startsWith(monthKey));
+}
+function dateNavStep(delta) {
+    // Step the displayed unit. In monthly view: month if no day drilled,
+    // otherwise day with cross-month wrap. In daily view: day.
+    if (state.view === "daily") {
+        const keys = availableKeys();
+        if (keys.length === 0) return;
+        const idx = keys.indexOf(state.dateKey);
+        const next = Math.max(0, Math.min(keys.length - 1, idx + delta));
+        state.dateKey = keys[next];
+    } else if (state.chartDay === null) {
+        const keys = availableKeys();
+        if (keys.length === 0) return;
+        const idx = keys.indexOf(state.dateKey);
+        const next = Math.max(0, Math.min(keys.length - 1, idx + delta));
+        state.dateKey = keys[next];
     } else {
-        const idx = days.indexOf(state.chartDay);
+        // Monthly view, drilled into a day → step day, jump month at the edge.
+        const allDays = state.tracker ? [...state.tracker.days].sort() : [];
+        const idx = allDays.indexOf(state.chartDay);
         const next = idx + delta;
-        if (next < 0 || next >= days.length) {
+        if (idx < 0 || next < 0 || next >= allDays.length) {
+            // Off the end of available data → exit day mode.
             state.chartDay = null;
         } else {
-            state.chartDay = days[next];
+            state.chartDay = allDays[next];
+            const newMonth = state.chartDay.slice(0, 6);
+            if (newMonth !== state.dateKey) state.dateKey = newMonth;
         }
     }
+    renderDateNav();
+    renderTable();
     renderChart();
 }
-function renderChartDayNav() {
-    const nav = els.chartDayNav;
-    if (state.view !== "monthly" || !state.tracker) {
-        nav.classList.add("hidden");
-        nav.innerHTML = "";
+function dateNavCanStep(delta) {
+    if (!state.tracker || !state.dateKey) return false;
+    if (state.view === "daily" || state.chartDay === null) {
+        const keys = availableKeys();
+        const idx = keys.indexOf(state.dateKey);
+        const next = idx + delta;
+        return next >= 0 && next < keys.length;
+    }
+    const allDays = [...state.tracker.days].sort();
+    const idx = allDays.indexOf(state.chartDay);
+    const next = idx + delta;
+    return next >= 0 && next < allDays.length;
+}
+function renderDateNav() {
+    if (!state.dateKey) {
+        els.dateLabel.textContent = "—";
+        els.dateLabel.classList.remove("day-mode");
+        els.datePrev.disabled = true;
+        els.dateNext.disabled = true;
         return;
     }
-    const days = activeChartDays();
-    if (days.length === 0) {
-        nav.classList.add("hidden");
-        nav.innerHTML = "";
+    const showingDay = state.chartDay || (state.view === "daily" ? state.dateKey : null);
+    els.dateLabel.textContent = showingDay ? formatDateKey(showingDay) : formatDateKey(state.dateKey);
+    els.dateLabel.classList.toggle("day-mode", !!state.chartDay);
+    els.datePrev.disabled = !dateNavCanStep(-1);
+    els.dateNext.disabled = !dateNavCanStep(1);
+}
+
+// ── Date popup ──────────────────────────────────────────────────────────────
+function openDatePopup() {
+    if (!state.tracker) return;
+    renderDatePopup();
+    const popup = els.datePopup;
+    popup.classList.remove("hidden");
+    const r = els.dateLabel.getBoundingClientRect();
+    // Show below the label by default; flip above if not enough room.
+    const popupHeight = Math.min(window.innerHeight * 0.6, 480);
+    const below = r.bottom + 6;
+    const top = (below + popupHeight > window.innerHeight - 8)
+        ? Math.max(8, r.top - popupHeight - 6)
+        : below;
+    const popupWidth = popup.getBoundingClientRect().width || 280;
+    let left = r.left + r.width / 2 - popupWidth / 2;
+    left = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, left));
+    popup.style.top = top + "px";
+    popup.style.left = left + "px";
+}
+function closeDatePopup() {
+    els.datePopup.classList.add("hidden");
+}
+function renderDatePopup() {
+    const tracker = state.tracker;
+    if (!tracker) {
+        els.datePopup.innerHTML = `<div class="date-popup-empty">Keine Daten geladen</div>`;
         return;
     }
-    const label = state.chartDay ? formatDateKey(state.chartDay) : "Ø Monat";
-    nav.classList.remove("hidden");
-    nav.innerHTML = `
-        <button class="chart-day-btn" data-chart-shift="-1" title="Vorheriger Tag">‹</button>
-        <span class="chart-day-label">${escapeHTML(label)}</span>
-        <button class="chart-day-btn" data-chart-shift="1" title="Nächster Tag">›</button>`;
+    const allDays = [...tracker.days].sort();
+    const months = [...new Set(allDays.map((d) => d.slice(0, 6)))];
+    const isDaily = state.view === "daily";
+    const currentMonth = state.dateKey && state.dateKey.length >= 6 ? state.dateKey.slice(0, 6) : null;
+    const currentDay = state.chartDay || (isDaily ? state.dateKey : null);
+
+    const html = months.map((m) => {
+        const days = allDays.filter((d) => d.startsWith(m));
+        const cls = ["date-popup-month-name"];
+        if (m === currentMonth && !currentDay) cls.push("current");
+        if (m === currentMonth) cls.push("active");
+        const dom = days[0] ? new Date(parseInt(days[0].slice(0, 4)), parseInt(days[0].slice(4, 6)) - 1, 1) : null;
+        const monthLabel = dom ? format(dom, "MMM yyyy") : m;
+        const firstWeekday = dom ? (new Date(parseInt(m.slice(0, 4)), parseInt(m.slice(4, 6)) - 1, 1).getDay() + 6) % 7 : 0;
+        const dayCells = [];
+        for (let i = 0; i < firstWeekday; i++) dayCells.push(`<span class="date-popup-day empty"></span>`);
+        for (const d of days) {
+            const dnum = parseInt(d.slice(6, 8), 10);
+            const isCurrent = d === currentDay;
+            dayCells.push(`<button class="date-popup-day${isCurrent ? " current" : ""}" data-day="${d}">${dnum}</button>`);
+        }
+        const monthAction = isDaily ? "" : `data-month="${m}"`;
+        const monthBtn = isDaily
+            ? `<span class="date-popup-month-name">${escapeHTML(monthLabel)}</span>`
+            : `<button class="${cls.join(" ")}" ${monthAction} title="Ganzer Monat">${escapeHTML(monthLabel)}</button>`;
+        return `<div class="date-popup-month">
+            <div class="date-popup-month-row">${monthBtn}</div>
+            <div class="date-popup-days">${dayCells.join("")}</div>
+        </div>`;
+    }).join("");
+
+    els.datePopup.innerHTML = html || `<div class="date-popup-empty">Keine Tage verfügbar</div>`;
+}
+function pickFromPopup(target) {
+    const monthBtn = target.closest("[data-month]");
+    if (monthBtn) {
+        state.dateKey = monthBtn.dataset.month;
+        state.chartDay = null;
+        closeDatePopup();
+        renderDateNav();
+        renderTable();
+        renderChart();
+        return;
+    }
+    const dayBtn = target.closest("[data-day]");
+    if (dayBtn) {
+        const day = dayBtn.dataset.day;
+        if (state.view === "daily") {
+            state.dateKey = day;
+            state.chartDay = null;
+        } else {
+            state.dateKey = day.slice(0, 6);
+            state.chartDay = day;
+        }
+        closeDatePopup();
+        renderDateNav();
+        renderTable();
+        renderChart();
+    }
 }
 
 // ── Sections / view toggle ──────────────────────────────────────────────────
@@ -765,7 +847,7 @@ function setView(view) {
     }
     state.chartDay = null;
     ensureDateKey();
-    renderDate();
+    renderDateNav();
     renderTable();
     renderChart();
 }
@@ -816,7 +898,7 @@ async function handleUpload(file) {
     els.uploadBtn.classList.add("upload-active");
     els.uploadBtnLabel.textContent = "Andere Datei laden";
 
-    renderDate();
+    renderDateNav();
     renderSidebar();
     renderTable();
     renderChart();
@@ -834,16 +916,20 @@ function init() {
     });
     syncSectionToggles();
 
-    // Date nav
-    els.prevBtn.addEventListener("click", () => shiftDate(-1));
-    els.nextBtn.addEventListener("click", () => shiftDate(1));
-
-    // Chart day nav (delegated)
-    els.chartDayNav.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-chart-shift]");
-        if (!btn) return;
-        shiftChartDay(parseInt(btn.dataset.chartShift, 10));
+    // Date nav (chart header)
+    els.datePrev.addEventListener("click", () => dateNavStep(-1));
+    els.dateNext.addEventListener("click", () => dateNavStep(1));
+    els.dateLabel.addEventListener("click", () => {
+        if (els.datePopup.classList.contains("hidden")) openDatePopup();
+        else closeDatePopup();
     });
+    els.datePopup.addEventListener("click", (e) => pickFromPopup(e.target));
+    document.addEventListener("click", (e) => {
+        if (els.datePopup.classList.contains("hidden")) return;
+        if (els.datePopup.contains(e.target) || els.dateLabel.contains(e.target)) return;
+        closeDatePopup();
+    });
+    window.addEventListener("resize", () => closeDatePopup());
 
     // Upload
     els.uploadBtn.addEventListener("click", () => els.fileInput.click());
@@ -892,6 +978,7 @@ function init() {
         if (e.key === "Escape") {
             closeModal();
             closeSidebar();
+            closeDatePopup();
         }
     });
 
@@ -902,7 +989,7 @@ function init() {
     renderSidebar();
     renderTable();
     renderChart();
-    renderDate();
+    renderDateNav();
 }
 
 function setupChartResize() {

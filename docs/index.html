@@ -76,20 +76,59 @@ body {
 }
 .help-btn:hover { background: oklch(28% 0.03 240); }
 
-/* DATE NAV */
-.date-nav { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
-.date-nav-btn {
-  width: 26px; height: 26px; border-radius: 5px;
-  background: oklch(28% 0.03 240); border: 1px solid oklch(35% 0.03 240);
-  color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; font-size: 12px; font-family: inherit;
+/* DATE NAV (lives in chart header) */
+.chart-date-nav { display: flex; align-items: center; gap: 4px; }
+.chart-date-btn {
+  width: 24px; height: 24px; border-radius: 5px;
+  background: white; border: 1px solid var(--border);
+  color: oklch(35% 0.02 240); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 12px; padding: 0;
+  transition: background 0.15s, border-color 0.15s;
 }
-.date-nav-btn:hover:not(:disabled) { background: oklch(35% 0.03 240); }
-.date-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.date-label {
-  font-family: 'DM Mono', monospace; font-size: 13px;
-  color: white; min-width: 80px; text-align: center;
+.chart-date-btn:hover:not(:disabled) { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.chart-date-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.chart-date-label {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: oklch(25% 0.02 240); min-width: 110px; text-align: center;
+  background: white; border: 1px solid var(--border); border-radius: 5px;
+  padding: 4px 10px; cursor: pointer; font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
 }
+.chart-date-label:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.chart-date-label.day-mode { background: var(--green-light); border-color: oklch(78% 0.06 145); color: oklch(35% 0.16 145); }
+
+/* DATE POPUP */
+.date-popup {
+  position: fixed; z-index: 100;
+  background: white; border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px oklch(20% 0.02 240 / 0.18);
+  padding: 10px; max-height: 60vh; overflow: auto;
+  min-width: 260px; max-width: 360px;
+}
+.date-popup.hidden { display: none; }
+.date-popup-month { margin-bottom: 8px; }
+.date-popup-month:last-child { margin-bottom: 0; }
+.date-popup-month-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.date-popup-month-name {
+  font-size: 12px; font-weight: 600; color: oklch(25% 0.02 240);
+  background: transparent; border: none; padding: 4px 6px; border-radius: 4px;
+  cursor: pointer; font-family: inherit; flex: 1; text-align: left;
+}
+.date-popup-month-name:hover { background: oklch(96% 0.006 240); }
+.date-popup-month-name.active { color: var(--green); }
+.date-popup-month-name.current { background: var(--green-light); color: oklch(35% 0.16 145); }
+.date-popup-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.date-popup-day {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  background: white; border: 1px solid oklch(94% 0.005 240); border-radius: 3px;
+  padding: 3px 0; cursor: pointer; color: oklch(35% 0.02 240);
+  transition: all 0.1s; font-weight: 500;
+}
+.date-popup-day:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
+.date-popup-day.current { background: var(--green); color: white; border-color: var(--green); }
+.date-popup-day.empty { background: transparent; border-color: transparent; color: transparent; cursor: default; pointer-events: none; }
+.date-popup-empty { font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; }
 
 /* BODY */
 .body { display: flex; flex: 1; overflow: hidden; }
@@ -281,22 +320,6 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
 .chart-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .chart-info { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
-.chart-day-nav { display: flex; align-items: center; gap: 4px; }
-.chart-day-nav.hidden { display: none; }
-.chart-day-btn {
-  width: 24px; height: 24px; border-radius: 5px;
-  background: white; border: 1px solid var(--border);
-  color: oklch(35% 0.02 240); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-family: inherit; font-size: 12px; padding: 0;
-  transition: background 0.15s;
-}
-.chart-day-btn:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
-.chart-day-label {
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  color: oklch(30% 0.02 240); min-width: 78px; text-align: center;
-  white-space: nowrap; padding: 0 4px;
-}
 .chart-wrap { flex: 1 1 auto; min-height: 180px; position: relative; user-select: none; }
 .chart-row { display: flex; gap: 0; height: 100%; }
 .chart-axis {
@@ -473,9 +496,8 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   .topbar-divider { display: none; }
   .upload-btn { padding: 7px 9px; }
   .upload-btn span { display: none; }
-  .date-nav { padding: 0; gap: 4px; }
-  .date-nav-btn { width: 30px; height: 30px; }
-  .date-label { min-width: 64px; font-size: 12px; }
+  .chart-date-btn { width: 30px; height: 30px; }
+  .chart-date-label { min-width: 90px; font-size: 12px; padding: 6px 10px; }
   .help-btn { width: 30px; height: 30px; }
 
   .body { flex-direction: column; overflow: visible; flex: none; }
@@ -512,7 +534,7 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 @media (max-width: 420px) {
   .topbar { gap: 6px; padding: 0 8px; }
-  .date-label { min-width: 56px; font-size: 11px; }
+  .chart-date-label { min-width: 70px; font-size: 11px; padding: 5px 8px; }
   .upload-btn { padding: 7px 8px; }
 }
 </style>
@@ -541,12 +563,6 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
                 <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </div>
             <div class="topbar-title">aWATTar Backtesting</div>
-        </div>
-        <div class="topbar-divider"></div>
-        <div class="date-nav">
-            <button class="date-nav-btn" id="prevBtn" title="Vorheriger Monat">‹</button>
-            <span class="date-label" id="dateLabel">—</span>
-            <button class="date-nav-btn" id="nextBtn" title="Nächster Monat">›</button>
         </div>
         <div class="topbar-spacer"></div>
         <button class="upload-btn" id="uploadBtn">
@@ -650,10 +666,15 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
             <div class="chart-area" id="chartArea">
                 <div class="chart-header">
                     <span class="chart-title" id="chartTitle">EPEX SPOT — Stündliche Preise</span>
-                    <div class="chart-day-nav hidden" id="chartDayNav"></div>
+                    <div class="chart-date-nav" id="chartDateNav">
+                        <button class="chart-date-btn" id="datePrev" title="Zurück">‹</button>
+                        <button class="chart-date-label" id="dateLabel" title="Datum wählen">—</button>
+                        <button class="chart-date-btn" id="dateNext" title="Vor">›</button>
+                    </div>
                     <span class="chart-info" id="chartInfo"></span>
                 </div>
                 <div class="chart-wrap" id="chartWrap"></div>
+                <div class="date-popup hidden" id="datePopup" role="dialog" aria-label="Datum wählen"></div>
             </div>
         </div>
     </div>
