@@ -6,7 +6,7 @@ export class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
     descriptorTimestamp = "timestamp";
-    descriptorTimesub = "timesub";
+    descriptorTimeSub = "timesub";
     dateFormatString = "foo";
     feedin = false;
 
