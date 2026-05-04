@@ -25,6 +25,16 @@ export const PROVIDER_COLORS = [
  *   einspeise     true for feed-in tariffs
  *   isCustom      true for user-defined tariffs
  *
+ * `calculate(price, kwh, opts)` computes the gross/net amount in cents for
+ * a (price, kwh) pair. `opts`:
+ *
+ *   includeMonthlyFee   include this.grundgebuehr_ct (display rolls up base fee)
+ *   monthlyFeeFactor    fraction of the month covered (1.0 = full month)
+ *   slot                optional slot context for per-slot tariffs (e.g. an
+ *                       EPEX-hour-aware cap). Undefined when calculate is
+ *                       invoked against pre-aggregated daily/monthly buckets;
+ *                       populated by callers that fan out per slot.
+ *
  * Inside `calculate`, `this.grundgebuehr_ct` resolves to the gross fee in
  * cents (always positive magnitude), so feed-in closures keep subtracting
  * it directly while consumption closures add it.
@@ -62,12 +72,12 @@ export function makeCustomTarif({ id, name, markupPct, addFixed, baseMonthly, va
             einspeise: false,
             isCustom: true,
         },
-        function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
             const factor = 1 + markupPct / 100;
             const vatFactor = 1 + vat / 100;
             let amount = price.times(factor).times(vatFactor).plus(kwh.times(addFixed));
-            if (include_monthly_fee) {
-                amount = amount.plus(this.grundgebuehr_ct * monthly_fee_factor);
+            if (includeMonthlyFee) {
+                amount = amount.plus(this.grundgebuehr_ct * monthlyFeeFactor);
             }
             return amount;
         }
@@ -86,10 +96,10 @@ export const awattar_neu = new Tarif(
         baseMonthly: 5.75,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         const factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
         let amount = price.times(factor).plus(kwh.times(1.5)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct * monthly_fee_factor);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct * monthlyFeeFactor);
         return amount;
     }
 );
@@ -106,9 +116,9 @@ export const smartcontrol_neu = new Tarif(
         baseMonthly: 2.99,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -125,9 +135,9 @@ export const steirerstrom = new Tarif(
         baseMonthly: 3.82,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -144,10 +154,10 @@ export const spotty_direkt = new Tarif(
         baseMonthly: 2.40,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         // +1.49ct/kWh +0.3ct/kWh (Stromnachweis) exkl. 20% USt.
         let amount = price.plus(kwh.times(1.49 + 0.3)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -164,9 +174,9 @@ export const naturstrom_spot_stunde_ii = new Tarif(
         baseMonthly: 2.16,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.3)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -183,9 +193,9 @@ export const oekostrom_spot = new Tarif(
         baseMonthly: 2.16,
         vat: 20,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.5)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -205,7 +215,7 @@ export const smartcontrol_sunny = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         return price.times(0.8);
     }
 );
@@ -223,9 +233,9 @@ export const awattar_sunny_spot_60 = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.19);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -243,9 +253,9 @@ export const naturstrom_marktpreis_spot_25 = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.minus(kwh.times(1.55));
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -263,9 +273,9 @@ export const wels_strom_sonnenstrom_spot = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.15);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -283,10 +293,10 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         // TODO: we need to calculate the fee based on each EPEX hour.
         let amount = Decimal.max(price.times(1 - 0.2), price.minus(kwh.times(1.2)));
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
