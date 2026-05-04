@@ -1,6 +1,6 @@
 import { parse, parseISO } from "date-fns";
 
-export var listOfNetzbetreiber = [];
+export const listOfNetzbetreiber = [];
 
 export class Netzbetreiber {
     name = "name";
@@ -55,7 +55,7 @@ export class Netzbetreiber {
                 return false;
             }
         }
-        if ('Datum' in entry && this.preprocessDateString(entry.Datum) == null) {
+        if ('Datum' in entry && this.preprocessDateString(entry.Datum) === null) {
             return false;
         }
         return true;
@@ -69,26 +69,27 @@ export class Netzbetreiber {
             return null;
         }
 
-        var valueTimestamp = entry[this.descriptorTimestamp];
+        let valueTimestamp = entry[this.descriptorTimestamp];
         if (this.descriptorTimeSub !== null) {
             valueTimestamp += " " + entry[this.descriptorTimeSub];
         }
 
         valueTimestamp = this.preprocessDateString(valueTimestamp);
 
-        var parsedTimestamp = null;
+        let parsedTimestamp;
         if (this.dateFormatString === "parseISO") {
             parsedTimestamp = parseISO(valueTimestamp);
         } else {
-            parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date())
+            parsedTimestamp = parse(valueTimestamp, this.dateFormatString, new Date());
         }
 
-        var valueUsage = entry[this.matchUsage(entry)];
+        const valueUsage = entry[this.matchUsage(entry)];
         if (valueUsage === "" || valueUsage === undefined) {
             return null;
         }
-        var parsedUsage = this.usageParser(valueUsage);
+        const parsedUsage = this.usageParser(valueUsage);
 
+        const MS_PER_MINUTE = 60000;
         if (this.fixupTimestamp) {
             /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
              * > Messzeitpunkt;Gemessener Verbrauch (kWh);Ersatzwert;
@@ -98,22 +99,20 @@ export class Netzbetreiber {
              * > 10.11.2023 23:45;0,214000;;
              * > 11.11.2023 00:00;0,397000;;
             */
-            var MS_PER_MINUTE = 60000;
             parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
         }
 
-        if (this.endDescriptorTimestamp != null) {
+        if (this.endDescriptorTimestamp !== null) {
             /* some Netzbetreiber mix the dataset with per-day consumption entries interleaved. Filter them */
-            var endValueTimestamp = entry[this.endDescriptorTimestamp];
+            const endValueTimestamp = entry[this.endDescriptorTimestamp];
 
-            var endParsedTimestamp = null;
+            let endParsedTimestamp;
             if (this.dateFormatString === "parseISO") {
                 endParsedTimestamp = parseISO(endValueTimestamp);
             } else {
-                endParsedTimestamp = parse(endValueTimestamp, this.dateFormatString, new Date())
+                endParsedTimestamp = parse(endValueTimestamp, this.dateFormatString, new Date());
             }
 
-            var MS_PER_MINUTE = 60000;
             if ((endParsedTimestamp - parsedTimestamp) > 15 * MS_PER_MINUTE) {
                 /* not a 15min entry, ignore it */
                 return null;
@@ -123,7 +122,7 @@ export class Netzbetreiber {
         return {
             timestamp: parsedTimestamp,
             usage: parsedUsage,
-        }
+        };
     }
 };
 
