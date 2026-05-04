@@ -42,36 +42,32 @@ export class Marketdata {
  * the aWATTar API with retries. `onWarning` is called when a retry is
  * triggered. Returns the response body as a JSON string.
  */
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 10000;
+
 export function createBrowserFetcher(onWarning = () => {}) {
     return async function fetchAwattarMarketdata(unixStamp) {
-        var response;
         try {
-            response = await fetch('/cache60/' + unixStamp);
-        } catch (error) { /* fall through */ }
-        if (response && response.ok) {
-            return await response.text();
-        }
+            const cached = await fetch('/cache60/' + unixStamp);
+            if (cached.ok) return await cached.text();
+        } catch { /* fall through to live API */ }
 
-        // Otherwise try aWATTar API, be gentle.
-        // Cannot read 'x-retry-in' header from response: aWATTar omits
-        // CORS headers on failures.
-        var waitForRetryMillis = 10000;
-        var retryFetch = 0;
-        do {
+        // aWATTar API fallback. Be gentle: aWATTar omits CORS headers on
+        // failures so we cannot read 'x-retry-in' to back off precisely.
+        const url = 'https://api.awattar.at/v1/marketdata?start=' + unixStamp;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                await sleep(RETRY_DELAY_MS);
+            }
             try {
-                response = await fetch('https://api.awattar.at/v1/marketdata?start=' + unixStamp);
+                const response = await fetch(url);
+                if (response.ok) return await response.text();
             } catch (error) {
-                console.log("Requested failed; will retry to get Awattar market data:", error);
-                onWarning("Failed to obtain market data from aWATTar, initiating retry. Please wait a few seconds.");
-                retryFetch++;
+                console.log("Request failed; will retry to get Awattar market data:", error);
             }
-            if ((response && response.ok) || retryFetch > 10) {
-                return await response.text();
-            }
-            if (retryFetch > 0) {
-                await sleep(waitForRetryMillis);
-            }
-        } while (retryFetch > 0);
+            onWarning("Failed to obtain market data from aWATTar, initiating retry. Please wait a few seconds.");
+        }
+        throw new Error(`aWATTar marketdata fetch failed after ${MAX_RETRIES} retries`);
     };
 }
 
