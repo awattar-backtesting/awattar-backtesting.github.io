@@ -29,11 +29,10 @@ export class Netzbetreiber {
     matchUsage(entry) {
         if (this.descriptorUsage[0] === '!') {
             /* fuzzy check as we don't know the exact column name */
-            var desc = this.descriptorUsage.substring(1);
-            var entries = Object.keys(entry);
-            for (var e in entries) {
-                if (entries[e].includes(desc)) {
-                    return entries[e];
+            const desc = this.descriptorUsage.substring(1);
+            for (const key of Object.keys(entry)) {
+                if (key.includes(desc)) {
+                    return key;
                 }
             }
         } else {
@@ -51,8 +50,8 @@ export class Netzbetreiber {
         if (!(this.descriptorTimestamp in entry)) {
             return false;
         }
-        for (var e in this.otherFields) {
-            if (!(this.otherFields[e] in entry)) {
+        for (const field of this.otherFields ?? []) {
+            if (!(field in entry)) {
                 return false;
             }
         }
