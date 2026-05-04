@@ -1,7 +1,5 @@
 import { parse, parseISO } from "date-fns";
 
-export const listOfNetzbetreiber = [];
-
 export class Netzbetreiber {
     name = "name";
     descriptorUsage = "usage";
@@ -23,7 +21,6 @@ export class Netzbetreiber {
         this.fixupTimestamp = fixupTimestamp;
         this.feedin = feedin;
         this.endDescriptorTimestamp = endDescriptorTimestamp;
-        listOfNetzbetreiber.push(this);
     }
 
     matchUsage(entry) {
@@ -263,3 +260,43 @@ export const EWWWelsv2 = new Netzbetreiber("eww Wels V2", "!Restnetzbezug", "Beg
 export const KWG = new Netzbetreiber("NetzKWG", "Daten 1", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
     return parseFloat(usage.replace(",", "."));
 }), [], null, true);
+
+/**
+ * Registry consumed by `pickNetzbetreiber` in pipeline.js. Order matches
+ * historical declaration order so probing behavior is unchanged.
+ */
+export const listOfNetzbetreiber = [
+    NetzNOEEinspeiser,
+    NetzNOEEinspeiser2,
+    NetzNOEVerbrauchv3EEG,
+    NetzNOEVerbrauch,
+    NetzNOEVerbrauchv2,
+    NetzNOEVerbrauchv3,
+    NetzOOE,
+    NetzOOEEinspeiser,
+    NetzBurgenland,
+    NetzBurgenlandv2,
+    KaerntenNetz,
+    KaerntenNetz2025,
+    EbnerStrom,
+    WienerNetze,
+    WienerNetzeEcontrol,
+    WienerNetzeEinspeiser,
+    SalzburgNetz,
+    SalzburgNetzv4,
+    LinzAG,
+    StromnetzGraz,
+    StromnetzGrazv2,
+    EnergienetzeSteiermark,
+    EnergienetzeSteiermarkLeistung,
+    EnergienetzeSteiermarkv3,
+    VorarlbergNetz,
+    Tinetz,
+    StadtwerkeKlagenfurt,
+    StadtwerkeKufstein,
+    IKB,
+    ClamStrom,
+    EWWWels,
+    EWWWelsv2,
+    KWG,
+];
