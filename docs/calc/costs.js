@@ -13,6 +13,11 @@ import { computeH0Day } from "./h0.js";
  * All numeric values are Decimal instances. priceCents is the raw
  * EPEX cost in cents (no tariff fees applied — caller layers tariffs
  * on top of the totals).
+ *
+ * Hours present in `tracker.data[day]` drive the iteration: missing
+ * hours contribute nothing to either the actual or H0-normalized
+ * sums, so a partial day is summed against itself only. Tracker's
+ * postProcess() drops days with fewer than two hourly entries.
  */
 export function aggregateCosts(tracker, marketdata, h0Sheet) {
     const monthly = {};
