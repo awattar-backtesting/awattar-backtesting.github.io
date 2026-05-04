@@ -201,7 +201,7 @@ body {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 /* TABLE AREA */
-.table-area { flex: 1; overflow: auto; padding: 16px 20px 20px; }
+.table-area { flex: 1 1 0; overflow: auto; padding: 16px 20px 20px; min-height: 0; }
 .section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
 .section-title { font-size: 13px; font-weight: 600; color: oklch(30% 0.02 240); }
 .section-sub { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
@@ -256,9 +256,25 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .empty-icon { font-size: 32px; opacity: 0.4; }
 .empty-text { font-size: 14px; }
 
+.chart-resize-handle {
+  flex: 0 0 6px; cursor: ns-resize; position: relative; z-index: 5;
+  background: var(--border); transition: background 0.15s;
+}
+.chart-resize-handle:hover, .chart-resize-handle.dragging {
+  background: oklch(78% 0.02 240);
+}
+.chart-resize-handle::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px; height: 2px; border-radius: 1px;
+  background: oklch(60% 0.02 240);
+}
+
 /* CHART */
 .chart-area {
-  flex-shrink: 0; padding: 14px 20px 10px;
+  flex: 0 0 auto; height: clamp(220px, 36vh, 520px);
+  display: flex; flex-direction: column;
+  padding: 14px 20px 10px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
@@ -281,8 +297,8 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   color: oklch(30% 0.02 240); min-width: 78px; text-align: center;
   white-space: nowrap; padding: 0 4px;
 }
-.chart-wrap { height: 240px; position: relative; user-select: none; }
-.chart-row { display: flex; gap: 0; }
+.chart-wrap { flex: 1 1 auto; min-height: 180px; position: relative; user-select: none; }
+.chart-row { display: flex; gap: 0; height: 100%; }
 .chart-axis {
   width: 36px; flex-shrink: 0;
   display: flex; flex-direction: column; justify-content: space-between;
@@ -476,6 +492,7 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   .sidebar.open { transform: translateX(0); }
 
   .main { overflow: visible; }
+  .chart-resize-handle { display: none; }
   .table-area { overflow-x: auto; overflow-y: visible; padding: 12px 12px 14px; flex: none; }
   .section-header-row { flex-wrap: wrap; gap: 8px; }
   .compare thead th { padding: 6px 10px; }
@@ -629,7 +646,8 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
                 </div>
             </div>
 
-            <div class="chart-area">
+            <div class="chart-resize-handle" id="chartResizeHandle" title="Höhe ziehen"></div>
+            <div class="chart-area" id="chartArea">
                 <div class="chart-header">
                     <span class="chart-title" id="chartTitle">EPEX SPOT — Stündliche Preise</span>
                     <div class="chart-day-nav hidden" id="chartDayNav"></div>

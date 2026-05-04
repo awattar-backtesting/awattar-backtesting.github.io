@@ -77,6 +77,8 @@ const els = {
     menuBtn: $("menuBtn"),
     sidebar: $("sidebar"),
     sidebarBackdrop: $("sidebarBackdrop"),
+    chartArea: $("chartArea"),
+    chartResizeHandle: $("chartResizeHandle"),
 };
 
 // ── Marketdata cache (preserved from original) ──────────────────────────────
@@ -514,14 +516,13 @@ function renderChart() {
         return `<span class="chart-x-label" style="${style}">${h}h</span>`;
     }).join("");
 
-    const CHART_H = 180;
     wrap.innerHTML = `
         ${sample ? `<div class="chart-placeholder">⚠ Beispieldaten — lade CSV für echte Werte</div>` : ""}
         <div class="chart-row">
-            <div class="chart-axis chart-axis-left" style="height:${CHART_H}px">
+            <div class="chart-axis chart-axis-left">
                 ${yAxisLeft.map((v) => `<span>${v.toFixed(1)}</span>`).join("")}
             </div>
-            <div class="chart-canvas" style="height:${CHART_H}px">
+            <div class="chart-canvas">
                 ${priceMin < 0 ? `<div class="chart-zero-line" style="top:${zeroTopPct}%"></div>` : ""}
                 <div class="chart-bars">${bars}</div>
                 <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -533,7 +534,7 @@ function renderChart() {
                     ${dots}
                 </svg>
             </div>
-            <div class="chart-axis chart-axis-right" style="height:${CHART_H}px">
+            <div class="chart-axis chart-axis-right">
                 ${yAxisRight.map((v) => `<span>${v.toFixed(1)}</span>`).join("")}
             </div>
         </div>
@@ -848,12 +849,43 @@ function init() {
         }
     });
 
+    setupChartResize();
+
     // Initial render
     state.selectedIds = pickDefaultSelection();
     renderSidebar();
     renderTable();
     renderChart();
     renderDate();
+}
+
+function setupChartResize() {
+    const handle = els.chartResizeHandle;
+    const area = els.chartArea;
+    if (!handle || !area) return;
+
+    const onPointerMove = (e) => {
+        const delta = e.clientY - handle._startY;
+        const next = Math.max(160, handle._startH - delta);
+        area.style.height = next + "px";
+    };
+    const onPointerUp = (e) => {
+        handle.classList.remove("dragging");
+        handle.releasePointerCapture(e.pointerId);
+        handle.removeEventListener("pointermove", onPointerMove);
+        handle.removeEventListener("pointerup", onPointerUp);
+        document.body.style.userSelect = "";
+    };
+    handle.addEventListener("pointerdown", (e) => {
+        handle._startY = e.clientY;
+        handle._startH = area.getBoundingClientRect().height;
+        handle.setPointerCapture(e.pointerId);
+        handle.classList.add("dragging");
+        document.body.style.userSelect = "none";
+        handle.addEventListener("pointermove", onPointerMove);
+        handle.addEventListener("pointerup", onPointerUp);
+        e.preventDefault();
+    });
 }
 
 document.addEventListener("DOMContentLoaded", init);
