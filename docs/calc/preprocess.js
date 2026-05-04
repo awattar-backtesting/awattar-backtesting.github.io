@@ -1,22 +1,5 @@
 import * as XLSX from "xlsx";
-
-function bufferToString(buf) {
-    return new Uint8Array(buf)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '');
-}
-
-function decodeUTF16LE(buf) {
-    return new TextDecoder('utf-16le').decode(buf);
-}
-
-function stringToBuffer(str) {
-    const buf = new ArrayBuffer(str.length);
-    const bufView = new Uint8Array(buf);
-    for (let i = 0, strLen = str.length; i < strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
+import { bufferToString, decodeUTF16LE, stringToBuffer } from "./encoding.js";
 
 /**
  * Preprocess a raw upload (ArrayBuffer) by stripping provider-specific
