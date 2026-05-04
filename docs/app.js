@@ -79,6 +79,7 @@ const els = {
     sidebarBackdrop: $("sidebarBackdrop"),
     chartArea: $("chartArea"),
     chartResizeHandle: $("chartResizeHandle"),
+    exportBtn: $("exportBtn"),
 };
 
 // ── Marketdata cache (preserved from original) ──────────────────────────────
@@ -409,6 +410,92 @@ function renderTable() {
                 ${totalsRow}
             </tbody>
         </table>`;
+}
+
+// ── Excel export ────────────────────────────────────────────────────────────
+function buildExportSheet(view) {
+    const buckets = view === "monthly" ? state.monthly : state.daily;
+    if (!buckets) return null;
+    const fmtKey = view === "monthly" ? "yyyyMM" : "yyyyMMdd";
+    const fmtOut = view === "monthly" ? "yyyy-MM" : "yyyy-MM-dd";
+    const includeMonthlyFee = view === "monthly";
+    const selected = state.providers.filter((p) => state.selectedIds.has(p.meta.id));
+    const keys = Object.keys(buckets).sort();
+
+    // Column headers
+    const header = [view === "monthly" ? "Monat" : "Datum", "Energie (kWh)", "EPEX Ø (ct/kWh)"];
+    if (!state.feedin) header.push("H0 Ø (ct/kWh)", "Δ H0 (ct/kWh)");
+    for (const p of selected) {
+        header.push(`${p.meta.shortName} (€)`);
+        header.push(`${p.meta.shortName} (ct/kWh)`);
+    }
+
+    // Data rows + per-provider totals
+    const totals = {};
+    for (const p of selected) totals[p.meta.id] = new Decimal(0);
+
+    const rows = keys.map((k) => {
+        const b = buckets[k];
+        const factor = view === "monthly" ? monthlyFeeFactorFor(k) : 1;
+        const energyKwh = Number(b.kwh);
+        const epexAvg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
+        const h0Diff = h0Avg !== null ? epexAvg - h0Avg : null;
+        const row = [format(parse(k, fmtKey, new Date()), fmtOut), energyKwh, epexAvg];
+        if (!state.feedin) {
+            row.push(h0Avg);
+            row.push(h0Diff);
+        }
+        for (const p of selected) {
+            const cents = p.calculate(b.priceCents, b.kwh, includeMonthlyFee, factor);
+            const grossEur = Number(cents) / 100;
+            const avgCt = b.kwh.equals(0) ? 0 : Number(cents.dividedBy(b.kwh));
+            row.push(grossEur);
+            row.push(avgCt);
+            if (view === "monthly") totals[p.meta.id] = totals[p.meta.id].plus(cents);
+        }
+        return row;
+    });
+
+    // For daily view, totals come from monthly buckets so the user gets a
+    // realistic period total (daily rows skip the monthly base fee).
+    if (view !== "monthly") {
+        const mb = state.monthly || {};
+        for (const p of selected) {
+            for (const mk of Object.keys(mb)) {
+                const mb_b = mb[mk];
+                totals[p.meta.id] = totals[p.meta.id].plus(
+                    p.calculate(mb_b.priceCents, mb_b.kwh, true, monthlyFeeFactorFor(mk))
+                );
+            }
+        }
+    }
+
+    const totalsRow = ["Gesamt" + (view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""), null, null];
+    if (!state.feedin) totalsRow.push(null, null);
+    for (const p of selected) {
+        totalsRow.push(Number(totals[p.meta.id]) / 100);
+        totalsRow.push(null);
+    }
+
+    const sheet = XLSX.utils.aoa_to_sheet([header, ...rows, totalsRow]);
+    sheet["!cols"] = header.map((h, i) => ({ wch: i === 0 ? 14 : Math.max(12, h.length + 1) }));
+    return sheet;
+}
+function exportXlsx() {
+    if (!state.tracker || !state.monthly) return;
+    const wb = XLSX.utils.book_new();
+    const monthly = buildExportSheet("monthly");
+    if (monthly) XLSX.utils.book_append_sheet(wb, monthly, "Monatlich");
+    const daily = buildExportSheet("daily");
+    if (daily) XLSX.utils.book_append_sheet(wb, daily, "Täglich");
+    const stamp = format(new Date(), "yyyyMMdd");
+    const kind = state.feedin ? "einspeisung" : "energiekosten";
+    XLSX.writeFile(wb, `awattar-backtesting-${kind}-${stamp}.xlsx`);
+}
+function syncExportBtn() {
+    if (!els.exportBtn) return;
+    els.exportBtn.disabled = !state.tracker || !state.monthly;
 }
 
 // ── Hourly chart ────────────────────────────────────────────────────────────
@@ -902,6 +989,7 @@ async function handleUpload(file) {
     renderSidebar();
     renderTable();
     renderChart();
+    syncExportBtn();
 }
 
 // ── Wire events ─────────────────────────────────────────────────────────────
@@ -915,6 +1003,9 @@ function init() {
         });
     });
     syncSectionToggles();
+
+    // Excel export
+    if (els.exportBtn) els.exportBtn.addEventListener("click", exportXlsx);
 
     // Date nav (chart header)
     els.datePrev.addEventListener("click", () => dateNavStep(-1));
