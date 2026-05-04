@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import Decimal from "decimal.js";
+import { slotOfTimestamp } from "./slots.js";
 
 /**
  * Accumulates per-day, per-hour kWh totals from a stream of provider
@@ -15,17 +16,17 @@ export class Tracker {
         if (res === null) {
             return false;
         }
-        const hour = res.timestamp.getHours();
+        const slot = slotOfTimestamp(res.timestamp);
         const fullday = format(res.timestamp, "yyyyMMdd");
         this.days.add(fullday);
 
         if (!(fullday in this.data)) {
             this.data[fullday] = {};
         }
-        if (!(hour in this.data[fullday])) {
-            this.data[fullday][hour] = new Decimal(0.0);
+        if (!(slot in this.data[fullday])) {
+            this.data[fullday][slot] = new Decimal(0.0);
         }
-        this.data[fullday][hour] = this.data[fullday][hour].plus(new Decimal(res.usage));
+        this.data[fullday][slot] = this.data[fullday][slot].plus(new Decimal(res.usage));
         return true;
     }
 

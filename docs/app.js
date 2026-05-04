@@ -17,6 +17,7 @@ import {
 } from "./tariffs.js";
 import { Marketdata, createBrowserFetcher } from "./marketdata.js";
 import { runPipeline } from "./calc/pipeline.js";
+import { SLOTS_PER_DAY } from "./calc/slots.js";
 
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
 const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot];
@@ -669,7 +670,7 @@ function axisBounds(days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
         if (!usages || !prices) continue;
-        for (let h = 0; h < 24; h++) {
+        for (let h = 0; h < SLOTS_PER_DAY; h++) {
             const u = usages[h];
             const p = prices[h];
             if (p !== undefined) {
@@ -692,13 +693,13 @@ function axisBounds(days) {
 function aggregateHourly(days) {
     const tracker = state.tracker;
     const md = state.marketdata;
-    const pricesPerHour = Array.from({ length: 24 }, () => []);
-    const consPerHour = Array.from({ length: 24 }, () => []);
+    const pricesPerHour = Array.from({ length: SLOTS_PER_DAY }, () => []);
+    const consPerHour = Array.from({ length: SLOTS_PER_DAY }, () => []);
     for (const d of days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
         if (!usages || !prices) continue;
-        for (let h = 0; h < 24; h++) {
+        for (let h = 0; h < SLOTS_PER_DAY; h++) {
             const u = usages[h];
             const p = prices[h];
             if (u !== undefined) consPerHour[h].push(Number(u));

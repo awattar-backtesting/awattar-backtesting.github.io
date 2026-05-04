@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { parse } from "date-fns";
+import { SLOTS_PER_DAY } from "./slots.js";
 
 /*
  * H0 Standardlastprofil lookup against the Energie-Control workbook
@@ -58,13 +59,17 @@ export function computeH0Day(h0Sheet, day) {
     const dayIndex = dayAsDate.getDay();  // 0 == Sonntag, 6 == Samstag
 
     const col = computeSheetColumn(zeitzone, dayIndex);
-    const h0DayProfile = new Array(24).fill(0);
+    const h0DayProfile = new Array(SLOTS_PER_DAY).fill(0);
 
-    // Werte in 15min Takte, Datenstart in Zeile 4 (zero-indexed: Zeile 3)
+    // Werte in 15min Takte, Datenstart in Zeile 4 (zero-indexed: Zeile 3).
+    // The workbook is fixed at 96 quarter-hour rows; aggregate down to
+    // however many slots-per-day the calc layer currently uses.
     const rowOffset = 3;
-    for (let i = 0; i < 24; i++) {
-        for (let j = 0; j < 4; j++) {
-            const addr = XLSX.utils.encode_cell({ c: col, r: rowOffset + i * 4 + j });
+    const QUARTER_HOURS_PER_DAY = 96;
+    const quartersPerSlot = QUARTER_HOURS_PER_DAY / SLOTS_PER_DAY;
+    for (let i = 0; i < SLOTS_PER_DAY; i++) {
+        for (let j = 0; j < quartersPerSlot; j++) {
+            const addr = XLSX.utils.encode_cell({ c: col, r: rowOffset + i * quartersPerSlot + j });
             h0DayProfile[i] += h0Sheet[addr].v;
         }
     }
