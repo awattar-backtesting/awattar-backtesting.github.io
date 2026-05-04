@@ -26,7 +26,7 @@ export async function runPipeline({ bytes, h0Sheet, marketdata, onWarning = () =
         return { ok: false, reason: "stripPlain rejected the upload" };
     }
 
-    const xls = stripXls(XLSX.read(new Uint8Array(stripped), { raw: 'true' }));
+    const xls = stripXls(XLSX.read(new Uint8Array(stripped), { raw: true }));
     const csv = XLSX.utils.sheet_to_csv(xls.Sheets[xls.SheetNames[0]]);
 
     const parsed = await new Promise(resolve => {
