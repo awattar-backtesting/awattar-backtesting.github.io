@@ -8,10 +8,11 @@ import Decimal from "decimal.js";
  * in Node (filesystem reads against docs/cache60/).
  */
 export class Marketdata {
-    data = {}
+    /* localStorage cache key — bump when the stored shape of `data` changes. */
+    static version = "2023-12-29_v2";
 
-    /* bump if format changes */
-    version = "2023-12-29_v2";
+    data = {};
+    version = Marketdata.version;
 
     constructor(fetcher) {
         this.fetcher = fetcher;
