@@ -44,11 +44,12 @@ export class Marketdata {
  */
 const MAX_RETRIES = 10;
 const RETRY_DELAY_MS = 10000;
+const FETCH_TIMEOUT_MS = 15000;
 
 export function createBrowserFetcher(onWarning = () => {}) {
     return async function fetchAwattarMarketdata(unixStamp) {
         try {
-            const cached = await fetch('/cache60/' + unixStamp);
+            const cached = await fetchWithTimeout('/cache60/' + unixStamp);
             if (cached.ok) return await cached.text();
         } catch { /* fall through to live API */ }
 
@@ -60,7 +61,7 @@ export function createBrowserFetcher(onWarning = () => {}) {
                 await sleep(RETRY_DELAY_MS);
             }
             try {
-                const response = await fetch(url);
+                const response = await fetchWithTimeout(url);
                 if (response.ok) return await response.text();
             } catch (error) {
                 console.log("Request failed; will retry to get Awattar market data:", error);
@@ -69,6 +70,16 @@ export function createBrowserFetcher(onWarning = () => {}) {
         }
         throw new Error(`aWATTar marketdata fetch failed after ${MAX_RETRIES} retries`);
     };
+}
+
+async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 function sleep(time) {
