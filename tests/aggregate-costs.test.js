@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import Decimal from "decimal.js";
 import { aggregateCosts } from "../docs/calc/costs.js";
 import { SLOTS_PER_DAY } from "../docs/calc/slots.js";
+import { energie_steiermark_sonnenstrom_spot } from "../docs/tariffs.js";
 
 /**
  * Synthetic fixtures isolate aggregateCosts from the CSV/XLSX
@@ -119,6 +120,21 @@ describe("aggregateCosts", () => {
         expect(monthly["202402"].priceCents.toString()).toBe(daily["20240201"].priceCents.toString());
     });
 
+    it("retains a per-slot breakdown on each bucket", () => {
+        const day = "20240115";
+        const h0Sheet = makeH0Sheet(3, 0.01);
+        const tracker = makeTracker([day], 1.5);
+        const marketdata = makeMarketdata([day], 8);
+
+        const { daily, monthly } = aggregateCosts(tracker, marketdata, h0Sheet);
+        expect(daily[day].slots).toHaveLength(SLOTS_PER_DAY);
+        expect(monthly["202401"].slots).toHaveLength(SLOTS_PER_DAY);
+        for (const s of daily[day].slots) {
+            expect(s.kwh.toString()).toBe("1.5");
+            expect(s.priceCents.toString()).toBe("12");
+        }
+    });
+
     it("only sums hours present in tracker.data (partial days)", () => {
         const day = "20240115";
         const h0Sheet = makeH0Sheet(3, 0.01);
@@ -136,5 +152,49 @@ describe("aggregateCosts", () => {
         // h0NormKwh sums only the two hours present
         const expectedH0Kwh = (0.01 * QUARTERS_PER_SLOT) * 2;
         expect(daily[day].h0NormKwh.toFixed(6)).toBe(new Decimal(expectedH0Kwh).toFixed(6));
+    });
+});
+
+describe("energie_steiermark_sonnenstrom_spot per-slot cap", () => {
+    /*
+     * Per EPEX hour: amount = max(0.8 · price, price − 1.2 · kwh)
+     * Choose two hours with different (price, kwh) so the slot-wise sum
+     * differs from applying max() to the daily aggregates.
+     */
+    const slots = [
+        // hour A: price 100 cent, kwh 10 → max(80, 100 − 12) = 88
+        { priceCents: new Decimal(100), kwh: new Decimal(10) },
+        // hour B: price 50 cent, kwh 1 → max(40, 50 − 1.2) = 48.8
+        { priceCents: new Decimal(50), kwh: new Decimal(1) },
+    ];
+    const aggPrice = new Decimal(150);
+    const aggKwh = new Decimal(11);
+
+    it("uses per-slot evaluation when slots are provided", () => {
+        const got = energie_steiermark_sonnenstrom_spot.calculate(aggPrice, aggKwh, { slots });
+        expect(got.toFixed(2)).toBe("136.80");
+    });
+
+    it("falls back to aggregated math when no slots supplied", () => {
+        // max(0.8 · 150, 150 − 1.2 · 11) = max(120, 136.8) = 136.8
+        const got = energie_steiermark_sonnenstrom_spot.calculate(aggPrice, aggKwh, {});
+        expect(got.toFixed(2)).toBe("136.80");
+    });
+
+    it("differs from the aggregate path when the cap binds asymmetrically", () => {
+        // Hour A: cap binds (0.8·price = 80 wins). Hour B: subtraction wins.
+        const asymmetricSlots = [
+            { priceCents: new Decimal(100), kwh: new Decimal(50) }, // max(80, 100−60)=80
+            { priceCents: new Decimal(50), kwh: new Decimal(1) },   // max(40, 50−1.2)=48.8
+        ];
+        const totalPrice = new Decimal(150);
+        const totalKwh = new Decimal(51);
+
+        const perSlot = energie_steiermark_sonnenstrom_spot.calculate(totalPrice, totalKwh, { slots: asymmetricSlots });
+        const aggregated = energie_steiermark_sonnenstrom_spot.calculate(totalPrice, totalKwh, {});
+        // per-slot: 80 + 48.8 = 128.8;  aggregated: max(120, 150−61.2) = 120
+        expect(perSlot.toFixed(2)).toBe("128.80");
+        expect(aggregated.toFixed(2)).toBe("120.00");
+        expect(perSlot.toString()).not.toBe(aggregated.toString());
     });
 });

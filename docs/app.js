@@ -130,7 +130,7 @@ function providerTotalEur(p) {
     let sum = new Decimal(0);
     for (const key of Object.keys(buckets)) {
         const b = buckets[key];
-        sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(key) }));
+        sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(key), slots: b.slots }));
     }
     return sum.dividedBy(100);
 }
@@ -295,7 +295,7 @@ function renderTable() {
         const factor = state.view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         computed[k] = {};
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor });
+            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor, slots: b.slots });
             computed[k][p.meta.id] = cents;
         }
     }
@@ -315,7 +315,7 @@ function renderTable() {
             let sum = new Decimal(0);
             for (const mk of Object.keys(mb)) {
                 const b = mb[mk];
-                sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) }));
+                sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk), slots: b.slots }));
             }
             totals[p.meta.id] = sum;
         }
@@ -448,7 +448,7 @@ function buildExportSheet(view) {
             row.push(h0Diff);
         }
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor });
+            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor, slots: b.slots });
             const grossEur = Number(cents) / 100;
             const avgCt = b.kwh.equals(0) ? 0 : Number(cents.dividedBy(b.kwh));
             row.push(grossEur);
@@ -466,7 +466,7 @@ function buildExportSheet(view) {
             for (const mk of Object.keys(mb)) {
                 const mb_b = mb[mk];
                 totals[p.meta.id] = totals[p.meta.id].plus(
-                    p.calculate(mb_b.priceCents, mb_b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) })
+                    p.calculate(mb_b.priceCents, mb_b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk), slots: mb_b.slots })
                 );
             }
         }

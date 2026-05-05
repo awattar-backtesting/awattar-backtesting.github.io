@@ -293,9 +293,20 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif(
         vat: 20,
         einspeise: true,
     },
-    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
-        // TODO: we need to calculate the fee based on each EPEX hour.
-        let amount = Decimal.max(price.times(1 - 0.2), price.minus(kwh.times(1.2)));
+    function (price, kwh, { includeMonthlyFee = false, slots } = {}) {
+        // Cap is per EPEX hour: amount_h = max(0.8·price_h, price_h − 1.2·kwh_h).
+        // When `slots` is supplied (per-EPEX-hour breakdown) we evaluate the cap
+        // hour by hour and sum; otherwise fall back to the aggregated form,
+        // which over-estimates because the max() is applied to totals.
+        let amount;
+        if (slots && slots.length > 0) {
+            amount = slots.reduce(
+                (acc, s) => acc.plus(Decimal.max(s.priceCents.times(1 - 0.2), s.priceCents.minus(s.kwh.times(1.2)))),
+                new Decimal(0),
+            );
+        } else {
+            amount = Decimal.max(price.times(1 - 0.2), price.minus(kwh.times(1.2)));
+        }
         if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }

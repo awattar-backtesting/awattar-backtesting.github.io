@@ -6,13 +6,16 @@ import { computeH0Day } from "./h0.js";
  * plus the H0 worksheet, returns per-day and per-month rollups:
  *
  *   {
- *     daily:   { "20241015": { priceCents, kwh, h0NormPriceCents, h0NormKwh } },
- *     monthly: { "202410":   { priceCents, kwh, h0NormPriceCents, h0NormKwh } },
+ *     daily:   { "20241015": { priceCents, kwh, h0NormPriceCents, h0NormKwh, slots } },
+ *     monthly: { "202410":   { priceCents, kwh, h0NormPriceCents, h0NormKwh, slots } },
  *   }
  *
  * All numeric values are Decimal instances. priceCents is the raw
  * EPEX cost in cents (no tariff fees applied — caller layers tariffs
- * on top of the totals).
+ * on top of the totals). `slots` is the per-EPEX-hour breakdown
+ * `[{ priceCents, kwh }, ...]` retained so non-linear tariffs (e.g.
+ * a per-hour cap) can re-evaluate against the raw slots instead of
+ * the daily/monthly aggregates.
  *
  * Hours present in `tracker.data[day]` drive the iteration: missing
  * hours contribute nothing to either the actual or H0-normalized
@@ -43,21 +46,24 @@ export function aggregateCosts(tracker, marketdata, h0Sheet) {
         let sumKwh = new Decimal(0.0);
         let sumH0NormPrice = new Decimal(0.0);
         let sumH0NormKwh = new Decimal(0.0);
+        const slotsThisDay = [];
 
         Object.keys(usages).forEach(hour => {
             const dUsage = usages[hour];
             const dPrice = new Decimal(prices[hour]);
+            const slotPrice = dUsage.times(dPrice);
 
-            sumPrice = sumPrice.plus(dUsage.times(dPrice));
+            sumPrice = sumPrice.plus(slotPrice);
             sumKwh = sumKwh.plus(dUsage);
+            slotsThisDay.push({ priceCents: slotPrice, kwh: dUsage });
 
             const h0KwhInHour = new Decimal(h0DayProfile[hour]);
             sumH0NormKwh = sumH0NormKwh.plus(h0KwhInHour);
             sumH0NormPrice = sumH0NormPrice.plus(h0KwhInHour.times(prices[hour]));
         });
 
-        addInto(daily[day], sumPrice, sumKwh, sumH0NormPrice, sumH0NormKwh);
-        addInto(monthly[monthKey], sumPrice, sumKwh, sumH0NormPrice, sumH0NormKwh);
+        addInto(daily[day], sumPrice, sumKwh, sumH0NormPrice, sumH0NormKwh, slotsThisDay);
+        addInto(monthly[monthKey], sumPrice, sumKwh, sumH0NormPrice, sumH0NormKwh, slotsThisDay);
     }
 
     return { daily, monthly };
@@ -69,12 +75,14 @@ function bucket() {
         kwh: new Decimal(0.0),
         h0NormPriceCents: new Decimal(0.0),
         h0NormKwh: new Decimal(0.0),
+        slots: [],
     };
 }
 
-function addInto(b, price, kwh, h0Price, h0Kwh) {
+function addInto(b, price, kwh, h0Price, h0Kwh, slots) {
     b.priceCents = b.priceCents.plus(price);
     b.kwh = b.kwh.plus(kwh);
     b.h0NormPriceCents = b.h0NormPriceCents.plus(h0Price);
     b.h0NormKwh = b.h0NormKwh.plus(h0Kwh);
+    for (const s of slots) b.slots.push(s);
 }
