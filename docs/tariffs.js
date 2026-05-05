@@ -184,9 +184,9 @@ export const naturstrom_spot_stunde_ii = new Tarif(
 export const oekostrom_spot = new Tarif(
     {
         id: "oekostrom",
-        name: "Ökostrom Spot+",
-        shortName: "Ökostrom Spot+",
-        url: "https://oekostrom.at/wp-content/uploads/joules_tariff_files/78-0_1.1.Produktblatt_oekospotV1_.pdf",
+        name: "oeko Spot+",
+        shortName: "oeko Spot+",
+        url: "https://hub.oekostrom.at/uploads/documents/aefd9a843240e42f5cf4282326e97581.pdf",
         color: PROVIDER_COLORS[5],
         markupPct: 0,
         addFixedGross: 1.80,
