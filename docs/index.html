@@ -56,6 +56,17 @@ body {
 .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
 .topbar-divider { width: 1px; height: 24px; background: oklch(35% 0.02 240); margin: 0 4px; }
 .topbar-spacer { flex: 1; }
+.topbar-referral {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; color: oklch(80% 0.02 240);
+  text-align: center;
+}
+.topbar-referral a {
+  color: oklch(78% 0.16 145); text-decoration: none; font-weight: 500;
+  margin-left: 4px;
+}
+.topbar-referral a:hover { text-decoration: underline; }
 .upload-btn {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 14px; border-radius: 7px;
@@ -524,6 +535,7 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   .menu-btn { display: flex; }
   .topbar-title { display: none; }
   .topbar-divider { display: none; }
+  .topbar-referral { display: none; }
   .upload-btn { padding: 7px 9px; }
   .upload-btn span { display: none; }
   .chart-date-btn { width: 30px; height: 30px; }
@@ -595,7 +607,10 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
             </div>
             <div class="topbar-title">aWATTar Backtesting</div>
         </div>
-        <div class="topbar-spacer"></div>
+        <div class="topbar-referral">
+            <span>Wenn dieses Tool nützlich war, verwende bitte meinen
+                <a href="https://oekostrom.at/lass-uns-gemeinsam-die-welt-retten/?fwf=dnJVc2Y3RUpLT0NUc1U3R2dwVDBBUT09" target="_blank" rel="noopener noreferrer">oekostrom Empfehlungslink</a>.</span>
+        </div>
         <button class="upload-btn" id="uploadBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
             <span id="uploadBtnLabel">Verbrauchsdaten laden</span>
