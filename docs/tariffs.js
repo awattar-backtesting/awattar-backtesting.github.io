@@ -101,6 +101,7 @@ export function makeCustomTarif({ id, name, markupPct, addFixed, baseMonthly, va
             vat,
             einspeise: false,
             isCustom: true,
+            priceSource: "hourly",
         },
         function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
             const factor = 1 + markupPct / 100;
@@ -125,6 +126,7 @@ export const awattar_neu = new Tarif(
         addFixedGross: 1.80,
         baseMonthly: 5.75,
         vat: 20,
+        priceSource: "hourly",
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         const factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
@@ -145,6 +147,7 @@ export const smartcontrol_neu = new Tarif(
         addFixedGross: 1.44,
         baseMonthly: 2.99,
         vat: 20,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
@@ -164,6 +167,7 @@ export const steirerstrom = new Tarif(
         addFixedGross: 1.44,
         baseMonthly: 3.82,
         vat: 20,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
@@ -183,6 +187,7 @@ export const spotty_direkt = new Tarif(
         addFixedGross: 2.15,
         baseMonthly: 2.40,
         vat: 20,
+        priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         // +1.49ct/kWh +0.3ct/kWh (Stromnachweis) exkl. 20% USt.
@@ -203,6 +208,7 @@ export const naturstrom_spot_stunde_ii = new Tarif(
         addFixedGross: 1.56,
         baseMonthly: 2.16,
         vat: 20,
+        priceSource: "hourly", // name implies hourly is permanent — verify
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.3)).times(1.2);
@@ -222,6 +228,7 @@ export const oekostrom_spot = new Tarif(
         addFixedGross: 1.80,
         baseMonthly: 2.16,
         vat: 20,
+        priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.5)).times(1.2);
@@ -244,6 +251,7 @@ export const smartcontrol_sunny = new Tarif(
         baseMonthly: 0,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         return price.times(0.8);
@@ -262,6 +270,7 @@ export const awattar_sunny_spot_60 = new Tarif(
         baseMonthly: -5.75,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // "_60" in product name pins it to hourly auction
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.19);
@@ -282,6 +291,7 @@ export const naturstrom_marktpreis_spot_25 = new Tarif(
         baseMonthly: -5.40,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.minus(kwh.times(1.55));
@@ -302,6 +312,7 @@ export const wels_strom_sonnenstrom_spot = new Tarif(
         baseMonthly: -1.80,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.15);
@@ -322,6 +333,7 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif(
         baseMonthly: 0,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
     function (price, kwh, { includeMonthlyFee = false, slots } = {}) {
         // Cap is per EPEX hour: amount_h = max(0.8·price_h, price_h − 1.2·kwh_h).
