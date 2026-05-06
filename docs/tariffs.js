@@ -321,6 +321,32 @@ export const wels_strom_sonnenstrom_spot = new Tarif(
     }
 );
 
+export const oekostrom_sun_spot = new Tarif(
+    {
+        id: "oekostrom_sunny",
+        name: "oeko Sun Spot+",
+        shortName: "oeko Sun Spot+",
+        url: "https://hub.oekostrom.at/uploads/documents/2c2b3587acadd602114568cb0d679375.pdf",
+        color: PROVIDER_COLORS[5],
+        markupPct: 0,
+        addFixedGross: -2.0,
+        baseMonthly: 0,
+        vat: 20,
+        einspeise: true,
+        // Tarifkonditionen Stand Februar 2026 (V0102206) declares the feed-in
+        // price as 15-min from inception. priceSourceFor() will still clamp to
+        // hourly for pre-2025-10-01 dates if a sample reaches that far back.
+        priceSource: "quarter-hourly",
+    },
+    function (price, kwh, { includeMonthlyFee = false } = {}) {
+        // Arbeitspreis = EPEX SPOT AT Day-Ahead − 2 ct/kWh (Abwicklungsgebühr,
+        // exkl. USt.). No monthly fee.
+        let amount = price.minus(kwh.times(2.0));
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
+    }
+);
+
 export const energie_steiermark_sonnenstrom_spot = new Tarif(
     {
         id: "esteiermark_sunny",

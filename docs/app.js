@@ -12,6 +12,7 @@ import {
     awattar_sunny_spot_60,
     naturstrom_marktpreis_spot_25,
     wels_strom_sonnenstrom_spot,
+    oekostrom_sun_spot,
     PROVIDER_COLORS,
     makeCustomTarif,
 } from "./tariffs.js";
@@ -21,7 +22,7 @@ import { tariffCostForBucket } from "./calc/fanout.js";
 import { SLOTS_PER_DAY, HOURS_PER_DAY, SLOTS_PER_HOUR } from "./calc/slots.js";
 
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
-const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot];
+const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot, oekostrom_sun_spot];
 
 const SAMPLE_HOURLY_PRICES = Array.from({ length: 24 }, (_, h) => {
     const base = 8 + 4 * Math.sin((h - 6) * Math.PI / 12);
