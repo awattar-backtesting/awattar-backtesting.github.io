@@ -34,6 +34,16 @@ const SAMPLE_HOURLY_CONS = Array.from({ length: 24 }, (_, h) => {
     const evening = Math.exp(-0.5 * ((h - 19) / 2) ** 2) * 1.2;
     return Math.max(0.05, 0.15 + morning + evening);
 });
+/* Sample consumption at 15-min resolution: smooth-interpolate the hourly
+ * placeholder so the polyline curve looks continuous before upload. Values
+ * are kWh/h equivalent (i.e. instantaneous power), matching the y-axis. */
+const SAMPLE_QUARTER_CONS = Array.from({ length: 96 }, (_, q) => {
+    const t = q / 4;
+    const a = Math.floor(t) % 24;
+    const b = (a + 1) % 24;
+    const f = t - Math.floor(t);
+    return SAMPLE_HOURLY_CONS[a] * (1 - f) + SAMPLE_HOURLY_CONS[b] * f;
+});
 
 const state = {
     providers: CONSUMPTION_PROVIDERS.slice(),
@@ -562,20 +572,21 @@ function renderChart() {
 
     ensureChartDay();
 
-    let prices, consumption, priceBox, daysCount;
+    let prices, consumption, consumption15, priceBox, daysCount;
     let priceMin, priceMax, consMax;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
         consumption = SAMPLE_HOURLY_CONS;
+        consumption15 = SAMPLE_QUARTER_CONS;
         priceBox = null;
         daysCount = 0;
         priceMin = Math.min(...prices, 0);
         priceMax = Math.max(...prices, 0.1);
-        consMax = Math.max(...consumption, 0.1);
+        consMax = Math.max(...consumption15, 0.1);
     } else {
         const { chartDays, axisDays } = chartDayScope();
         const r = aggregateHourly(chartDays);
-        prices = r.prices; consumption = r.consumption;
+        prices = r.prices; consumption = r.consumption; consumption15 = r.consumption15;
         priceBox = r.priceBox; daysCount = chartDays.length;
         const ab = axisBounds(axisDays);
         priceMin = Math.min(ab.priceMin, 0);
@@ -638,17 +649,11 @@ function renderChart() {
             </div>`;
     }).join("");
 
-    const polyline = consumption.map((c, i) => {
-        const x = ((i + 0.5) / 24) * 100;
+    const polyline = consumption15.map((c, q) => {
+        const x = ((q + 0.5) / SLOTS_PER_DAY) * 100;
         const y = (1 - (c / consMax) * 0.85) * 100;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
     }).join(" ");
-
-    const dots = consumption.map((c, i) => {
-        const x = ((i + 0.5) / 24) * 100;
-        const y = (1 - (c / consMax) * 0.85) * 100;
-        return `<circle cx="${x.toFixed(2)}%" cy="${y.toFixed(2)}%" r="3" fill="oklch(62% 0.18 260)" stroke="white" stroke-width="1" />`;
-    }).join("");
 
     const xLabels = [0, 4, 8, 12, 16, 20, 24].map((h) => {
         let style;
@@ -671,9 +676,6 @@ function renderChart() {
                     <polyline points="${polyline}" fill="none" stroke="oklch(62% 0.18 260)" stroke-width="1.5"
                               stroke-linejoin="round" stroke-linecap="round" opacity="0.9"
                               vector-effect="non-scaling-stroke" />
-                </svg>
-                <svg class="chart-svg" style="overflow:visible">
-                    ${dots}
                 </svg>
             </div>
             <div class="chart-axis chart-axis-right">
@@ -740,6 +742,14 @@ function axisBounds(days) {
             }
             if (usageHour > consMax) consMax = usageHour;
         }
+        // Per-quarter rate (kwh × 4 → kWh/h-equivalent) can spike above the
+        // hour's mean — extend consMax so the 15-min polyline doesn't clip.
+        for (let q = 0; q < SLOTS_PER_DAY; q++) {
+            const u = usages[q];
+            if (u === undefined) continue;
+            const rate = Number(u) * SLOTS_PER_HOUR;
+            if (rate > consMax) consMax = rate;
+        }
     }
     if (!Number.isFinite(priceMin)) priceMin = 0;
     if (!Number.isFinite(priceMax)) priceMax = 0.1;
@@ -752,6 +762,7 @@ function aggregateHourly(days) {
     const md = state.marketdata;
     const pricesPerHour = Array.from({ length: HOURS_PER_DAY }, () => []);
     const consPerHour = Array.from({ length: HOURS_PER_DAY }, () => []);
+    const consPerQuarter = Array.from({ length: SLOTS_PER_DAY }, () => []);
     for (const d of days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
@@ -769,6 +780,10 @@ function aggregateHourly(days) {
                 }
             }
             if (anyPresent) consPerHour[h].push(usageHour);
+        }
+        for (let q = 0; q < SLOTS_PER_DAY; q++) {
+            const u = usages[q];
+            if (u !== undefined) consPerQuarter[q].push(Number(u) * SLOTS_PER_HOUR);
         }
     }
     const mean = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
@@ -799,7 +814,8 @@ function aggregateHourly(days) {
     const prices = pricesPerHour.map(mean);
     const priceBox = pricesPerHour.map(boxStats);
     const consumption = consPerHour.map(mean);
-    return { prices, priceBox, consumption, days };
+    const consumption15 = consPerQuarter.map(mean);
+    return { prices, priceBox, consumption, consumption15, days };
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────
