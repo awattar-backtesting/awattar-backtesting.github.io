@@ -42,18 +42,27 @@ export class Marketdata {
             tasks.push(this._fetchInto(fullday, "hourly", this.data60));
         }
         if (fullday >= QUARTER_HOURLY_AUCTION_GO_LIVE && !(fullday in this.data15)) {
-            tasks.push(this._fetchInto(fullday, "quarter-hourly", this.data15));
+            // Quarter-hourly is best-effort: in the browser the upstream
+            // (energy-charts.info) is blocked by CORS so the cache is the
+            // only source. A miss falls through to repriceBucket's per-slot
+            // fallback to hourly with an onMissingSource warning.
+            tasks.push(this._fetchInto(fullday, "quarter-hourly", this.data15).catch(() => {}));
         }
         await Promise.all(tasks);
     }
 
     async _fetchInto(fullday, source, target) {
         target[fullday] = "requesting";
-        const date = parse(fullday, "yyyyMMdd", new Date());
-        const unixStamp = date.getTime();
-        const jsonText = await this.fetcher(unixStamp, source);
-        const d = JSON.parse(jsonText);
-        target[fullday] = d.data.map(slot => new Decimal(slot.marketprice).dividedBy(10).toFixed(3));
+        try {
+            const date = parse(fullday, "yyyyMMdd", new Date());
+            const unixStamp = date.getTime();
+            const jsonText = await this.fetcher(unixStamp, source);
+            const d = JSON.parse(jsonText);
+            target[fullday] = d.data.map(slot => new Decimal(slot.marketprice).dividedBy(10).toFixed(3));
+        } catch (err) {
+            delete target[fullday];
+            throw err;
+        }
     }
 
     /**
@@ -71,17 +80,17 @@ export class Marketdata {
 }
 
 /**
- * Browser fetcher: tries the local cache directory first, then falls
- * back to the live API with retries. `onWarning` is called when a
- * retry is triggered. Returns the response body as a JSON string.
+ * Browser fetcher: tries the local cache directory first, with the live
+ * upstream as a fallback for the hourly product. `onWarning` is called
+ * when a retry is triggered. Returns the response body as a JSON string.
  *
- * Two API endpoints, picked by `source`:
- *   "hourly"          → /cache60 then api.awattar.at
- *   "quarter-hourly"  → /cache15 then api.energy-charts.info (AT bzn)
- *
- * energy-charts returns a different payload shape; we normalize to the
- * awattar shape so the rest of the loader stays format-agnostic, the
- * same way build-cache.py does for the on-disk cache.
+ *   "hourly"          → /cache60 then api.awattar.at (CORS-friendly)
+ *   "quarter-hourly"  → /cache15 only — energy-charts.info pins
+ *                       Access-Control-Allow-Origin to its own subdomain
+ *                       so a browser fetch is impossible. Cache misses
+ *                       throw and the caller (Marketdata.addDay) lets the
+ *                       per-slot fallback in repriceBucket degrade to the
+ *                       hourly product for that day.
  */
 const MAX_RETRIES = 10;
 const RETRY_DELAY_MS = 10000;
@@ -93,10 +102,10 @@ export function createBrowserFetcher(onWarning = () => {}) {
         try {
             const cached = await fetchWithTimeout(cacheDir + unixStamp);
             if (cached.ok) return await cached.text();
-        } catch { /* fall through to live API */ }
+        } catch { /* fall through */ }
 
         if (source === "quarter-hourly") {
-            return await fetchEnergyCharts(unixStamp, onWarning);
+            throw new Error(`No 15-min cache entry for unix ${unixStamp}`);
         }
         return await fetchAwattar(unixStamp, onWarning);
     };
@@ -116,39 +125,6 @@ async function fetchAwattar(unixStamp, onWarning) {
         onWarning("Failed to obtain market data from aWATTar, initiating retry. Please wait a few seconds.");
     }
     throw new Error(`aWATTar marketdata fetch failed after ${MAX_RETRIES} retries`);
-}
-
-async function fetchEnergyCharts(unixStamp, onWarning) {
-    const day = new Date(unixStamp).toISOString().slice(0, 10);
-    const url = `https://api.energy-charts.info/price?bzn=AT&start=${day}`;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        if (attempt > 0) await sleep(RETRY_DELAY_MS);
-        try {
-            const response = await fetchWithTimeout(url);
-            if (response.ok) return normalizeEnergyCharts(await response.json());
-        } catch (error) {
-            console.log("Request failed; will retry to get energy-charts market data:", error);
-        }
-        onWarning("Failed to obtain 15-min market data from energy-charts.info, initiating retry. Please wait a few seconds.");
-    }
-    throw new Error(`energy-charts marketdata fetch failed after ${MAX_RETRIES} retries`);
-}
-
-function normalizeEnergyCharts(raw) {
-    // 15-min responses have ~96 entries (92..100 with DST); hourly fallback
-    // would have ~24. We only call this for "quarter-hourly" so it should
-    // always be 96-ish, but the threshold copes with either.
-    const slotMinutes = raw.price.length < 26 ? 60 : 15;
-    const data = raw.price.map((price, i) => {
-        const ts = raw.unix_seconds[i];
-        return {
-            start_timestamp: ts * 1000,
-            end_timestamp: (ts + slotMinutes * 60) * 1000,
-            marketprice: price,
-            unit: raw.unit,
-        };
-    });
-    return JSON.stringify({ license_info: raw.license_info, data });
 }
 
 async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
