@@ -657,14 +657,19 @@ function renderChart() {
 
     const xLabels = [0, 4, 8, 12, 16, 20, 24].map((h) => {
         let style;
-        if (h === 0) style = "left:0; transform:none";
-        else if (h === 24) style = "left:auto; right:0; transform:none";
+        if (h === 0) style = "left:2px; transform:none";
+        else if (h === 24) style = "left:auto; right:2px; transform:none";
         else style = `left:${(h / 24) * 100}%`;
         return `<span class="chart-x-label" style="${style}">${h}h</span>`;
     }).join("");
 
     wrap.innerHTML = `
         ${sample ? `<div class="chart-placeholder">⚠ Beispieldaten — lade CSV für echte Werte</div>` : ""}
+        <div class="chart-units-row">
+            <div class="chart-unit chart-unit-left">ct/kWh</div>
+            <div class="chart-unit-spacer"></div>
+            <div class="chart-unit chart-unit-right">kWh</div>
+        </div>
         <div class="chart-row">
             <div class="chart-axis chart-axis-left">
                 ${yAxisLeft.map((v) => `<span>${v.toFixed(1)}</span>`).join("")}
