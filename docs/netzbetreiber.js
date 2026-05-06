@@ -12,6 +12,8 @@ import { parse, parseISO } from "date-fns";
  *     fixupTimestamp,                   // false | true (subtract 15min from start date)
  *     feedin,                           // false | true (Einspeisung tariff)
  *     endDescriptorTimestamp,           // null | column name; used to drop non-15min entries
+ *     slotDurationMin,                  // 15 (default) | 60; KWG-style hourly providers set 60
+ *                                       //   so the tracker can fan one entry across four quarters
  *     preprocessDateString,             // identity | (string) => string
  *   })
  */
@@ -28,6 +30,7 @@ export class Netzbetreiber {
         fixupTimestamp = false,
         feedin = false,
         endDescriptorTimestamp = null,
+        slotDurationMin = 15,
         preprocessDateString = (date) => date,
     }) {
         Object.assign(this, {
@@ -42,6 +45,7 @@ export class Netzbetreiber {
             fixupTimestamp,
             feedin,
             endDescriptorTimestamp,
+            slotDurationMin,
             preprocessDateString,
         });
     }
@@ -118,8 +122,12 @@ export class Netzbetreiber {
              * > [...]
              * > 10.11.2023 23:45;0,214000;;
              * > 11.11.2023 00:00;0,397000;;
-            */
-            parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
+             *
+             * Subtract a full slot's worth of minutes so the resulting
+             * timestamp lands at the slot's start (the tracker fans
+             * 60-min entries into four 15-min slots from there).
+             */
+            parsedTimestamp = new Date(parsedTimestamp - this.slotDurationMin * MS_PER_MINUTE);
         }
 
         if (this.endDescriptorTimestamp !== null) {
@@ -142,6 +150,7 @@ export class Netzbetreiber {
         return {
             timestamp: parsedTimestamp,
             usage: parsedUsage,
+            slotDurationMin: this.slotDurationMin,
         };
     }
 }
@@ -463,6 +472,7 @@ export const KWG = new Netzbetreiber({
     dateFormatString: "dd.MM.yyyy HH:mm",
     usageParser: parseGermanFloat,
     fixupTimestamp: true,
+    slotDurationMin: 60,
 });
 
 /**

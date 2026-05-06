@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import { computeH0Day } from "./h0.js";
+import { hourOfSlot } from "./slots.js";
 
 /**
  * Pure cost aggregation. Given a populated Tracker and Marketdata
@@ -12,15 +13,22 @@ import { computeH0Day } from "./h0.js";
  *
  * All numeric values are Decimal instances. priceCents is the raw
  * EPEX cost in cents (no tariff fees applied — caller layers tariffs
- * on top of the totals). `slots` is the per-EPEX-hour breakdown
+ * on top of the totals). `slots` is the per-quarter-hour breakdown
  * `[{ priceCents, kwh }, ...]` retained so non-linear tariffs (e.g.
  * a per-hour cap) can re-evaluate against the raw slots instead of
  * the daily/monthly aggregates.
  *
- * Hours present in `tracker.data[day]` drive the iteration: missing
- * hours contribute nothing to either the actual or H0-normalized
+ * Tracker keys are 15-min slots (0..95). EPEX prices in `marketdata.data`
+ * are still hourly (24 entries), so a tracker quarter q reads
+ * `prices[hourOfSlot(q)]` — four consecutive quarters share one price.
+ * The per-tariff fan-out (separate layer) decides whether to bill
+ * against this hourly source or the 15-min auction; this aggregation
+ * stays at the source granularity.
+ *
+ * Slots present in `tracker.data[day]` drive the iteration: missing
+ * slots contribute nothing to either the actual or H0-normalized
  * sums, so a partial day is summed against itself only. Tracker's
- * postProcess() drops days with fewer than two hourly entries.
+ * postProcess() drops days with fewer than two slot entries.
  */
 export function aggregateCosts(tracker, marketdata, h0Sheet) {
     const monthly = {};
@@ -48,8 +56,9 @@ export function aggregateCosts(tracker, marketdata, h0Sheet) {
         let sumH0NormKwh = new Decimal(0.0);
         const slotsThisDay = [];
 
-        Object.keys(usages).forEach(hour => {
-            const dUsage = usages[hour];
+        Object.keys(usages).forEach(slot => {
+            const dUsage = usages[slot];
+            const hour = hourOfSlot(Number(slot));
             const dPrice = new Decimal(prices[hour]);
             const slotPrice = dUsage.times(dPrice);
 
@@ -57,9 +66,9 @@ export function aggregateCosts(tracker, marketdata, h0Sheet) {
             sumKwh = sumKwh.plus(dUsage);
             slotsThisDay.push({ priceCents: slotPrice, kwh: dUsage });
 
-            const h0KwhInHour = new Decimal(h0DayProfile[hour]);
-            sumH0NormKwh = sumH0NormKwh.plus(h0KwhInHour);
-            sumH0NormPrice = sumH0NormPrice.plus(h0KwhInHour.times(prices[hour]));
+            const h0KwhInSlot = new Decimal(h0DayProfile[slot]);
+            sumH0NormKwh = sumH0NormKwh.plus(h0KwhInSlot);
+            sumH0NormPrice = sumH0NormPrice.plus(h0KwhInSlot.times(prices[hour]));
         });
 
         addInto(daily[day], sumPrice, sumKwh, sumH0NormPrice, sumH0NormKwh, slotsThisDay);

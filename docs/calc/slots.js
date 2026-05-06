@@ -1,15 +1,23 @@
 /*
  * Time-slot constants for the calc layer.
  *
- * Today the data layer aggregates everything into hourly buckets, so a
- * "day" has 24 slots indexed 0..23. The eventual move to 15-minute
- * granularity will flip SLOTS_PER_DAY to 96 and switch slotOfTimestamp
- * to return floor(minutes / 15) + hour * 4. Centralizing the constant
- * + helper here means the rest of the calc layer doesn't need to care.
+ * The data layer keeps consumption at 15-minute granularity end-to-end:
+ * a day has 96 slots indexed 0..95 (q = hour*4 + floor(min/15)). Hourly
+ * EPEX prices are 24 entries per day; cost code that pairs a tracker
+ * quarter with an hourly price reads `prices[Math.floor(slot/4)]`.
+ *
+ * H0 standard-load profiles in lastprofile.xls are natively 15-min, so
+ * computeH0Day reads one row per slot.
  */
 
-export const SLOTS_PER_DAY = 24;
+export const SLOTS_PER_DAY = 96;
+export const HOURS_PER_DAY = 24;
+export const SLOTS_PER_HOUR = SLOTS_PER_DAY / HOURS_PER_DAY;
 
 export function slotOfTimestamp(ts) {
-    return ts.getHours();
+    return ts.getHours() * SLOTS_PER_HOUR + Math.floor(ts.getMinutes() / 15);
+}
+
+export function hourOfSlot(slot) {
+    return Math.floor(slot / SLOTS_PER_HOUR);
 }

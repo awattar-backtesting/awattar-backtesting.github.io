@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
 import Decimal from "decimal.js";
 import { aggregateCosts } from "../docs/calc/costs.js";
-import { SLOTS_PER_DAY } from "../docs/calc/slots.js";
+import { SLOTS_PER_DAY, HOURS_PER_DAY } from "../docs/calc/slots.js";
 import { energie_steiermark_sonnenstrom_spot } from "../docs/tariffs.js";
 
 /**
@@ -44,10 +44,12 @@ function makeTracker(days, usagePerSlot) {
     return { days: new Set(days), data };
 }
 
-function makeMarketdata(days, pricePerSlot) {
+function makeMarketdata(days, pricePerHour) {
+    /* aggregateCosts reads marketdata.data[day][hourOfSlot(slot)] —
+     * the hourly EPEX product, 24 entries per day. */
     const data = {};
     for (const day of days) {
-        data[day] = new Array(SLOTS_PER_DAY).fill(pricePerSlot);
+        data[day] = new Array(HOURS_PER_DAY).fill(pricePerHour);
     }
     return { data };
 }
@@ -68,9 +70,10 @@ describe("aggregateCosts", () => {
         const expectedH0Slot = 0.01 * QUARTERS_PER_SLOT;
         const expectedH0Kwh = expectedH0Slot * SLOTS_PER_DAY;
 
+        // 96 quarters × 1 kWh × 10 cents = 960 cents; 96 quarters × 1 kWh = 96 kWh
         const d = daily[day];
-        expect(d.priceCents.toString()).toBe("240");
-        expect(d.kwh.toString()).toBe("24");
+        expect(d.priceCents.toString()).toBe("960");
+        expect(d.kwh.toString()).toBe("96");
         expect(d.h0NormKwh.toFixed(6)).toBe(new Decimal(expectedH0Kwh).toFixed(6));
         expect(d.h0NormPriceCents.toFixed(6)).toBe(new Decimal(expectedH0Kwh * 10).toFixed(6));
 
@@ -101,9 +104,9 @@ describe("aggregateCosts", () => {
         expect(monthly["202401"].priceCents.toString()).toBe(sumPrice.toString());
         expect(monthly["202401"].kwh.toString()).toBe(sumKwh.toString());
 
-        // Each day: 24 slots × 2 kWh × 5 cents = 240 cents
-        expect(daily["20240115"].priceCents.toString()).toBe("240");
-        expect(daily["20240120"].priceCents.toString()).toBe("240");
+        // Each day: 96 quarters × 2 kWh × 5 cents = 960 cents
+        expect(daily["20240115"].priceCents.toString()).toBe("960");
+        expect(daily["20240120"].priceCents.toString()).toBe("960");
     });
 
     it("groups across month boundaries into separate monthly buckets", () => {
@@ -135,10 +138,10 @@ describe("aggregateCosts", () => {
         }
     });
 
-    it("only sums hours present in tracker.data (partial days)", () => {
+    it("only sums slots present in tracker.data (partial days)", () => {
         const day = "20240115";
         const h0Sheet = makeH0Sheet(3, 0.01);
-        // Only hours 8 and 9 present
+        // Only quarters 8 and 9 present (i.e. 02:00–02:30)
         const tracker = {
             days: new Set([day]),
             data: { [day]: { 8: new Decimal(1.0), 9: new Decimal(1.0) } },
@@ -149,8 +152,8 @@ describe("aggregateCosts", () => {
         expect(daily[day].kwh.toString()).toBe("2");
         expect(daily[day].priceCents.toString()).toBe("20");
 
-        // h0NormKwh sums only the two hours present
-        const expectedH0Kwh = (0.01 * QUARTERS_PER_SLOT) * 2;
+        // h0NormKwh sums only the two quarters present
+        const expectedH0Kwh = 0.01 * 2;
         expect(daily[day].h0NormKwh.toFixed(6)).toBe(new Decimal(expectedH0Kwh).toFixed(6));
     });
 });
