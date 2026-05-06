@@ -24,21 +24,33 @@ export const PROVIDER_COLORS = [
  *   vat           VAT %
  *   einspeise     true for feed-in tariffs
  *   isCustom      true for user-defined tariffs
+ *   priceSource   which EPEX day-ahead auction to bill against. The hourly
+ *                 product (cache60) and the 15-minute product (cache15)
+ *                 clear independently — averaging four 15-min prices does
+ *                 NOT reproduce the hourly index. Allowed shapes:
+ *                   "hourly"         constant
+ *                   "quarter-hourly" constant
+ *                   { before, from, then }   switchover; `from` is a
+ *                                            yyyymmdd string and is the
+ *                                            first day billed under `then`.
+ *                 Days before 2025-10-01 are clamped to "hourly" because
+ *                 only the hourly auction existed pre-go-live.
  *
  * `calculate(price, kwh, opts)` computes the gross/net amount in cents for
  * a (price, kwh) pair. `opts`:
  *
  *   includeMonthlyFee   include this.grundgebuehr_ct (display rolls up base fee)
  *   monthlyFeeFactor    fraction of the month covered (1.0 = full month)
- *   slot                optional slot context for per-slot tariffs (e.g. an
- *                       EPEX-hour-aware cap). Undefined when calculate is
- *                       invoked against pre-aggregated daily/monthly buckets;
- *                       populated by callers that fan out per slot.
+ *   slots               optional per-slot breakdown for tariffs whose math
+ *                       is non-linear in (price, kwh). Each entry is
+ *                       { priceCents, kwh } for one tariff-aligned slot.
  *
  * Inside `calculate`, `this.grundgebuehr_ct` resolves to the gross fee in
  * cents (always positive magnitude), so feed-in closures keep subtracting
  * it directly while consumption closures add it.
  */
+export const QUARTER_HOURLY_AUCTION_GO_LIVE = "20251001";
+
 export class Tarif {
     constructor(meta, calculate) {
         this.meta = meta;
@@ -49,6 +61,24 @@ export class Tarif {
     }
     get einspeise() {
         return !!this.meta.einspeise;
+    }
+    /**
+     * Resolve the EPEX auction product this tariff bills against on `yyyymmdd`.
+     * Days before the 15-min auction's go-live date are clamped to "hourly"
+     * because the quarter-hourly product didn't exist yet, regardless of the
+     * tariff's declaration. Tariffs without a declaration default to "hourly"
+     * (matches the legacy behavior).
+     */
+    priceSourceFor(yyyymmdd) {
+        const declared = this._declaredSource(yyyymmdd);
+        if (yyyymmdd < QUARTER_HOURLY_AUCTION_GO_LIVE) return "hourly";
+        return declared;
+    }
+    _declaredSource(yyyymmdd) {
+        const s = this.meta.priceSource;
+        if (s === undefined) return "hourly";
+        if (typeof s === "string") return s;
+        return yyyymmdd < s.from ? s.before : s.then;
     }
 }
 
