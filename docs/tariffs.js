@@ -7,6 +7,7 @@ export const PROVIDER_COLORS = [
     'oklch(60% 0.18 320)',  // purple
     'oklch(60% 0.18 190)',  // teal
     'oklch(60% 0.18 20)',   // red-orange
+    'oklch(70% 0.18 100)',  // yellow-green
 ];
 
 /**
@@ -24,11 +25,33 @@ export const PROVIDER_COLORS = [
  *   vat           VAT %
  *   einspeise     true for feed-in tariffs
  *   isCustom      true for user-defined tariffs
+ *   priceSource   which EPEX day-ahead auction to bill against. The hourly
+ *                 product (cache60) and the 15-minute product (cache15)
+ *                 clear independently — averaging four 15-min prices does
+ *                 NOT reproduce the hourly index. Allowed shapes:
+ *                   "hourly"         constant
+ *                   "quarter-hourly" constant
+ *                   { before, from, then }   switchover; `from` is a
+ *                                            yyyymmdd string and is the
+ *                                            first day billed under `then`.
+ *                 Days before 2025-10-01 are clamped to "hourly" because
+ *                 only the hourly auction existed pre-go-live.
+ *
+ * `calculate(price, kwh, opts)` computes the gross/net amount in cents for
+ * a (price, kwh) pair. `opts`:
+ *
+ *   includeMonthlyFee   include this.grundgebuehr_ct (display rolls up base fee)
+ *   monthlyFeeFactor    fraction of the month covered (1.0 = full month)
+ *   slots               optional per-slot breakdown for tariffs whose math
+ *                       is non-linear in (price, kwh). Each entry is
+ *                       { priceCents, kwh } for one tariff-aligned slot.
  *
  * Inside `calculate`, `this.grundgebuehr_ct` resolves to the gross fee in
  * cents (always positive magnitude), so feed-in closures keep subtracting
  * it directly while consumption closures add it.
  */
+export const QUARTER_HOURLY_AUCTION_GO_LIVE = "20251001";
+
 export class Tarif {
     constructor(meta, calculate) {
         this.meta = meta;
@@ -39,6 +62,24 @@ export class Tarif {
     }
     get einspeise() {
         return !!this.meta.einspeise;
+    }
+    /**
+     * Resolve the EPEX auction product this tariff bills against on `yyyymmdd`.
+     * Days before the 15-min auction's go-live date are clamped to "hourly"
+     * because the quarter-hourly product didn't exist yet, regardless of the
+     * tariff's declaration. Tariffs without a declaration default to "hourly"
+     * (matches the legacy behavior).
+     */
+    priceSourceFor(yyyymmdd) {
+        const declared = this._declaredSource(yyyymmdd);
+        if (yyyymmdd < QUARTER_HOURLY_AUCTION_GO_LIVE) return "hourly";
+        return declared;
+    }
+    _declaredSource(yyyymmdd) {
+        const s = this.meta.priceSource;
+        if (s === undefined) return "hourly";
+        if (typeof s === "string") return s;
+        return yyyymmdd < s.from ? s.before : s.then;
     }
 }
 
@@ -61,13 +102,14 @@ export function makeCustomTarif({ id, name, markupPct, addFixed, baseMonthly, va
             vat,
             einspeise: false,
             isCustom: true,
+            priceSource: "hourly",
         },
-        function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+        function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
             const factor = 1 + markupPct / 100;
             const vatFactor = 1 + vat / 100;
             let amount = price.times(factor).times(vatFactor).plus(kwh.times(addFixed));
-            if (include_monthly_fee) {
-                amount = amount.plus(this.grundgebuehr_ct * monthly_fee_factor);
+            if (includeMonthlyFee) {
+                amount = amount.plus(this.grundgebuehr_ct * monthlyFeeFactor);
             }
             return amount;
         }
@@ -85,11 +127,12 @@ export const awattar_neu = new Tarif(
         addFixedGross: 1.80,
         baseMonthly: 5.75,
         vat: 20,
+        priceSource: "hourly",
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         const factor = price < 0 ? 1 - 0.03 : 1 + 0.03;
         let amount = price.times(factor).plus(kwh.times(1.5)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct * monthly_fee_factor);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct * monthlyFeeFactor);
         return amount;
     }
 );
@@ -105,10 +148,11 @@ export const smartcontrol_neu = new Tarif(
         addFixedGross: 1.44,
         baseMonthly: 2.99,
         vat: 20,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -124,10 +168,11 @@ export const steirerstrom = new Tarif(
         addFixedGross: 1.44,
         baseMonthly: 3.82,
         vat: 20,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.2)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -143,11 +188,12 @@ export const spotty_direkt = new Tarif(
         addFixedGross: 2.15,
         baseMonthly: 2.40,
         vat: 20,
+        priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         // +1.49ct/kWh +0.3ct/kWh (Stromnachweis) exkl. 20% USt.
         let amount = price.plus(kwh.times(1.49 + 0.3)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -163,10 +209,11 @@ export const naturstrom_spot_stunde_ii = new Tarif(
         addFixedGross: 1.56,
         baseMonthly: 2.16,
         vat: 20,
+        priceSource: "hourly", // name implies hourly is permanent — verify
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.3)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -174,18 +221,45 @@ export const naturstrom_spot_stunde_ii = new Tarif(
 export const oekostrom_spot = new Tarif(
     {
         id: "oekostrom",
-        name: "Ökostrom Spot+",
-        shortName: "Ökostrom Spot+",
-        url: "https://oekostrom.at/wp-content/uploads/joules_tariff_files/78-0_1.1.Produktblatt_oekospotV1_.pdf",
+        name: "oeko Spot+",
+        shortName: "oeko Spot+",
+        url: "https://hub.oekostrom.at/uploads/documents/aefd9a843240e42f5cf4282326e97581.pdf",
         color: PROVIDER_COLORS[5],
         markupPct: 0,
         addFixedGross: 1.80,
         baseMonthly: 2.16,
         vat: 20,
+        priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.5)).times(1.2);
-        if (include_monthly_fee) amount = amount.plus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
+        return amount;
+    }
+);
+
+export const hofer_gruenstrom_spot = new Tarif(
+    {
+        id: "hofer_spot",
+        name: "Hofer Grünstrom SPOT",
+        shortName: "Hofer Grünstrom SPOT",
+        url: "https://www.hofer-gr%C3%BCnstrom.at/preisinformation-spot3.pdf?ch=9byl96of&:hp=6;69;de",
+        color: PROVIDER_COLORS[6],
+        markupPct: 0,
+        addFixedGross: 1.90,
+        baseMonthly: 4.95,
+        vat: 20,
+        // Tariff launched 2026-02-01 with quarter-hourly billing. Earlier
+        // days are backtested against the hourly auction — both because the
+        // product didn't exist yet and because Hofer's own API only serves
+        // real 15-min EPEX data from that date onward (older days come back
+        // as hourly values padded 4×, see project_hofer_data memory).
+        priceSource: { before: "hourly", from: "20260201", then: "quarter-hourly" },
+    },
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
+        // Aufschlag 1.5833 ct/kWh netto × 1.2 = 1.90 ct/kWh brutto.
+        let amount = price.plus(kwh.times(1.5833)).times(1.2);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -204,8 +278,9 @@ export const smartcontrol_sunny = new Tarif(
         baseMonthly: 0,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         return price.times(0.8);
     }
 );
@@ -222,10 +297,11 @@ export const awattar_sunny_spot_60 = new Tarif(
         baseMonthly: -5.75,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // "_60" in product name pins it to hourly auction
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.19);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -242,10 +318,11 @@ export const naturstrom_marktpreis_spot_25 = new Tarif(
         baseMonthly: -5.40,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.minus(kwh.times(1.55));
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -262,10 +339,37 @@ export const wels_strom_sonnenstrom_spot = new Tarif(
         baseMonthly: -1.80,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.times(1 - 0.15);
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
+        return amount;
+    }
+);
+
+export const oekostrom_sun_spot = new Tarif(
+    {
+        id: "oekostrom_sunny",
+        name: "oeko Sun Spot+",
+        shortName: "oeko Sun Spot+",
+        url: "https://hub.oekostrom.at/uploads/documents/2c2b3587acadd602114568cb0d679375.pdf",
+        color: PROVIDER_COLORS[5],
+        markupPct: 0,
+        addFixedGross: -2.0,
+        baseMonthly: 0,
+        vat: 20,
+        einspeise: true,
+        // Tarifkonditionen Stand Februar 2026 (V0102206) declares the feed-in
+        // price as 15-min from inception. priceSourceFor() will still clamp to
+        // hourly for pre-2025-10-01 dates if a sample reaches that far back.
+        priceSource: "quarter-hourly",
+    },
+    function (price, kwh, { includeMonthlyFee = false } = {}) {
+        // Arbeitspreis = EPEX SPOT AT Day-Ahead − 2 ct/kWh (Abwicklungsgebühr,
+        // exkl. USt.). No monthly fee.
+        let amount = price.minus(kwh.times(2.0));
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );
@@ -282,11 +386,23 @@ export const energie_steiermark_sonnenstrom_spot = new Tarif(
         baseMonthly: 0,
         vat: 20,
         einspeise: true,
+        priceSource: "hourly", // TODO: verify against current Produktblatt
     },
-    function (price, kwh, include_monthly_fee, monthly_fee_factor) {
-        // TODO: we need to calculate the fee based on each EPEX hour.
-        let amount = Decimal.max(price.times(1 - 0.2), price.minus(kwh.times(1.2)));
-        if (include_monthly_fee) amount = amount.minus(this.grundgebuehr_ct);
+    function (price, kwh, { includeMonthlyFee = false, slots } = {}) {
+        // Cap is per EPEX hour: amount_h = max(0.8·price_h, price_h − 1.2·kwh_h).
+        // When `slots` is supplied (per-EPEX-hour breakdown) we evaluate the cap
+        // hour by hour and sum; otherwise fall back to the aggregated form,
+        // which over-estimates because the max() is applied to totals.
+        let amount;
+        if (slots && slots.length > 0) {
+            amount = slots.reduce(
+                (acc, s) => acc.plus(Decimal.max(s.priceCents.times(1 - 0.2), s.priceCents.minus(s.kwh.times(1.2)))),
+                new Decimal(0),
+            );
+        } else {
+            amount = Decimal.max(price.times(1 - 0.2), price.minus(kwh.times(1.2)));
+        }
+        if (includeMonthlyFee) amount = amount.minus(this.grundgebuehr_ct);
         return amount;
     }
 );

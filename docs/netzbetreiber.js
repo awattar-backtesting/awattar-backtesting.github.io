@@ -1,29 +1,53 @@
 import { parse, parseISO } from "date-fns";
 
-export const listOfNetzbetreiber = [];
-
+/**
+ * Provider configuration. Construct with an options object:
+ *
+ *   new Netzbetreiber({
+ *     name, descriptorUsage, descriptorTimestamp, dateFormatString,
+ *     usageParser,                      // (string) => number
+ *     descriptorTimeSub,                // null | column name to concat with timestamp
+ *     otherFields,                      // [] | required column names for probe()
+ *     shouldSkip,                       // null | (entry) => boolean
+ *     fixupTimestamp,                   // false | true (subtract 15min from start date)
+ *     feedin,                           // false | true (Einspeisung tariff)
+ *     endDescriptorTimestamp,           // null | column name; used to drop non-15min entries
+ *     slotDurationMin,                  // 15 (default) | 60; KWG-style hourly providers set 60
+ *                                       //   so the tracker can fan one entry across four quarters
+ *     preprocessDateString,             // identity | (string) => string
+ *   })
+ */
 export class Netzbetreiber {
-    name = "name";
-    descriptorUsage = "usage";
-    descriptorTimestamp = "timestamp";
-    descriptorTimeSub = "timesub";
-    dateFormatString = "foo";
-    feedin = false;
-
-    constructor(name, descriptorUsage, descriptorTimestamp, descriptorTimeSub, dateFormatString, usageParser, otherFields, shouldSkip, fixupTimestamp, feedin = false, endDescriptorTimestamp = null, preprocessDateString = (date)=>date ) {
-        this.name = name;
-        this.descriptorUsage = descriptorUsage;
-        this.descriptorTimestamp = descriptorTimestamp;
-        this.descriptorTimeSub = descriptorTimeSub;
-        this.dateFormatString = dateFormatString;
-        this.preprocessDateString = preprocessDateString;
-        this.usageParser = usageParser;
-        this.otherFields = otherFields;
-        this.shouldSkip = shouldSkip;
-        this.fixupTimestamp = fixupTimestamp;
-        this.feedin = feedin;
-        this.endDescriptorTimestamp = endDescriptorTimestamp;
-        listOfNetzbetreiber.push(this);
+    constructor({
+        name,
+        descriptorUsage,
+        descriptorTimestamp,
+        dateFormatString,
+        usageParser,
+        descriptorTimeSub = null,
+        otherFields = [],
+        shouldSkip = null,
+        fixupTimestamp = false,
+        feedin = false,
+        endDescriptorTimestamp = null,
+        slotDurationMin = 15,
+        preprocessDateString = (date) => date,
+    }) {
+        Object.assign(this, {
+            name,
+            descriptorUsage,
+            descriptorTimestamp,
+            descriptorTimeSub,
+            dateFormatString,
+            usageParser,
+            otherFields,
+            shouldSkip,
+            fixupTimestamp,
+            feedin,
+            endDescriptorTimestamp,
+            slotDurationMin,
+            preprocessDateString,
+        });
     }
 
     matchUsage(entry) {
@@ -50,7 +74,7 @@ export class Netzbetreiber {
         if (!(this.descriptorTimestamp in entry)) {
             return false;
         }
-        for (const field of this.otherFields ?? []) {
+        for (const field of this.otherFields) {
             if (!(field in entry)) {
                 return false;
             }
@@ -98,8 +122,12 @@ export class Netzbetreiber {
              * > [...]
              * > 10.11.2023 23:45;0,214000;;
              * > 11.11.2023 00:00;0,397000;;
-            */
-            parsedTimestamp = new Date(parsedTimestamp - 15 * MS_PER_MINUTE);
+             *
+             * Subtract a full slot's worth of minutes so the resulting
+             * timestamp lands at the slot's start (the tracker fans
+             * 60-min entries into four 15-min slots from there).
+             */
+            parsedTimestamp = new Date(parsedTimestamp - this.slotDurationMin * MS_PER_MINUTE);
         }
 
         if (this.endDescriptorTimestamp !== null) {
@@ -122,144 +150,367 @@ export class Netzbetreiber {
         return {
             timestamp: parsedTimestamp,
             usage: parsedUsage,
+            slotDurationMin: this.slotDurationMin,
         };
     }
-};
+}
 
-export const NetzNOEEinspeiser = new Netzbetreiber("NetzNÖ", "Gemessene Menge (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), null, null, true, true);
+const parseGermanFloat = (usage) => parseFloat(usage.replace(",", "."));
+const parsePlainFloat = (usage) => parseFloat(usage);
 
-export const NetzNOEEinspeiser2 = new Netzbetreiber("NetzNÖ", "Einspeisung (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), null, null, true, true);
+export const NetzNOEEinspeiser = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Gemessene Menge (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    fixupTimestamp: true,
+    feedin: true,
+});
 
-export const NetzNOEVerbrauchv3EEG = new Netzbetreiber("NetzNÖ", "Restnetzbezug (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Eigendeckung (kWh)", "Verbrauch (kWh)", ], null, true);
+export const NetzNOEEinspeiser2 = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Einspeisung (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    fixupTimestamp: true,
+    feedin: true,
+});
 
-export const NetzNOEVerbrauch = new Netzbetreiber("NetzNÖ", "Gemessener Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null, true);
+export const NetzNOEVerbrauchv3EEG = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Restnetzbezug (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Eigendeckung (kWh)", "Verbrauch (kWh)"],
+    fixupTimestamp: true,
+});
 
-export const NetzNOEVerbrauchv2 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Qualität"], null, true);
+export const NetzNOEVerbrauch = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Gemessener Verbrauch (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Ersatzwert"],
+    fixupTimestamp: true,
+});
 
-export const NetzNOEVerbrauchv3 = new Netzbetreiber("NetzNÖ", "Verbrauch (kWh)", "Messzeitpunkt", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), [], null, true);
+export const NetzNOEVerbrauchv2 = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Verbrauch (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Qualität"],
+    fixupTimestamp: true,
+});
 
-export const NetzOOE = new Netzbetreiber("NetzOÖ", "kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["kW", "Status"], null, false);
+export const NetzNOEVerbrauchv3 = new Netzbetreiber({
+    name: "NetzNÖ",
+    descriptorUsage: "Verbrauch (kWh)",
+    descriptorTimestamp: "Messzeitpunkt",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    fixupTimestamp: true,
+});
 
-export const NetzOOEEinspeiser = new Netzbetreiber("NetzOÖ", "Einspeisung kWh", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["kW", "Status"], null, false, true);
+export const NetzOOE = new Netzbetreiber({
+    name: "NetzOÖ",
+    descriptorUsage: "kWh",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["kW", "Status"],
+});
 
-export const NetzBurgenland = new Netzbetreiber("Netz Burgenland", "Verbrauch (kWh) - Gesamtverbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ende"], null, false);
+export const NetzOOEEinspeiser = new Netzbetreiber({
+    name: "NetzOÖ",
+    descriptorUsage: "Einspeisung kWh",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["kW", "Status"],
+    feedin: true,
+});
 
-export const NetzBurgenlandv2 = new Netzbetreiber("Netz Burgenland V2", "Verbrauch (in kWh)", "Startdatum", "Startuhrzeit", "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), [/*" Status", */"Enddatum", "Enduhrzeit"], null, false);
+export const NetzBurgenland = new Netzbetreiber({
+    name: "Netz Burgenland",
+    descriptorUsage: "Verbrauch (kWh) - Gesamtverbrauch",
+    descriptorTimestamp: "Start",
+    dateFormatString: " dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Ende"],
+});
 
-export const KaerntenNetz = new Netzbetreiber("KaerntenNetz", "kWh", "Datum", "Zeit", "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status"], null, false);
+export const NetzBurgenlandv2 = new Netzbetreiber({
+    name: "Netz Burgenland V2",
+    descriptorUsage: "Verbrauch (in kWh)",
+    descriptorTimestamp: "Startdatum",
+    descriptorTimeSub: "Startuhrzeit",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: [/*" Status", */"Enddatum", "Enduhrzeit"],
+});
 
-export const KaerntenNetz2025 = new Netzbetreiber("KaerntenNetz2025", "Wert", "Startdatum", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Startdatum", "Enddatum", "Zählpunktbezeichnung", "OBIS", "OBIS Kurzbeschreibung", "Wert", "Einheit"], null, false);
+export const KaerntenNetz = new Netzbetreiber({
+    name: "KaerntenNetz",
+    descriptorUsage: "kWh",
+    descriptorTimestamp: "Datum",
+    descriptorTimeSub: "Zeit",
+    dateFormatString: "dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Status"],
+});
 
-export const EbnerStrom = new Netzbetreiber("EbnerStrom", "Wert (kWh)", "Zeitstempel String", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage);
-}), ["Angezeigter Zeitraum"], (function (row) {
-    var valueObiscode = row["Obiscode"];
-    return valueObiscode !== "1.8.0";
-}), true);
+export const KaerntenNetz2025 = new Netzbetreiber({
+    name: "KaerntenNetz2025",
+    descriptorUsage: "Wert",
+    descriptorTimestamp: "Startdatum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Startdatum", "Enddatum", "Zählpunktbezeichnung", "OBIS", "OBIS Kurzbeschreibung", "Wert", "Einheit"],
+});
 
-export const WienerNetze = new Netzbetreiber("WienerNetze", "!Verbrauch [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Zeit bis"], null, false);
+export const EbnerStrom = new Netzbetreiber({
+    name: "EbnerStrom",
+    descriptorUsage: "Wert (kWh)",
+    descriptorTimestamp: "Zeitstempel String",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parsePlainFloat,
+    otherFields: ["Angezeigter Zeitraum"],
+    shouldSkip: (row) => row["Obiscode"] !== "1.8.0",
+    fixupTimestamp: true,
+});
 
-export const WienerNetzeEcontrol = new Netzbetreiber("WienerNetze E-Control", "!Verbrauch [kWh]", "Ende Ablesezeitraum", null, "parseISO", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Messintervall"], null, false);
+export const WienerNetze = new Netzbetreiber({
+    name: "WienerNetze",
+    descriptorUsage: "!Verbrauch [kWh]",
+    descriptorTimestamp: "Datum",
+    descriptorTimeSub: "Zeit von",
+    dateFormatString: "dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Zeit bis"],
+});
 
-export const WienerNetzeEinspeiser = new Netzbetreiber("WienerNetze", "!Einspeiser [kWh]", "Datum", "Zeit von", "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Zeit bis"], null, false, true);
+export const WienerNetzeEcontrol = new Netzbetreiber({
+    name: "WienerNetze E-Control",
+    descriptorUsage: "!Verbrauch [kWh]",
+    descriptorTimestamp: "Ende Ablesezeitraum",
+    dateFormatString: "parseISO",
+    usageParser: parseGermanFloat,
+    otherFields: ["Messintervall"],
+});
 
-export const SalzburgNetz = new Netzbetreiber("SalzburgNetz", "!kWh)", "Datum und Uhrzeit", null, "yyyy-MM-dd HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status"], null, false);
+export const WienerNetzeEinspeiser = new Netzbetreiber({
+    name: "WienerNetze",
+    descriptorUsage: "!Einspeiser [kWh]",
+    descriptorTimestamp: "Datum",
+    descriptorTimeSub: "Zeit von",
+    dateFormatString: "dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Zeit bis"],
+    feedin: true,
+});
 
-export const SalzburgNetzv4 = new Netzbetreiber("SalzburgNetz V4", "!Restverbrauch", "Datum", null, "dd.MM.yyyy HH:mm:ss", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status"], null, false);
+export const SalzburgNetz = new Netzbetreiber({
+    name: "SalzburgNetz",
+    descriptorUsage: "!kWh)",
+    descriptorTimestamp: "Datum und Uhrzeit",
+    dateFormatString: "yyyy-MM-dd HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Status"],
+});
+
+export const SalzburgNetzv4 = new Netzbetreiber({
+    name: "SalzburgNetz V4",
+    descriptorUsage: "!Restverbrauch",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Status"],
+});
 
 // v1: "Energiemenge in kWh"
 // v2: "Verbrauch in kWh"
 // otherwise the same.
-export const LinzAG = new Netzbetreiber("LinzAG", "!in kWh", "Datum von", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ersatzwert"], null, false);
+export const LinzAG = new Netzbetreiber({
+    name: "LinzAG",
+    descriptorUsage: "!in kWh",
+    descriptorTimestamp: "Datum von",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Ersatzwert"],
+});
 
-export const StromnetzGraz = new Netzbetreiber("StromnetzGraz", "Verbrauch Einheitstarif", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
-    return parseFloat(usage);
-}), ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"], null, false);
+export const StromnetzGraz = new Netzbetreiber({
+    name: "StromnetzGraz",
+    descriptorUsage: "Verbrauch Einheitstarif",
+    descriptorTimestamp: "Ablesezeitpunkt",
+    dateFormatString: "parseISO",
+    usageParser: parsePlainFloat,
+    otherFields: ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"],
+});
 
-export const StromnetzGrazv2 = new Netzbetreiber("StromnetzGraz V2", "Verbrauch Gesamt - 1.8.0", "Ablesezeitpunkt", null, "parseISO", (function (usage) {
-    return parseFloat(usage);
-}), ["Zaehlerstand Gesamt - 1.8.0", "Zaehlerstand Hochtarif - 1.8.1", "Zaehlerstand Niedertarif - 1.8.2", "Verbrauch Hochtarif - 1.8.1", "Verbrauch Niedertarif - 1.8.2"], null, false);
+export const StromnetzGrazv2 = new Netzbetreiber({
+    name: "StromnetzGraz V2",
+    descriptorUsage: "Verbrauch Gesamt - 1.8.0",
+    descriptorTimestamp: "Ablesezeitpunkt",
+    dateFormatString: "parseISO",
+    usageParser: parsePlainFloat,
+    otherFields: ["Zaehlerstand Gesamt - 1.8.0", "Zaehlerstand Hochtarif - 1.8.1", "Zaehlerstand Niedertarif - 1.8.2", "Verbrauch Hochtarif - 1.8.1", "Verbrauch Niedertarif - 1.8.2"],
+});
 
-export const EnergienetzeSteiermark = new Netzbetreiber("EnergieNetzeSteiermark", "Verbrauch", "Verbrauchszeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Tarif","Verbrauchszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
+export const EnergienetzeSteiermark = new Netzbetreiber({
+    name: "EnergieNetzeSteiermark",
+    descriptorUsage: "Verbrauch",
+    descriptorTimestamp: "Verbrauchszeitraum Beginn",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Anlagennummer", "Tarif", "Verbrauchszeitraum Ende", "Einheit", "Messwert: VAL...gemessen, EST...rechnerisch ermittelt"],
+});
 
-export const EnergienetzeSteiermarkLeistung = new Netzbetreiber("EnergienetzeSteiermarkLeistung", "Wert", "Statistikzeitraum Beginn", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Tarif","Statistikzeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
+export const EnergienetzeSteiermarkLeistung = new Netzbetreiber({
+    name: "EnergienetzeSteiermarkLeistung",
+    descriptorUsage: "Wert",
+    descriptorTimestamp: "Statistikzeitraum Beginn",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Anlagennummer", "Tarif", "Statistikzeitraum Ende", "Einheit", "Messwert: VAL...gemessen, EST...rechnerisch ermittelt"],
+});
 
-export const EnergienetzeSteiermarkv3 = new Netzbetreiber("EnergienetzeSteiermarkv3", "Leistung", "Leistungszeitraum Beginn", null, "dd.MM.yy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Anlagennummer","Tarif","Leistungszeitraum Ende","Einheit","Messwert: VAL...gemessen, EST...rechnerisch ermittelt"], null, false);
+export const EnergienetzeSteiermarkv3 = new Netzbetreiber({
+    name: "EnergienetzeSteiermarkv3",
+    descriptorUsage: "Leistung",
+    descriptorTimestamp: "Leistungszeitraum Beginn",
+    dateFormatString: "dd.MM.yy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Anlagennummer", "Tarif", "Leistungszeitraum Ende", "Einheit", "Messwert: VAL...gemessen, EST...rechnerisch ermittelt"],
+});
 
-export const VorarlbergNetz = new Netzbetreiber("VorarlbergNetz", "Messwert in kWh", "Beginn der Messreihe", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ende der Messreihe"], null, false);
+export const VorarlbergNetz = new Netzbetreiber({
+    name: "VorarlbergNetz",
+    descriptorUsage: "Messwert in kWh",
+    descriptorTimestamp: "Beginn der Messreihe",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Ende der Messreihe"],
+});
 
-export const Tinetz = new Netzbetreiber("TINETZ", "VALUE2", "DATE_FROM2", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["DATE_FROM", "DATE_TO"], null, false);
+export const Tinetz = new Netzbetreiber({
+    name: "TINETZ",
+    descriptorUsage: "VALUE2",
+    descriptorTimestamp: "DATE_FROM2",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["DATE_FROM", "DATE_TO"],
+});
 
-export const StadtwerkeKlagenfurt = new Netzbetreiber("Stadtwerke Klagenfurt", "Verbrauch", "DatumUhrzeit", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Typ", "Anlage", "OBIS-Code", "Einheit"], null, false);
+export const StadtwerkeKlagenfurt = new Netzbetreiber({
+    name: "Stadtwerke Klagenfurt",
+    descriptorUsage: "Verbrauch",
+    descriptorTimestamp: "DatumUhrzeit",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["Typ", "Anlage", "OBIS-Code", "Einheit"],
+});
 
-export const StadtwerkeKufstein = new Netzbetreiber("Stadtwerke Kufstein", "!AT005140", "Datum", null, "dd.MM.yyyy HH:mm", (usage) => parseFloat(usage), [], null, false, false, null,
+export const StadtwerkeKufstein = new Netzbetreiber({
+    name: "Stadtwerke Kufstein",
+    descriptorUsage: "!AT005140",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parsePlainFloat,
     // date column contains a range, which is not parseable; drop end-date after dash
-(   dateStr) => dateStr.split("-")[0]);
+    preprocessDateString: (dateStr) => dateStr.split("-")[0],
+});
 
-export const IKB = new Netzbetreiber("IKB", "!AT005100", "Datum", null, "dd.MM.yyyy HH:mm",  (function (usage) {
-    return parseFloat(usage);
-}), [], null, true);
+export const IKB = new Netzbetreiber({
+    name: "IKB",
+    descriptorUsage: "!AT005100",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parsePlainFloat,
+    fixupTimestamp: true,
+});
 
-export const ClamStrom = new Netzbetreiber("ClamStrom", "Vorschub (kWh) - Verbrauch", "Start", null, " dd.MM.yyyy HH:mm:ss",  (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Ende", "Zählerstand (kWh) - Verbrauch"], null, false);
+export const ClamStrom = new Netzbetreiber({
+    name: "ClamStrom",
+    descriptorUsage: "Vorschub (kWh) - Verbrauch",
+    descriptorTimestamp: "Start",
+    dateFormatString: " dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Ende", "Zählerstand (kWh) - Verbrauch"],
+});
 
-export const EWWWels = new Netzbetreiber("eww Wels", "!Netztarif", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
+export const EWWWels = new Netzbetreiber({
+    name: "eww Wels",
+    descriptorUsage: "!Netztarif",
+    descriptorTimestamp: "BeginDate",
+    dateFormatString: "yyyy-MM-dd HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Status", "EndDate", "Unit"],
+    endDescriptorTimestamp: "EndDate",
+});
 
-export const EWWWelsv2 = new Netzbetreiber("eww Wels V2", "!Restnetzbezug", "BeginDate", null, "yyyy-MM-dd HH:mm:ss",  (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), ["Status", "EndDate", "Unit"], null, false, false, "EndDate");
+export const EWWWelsv2 = new Netzbetreiber({
+    name: "eww Wels V2",
+    descriptorUsage: "!Restnetzbezug",
+    descriptorTimestamp: "BeginDate",
+    dateFormatString: "yyyy-MM-dd HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["Status", "EndDate", "Unit"],
+    endDescriptorTimestamp: "EndDate",
+});
 
-export const KWG = new Netzbetreiber("NetzKWG", "Daten 1", "Datum", null, "dd.MM.yyyy HH:mm", (function (usage) {
-    return parseFloat(usage.replace(",", "."));
-}), [], null, true);
+export const KWG = new Netzbetreiber({
+    name: "NetzKWG",
+    descriptorUsage: "Daten 1",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    fixupTimestamp: true,
+    slotDurationMin: 60,
+});
+
+/**
+ * Registry consumed by `pickNetzbetreiber` in pipeline.js. Order matches
+ * historical declaration order so probing behavior is unchanged.
+ */
+export const listOfNetzbetreiber = [
+    NetzNOEEinspeiser,
+    NetzNOEEinspeiser2,
+    NetzNOEVerbrauchv3EEG,
+    NetzNOEVerbrauch,
+    NetzNOEVerbrauchv2,
+    NetzNOEVerbrauchv3,
+    NetzOOE,
+    NetzOOEEinspeiser,
+    NetzBurgenland,
+    NetzBurgenlandv2,
+    KaerntenNetz,
+    KaerntenNetz2025,
+    EbnerStrom,
+    WienerNetze,
+    WienerNetzeEcontrol,
+    WienerNetzeEinspeiser,
+    SalzburgNetz,
+    SalzburgNetzv4,
+    LinzAG,
+    StromnetzGraz,
+    StromnetzGrazv2,
+    EnergienetzeSteiermark,
+    EnergienetzeSteiermarkLeistung,
+    EnergienetzeSteiermarkv3,
+    VorarlbergNetz,
+    Tinetz,
+    StadtwerkeKlagenfurt,
+    StadtwerkeKufstein,
+    IKB,
+    ClamStrom,
+    EWWWels,
+    EWWWelsv2,
+    KWG,
+];

@@ -8,18 +8,22 @@ import {
     spotty_direkt,
     naturstrom_spot_stunde_ii,
     oekostrom_spot,
+    hofer_gruenstrom_spot,
     smartcontrol_sunny,
     awattar_sunny_spot_60,
     naturstrom_marktpreis_spot_25,
     wels_strom_sonnenstrom_spot,
+    oekostrom_sun_spot,
     PROVIDER_COLORS,
     makeCustomTarif,
 } from "./tariffs.js";
 import { Marketdata, createBrowserFetcher } from "./marketdata.js";
 import { runPipeline } from "./calc/pipeline.js";
+import { tariffCostForBucket, bucketPriceCentsAt } from "./calc/fanout.js";
+import { SLOTS_PER_DAY, HOURS_PER_DAY, SLOTS_PER_HOUR } from "./calc/slots.js";
 
-const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
-const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot];
+const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot, hofer_gruenstrom_spot];
+const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot, oekostrom_sun_spot];
 
 const SAMPLE_HOURLY_PRICES = Array.from({ length: 24 }, (_, h) => {
     const base = 8 + 4 * Math.sin((h - 6) * Math.PI / 12);
@@ -30,6 +34,16 @@ const SAMPLE_HOURLY_CONS = Array.from({ length: 24 }, (_, h) => {
     const morning = Math.exp(-0.5 * ((h - 8) / 1.5) ** 2) * 0.9;
     const evening = Math.exp(-0.5 * ((h - 19) / 2) ** 2) * 1.2;
     return Math.max(0.05, 0.15 + morning + evening);
+});
+/* Sample consumption at 15-min resolution: smooth-interpolate the hourly
+ * placeholder so the polyline curve looks continuous before upload. Values
+ * are kWh/h equivalent (i.e. instantaneous power), matching the y-axis. */
+const SAMPLE_QUARTER_CONS = Array.from({ length: 96 }, (_, q) => {
+    const t = q / 4;
+    const a = Math.floor(t) % 24;
+    const b = (a + 1) % 24;
+    const f = t - Math.floor(t);
+    return SAMPLE_HOURLY_CONS[a] * (1 - f) + SAMPLE_HOURLY_CONS[b] * f;
 });
 
 const state = {
@@ -89,11 +103,16 @@ function loadAwattarCache() {
     if (cache === null) return a;
     const cached = JSON.parse(cache);
     if (cached.version !== a.version) return a;
-    a.data = cached.data;
+    a.data60 = cached.data60 ?? {};
+    a.data15 = cached.data15 ?? {};
     return a;
 }
 function storeAwattarCache(a) {
-    localStorage.setItem("awattarCache", JSON.stringify({ version: a.version, data: a.data }));
+    localStorage.setItem("awattarCache", JSON.stringify({
+        version: a.version,
+        data60: a.data60,
+        data15: a.data15,
+    }));
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -122,6 +141,40 @@ function makeNetzbetreiberLabel(name) {
     return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/* Per-tariff cost wrapper used at every render call site. The fan-out picks
+ * the EPEX auction (hourly vs. 15-min) declared by the tariff for each slot's
+ * date; if a slot's declared source has no data we fall back to the hourly
+ * source per slot and remember the (day, source) pair so we can show one
+ * aggregated warning at the end of the upload pipeline. */
+const fallbackReports = new Set();
+
+function tariffCost(bucket, tarif, opts) {
+    const onMissingSource = (day, source) => {
+        fallbackReports.add(`${day}:${source}`);
+    };
+    const cents = tariffCostForBucket(bucket, tarif, state.marketdata, { ...opts, onMissingSource });
+    if (cents !== null) return cents;
+    // Hourly source itself missing — last-ditch fall back to bucket defaults.
+    return tarif.calculate(bucket.priceCents, bucket.kwh, { ...opts, slots: bucket.slots });
+}
+
+function surfaceFallbackWarnings() {
+    if (fallbackReports.size === 0) return;
+    const days = Array.from(fallbackReports)
+        .map((k) => k.split(":", 1)[0])
+        .filter((d, i, a) => a.indexOf(d) === i)
+        .sort();
+    const sample = days.slice(0, 5).map(prettyDate).join(", ");
+    const more = days.length > 5 ? ` und ${days.length - 5} weitere(n)` : "";
+    displayWarning(
+        `Hinweis: Für ${sample}${more} fehlen 15-Minuten-Spotpreise — die Berechnung dieser Tage erfolgt mit dem stündlichen EPEX-Index als Fallback.`,
+    );
+}
+
+function prettyDate(yyyymmdd) {
+    return `${yyyymmdd.slice(6, 8)}.${yyyymmdd.slice(4, 6)}.${yyyymmdd.slice(0, 4)}`;
+}
+
 // ── Sidebar rendering ───────────────────────────────────────────────────────
 function providerTotalEur(p) {
     const buckets = state.monthly;
@@ -129,7 +182,7 @@ function providerTotalEur(p) {
     let sum = new Decimal(0);
     for (const key of Object.keys(buckets)) {
         const b = buckets[key];
-        sum = sum.plus(p.calculate(b.priceCents, b.kwh, true, monthlyFeeFactorFor(key)));
+        sum = sum.plus(tariffCost(b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(key) }));
     }
     return sum.dividedBy(100);
 }
@@ -294,7 +347,7 @@ function renderTable() {
         const factor = state.view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         computed[k] = {};
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, includeMonthlyFee, factor);
+            const cents = tariffCost(b, p, { includeMonthlyFee, monthlyFeeFactor: factor });
             computed[k][p.meta.id] = cents;
         }
     }
@@ -314,7 +367,7 @@ function renderTable() {
             let sum = new Decimal(0);
             for (const mk of Object.keys(mb)) {
                 const b = mb[mk];
-                sum = sum.plus(p.calculate(b.priceCents, b.kwh, true, monthlyFeeFactorFor(mk)));
+                sum = sum.plus(tariffCost(b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) }));
             }
             totals[p.meta.id] = sum;
         }
@@ -341,9 +394,11 @@ function renderTable() {
         const b = buckets[k];
         const dateOut = format(parse(k, fmtKey, new Date()), fmtOut);
         const energyKwh = Number(b.kwh);
-        const epexAvg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
-        const h0Diff = h0Avg !== null ? epexAvg - h0Avg : null;
+        const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
 
         const costs = computed[k];
         const grossNumbers = selected.map((p) => Number(costs[p.meta.id]));
@@ -372,17 +427,22 @@ function renderTable() {
                 <span class="h0-diff ${h0Diff < 0 ? "diff-good" : "diff-bad"}">(${h0Diff > 0 ? "+" : ""}${fmtNum(h0Diff, 2)})</span>
               </td>`;
 
+        const epex15Cell = epex15Avg === null
+            ? `<td class="num td-price">—</td>`
+            : `<td class="num td-price">${fmtNum(epex15Avg, 2)} ct/kWh</td>`;
+
         return `<tr>
             <td class="td-month">${escapeHTML(dateOut)}</td>
             <td class="num td-energy">${fmtNum(energyKwh, 0)} kWh</td>
-            <td class="num td-price">${fmtNum(epexAvg, 2)} ct/kWh</td>
+            <td class="num td-price">${fmtNum(epex60Avg, 2)} ct/kWh</td>
+            ${epex15Cell}
             ${state.feedin ? "" : h0Cell}
             ${providerCells}
         </tr>`;
     }).join("");
 
     const totalsRow = `<tr class="totals-row">
-        <td colspan="${state.feedin ? 3 : 4}" style="font-family:'DM Sans';font-weight:600;font-size:12px;">Gesamt${state.view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""}</td>
+        <td colspan="${state.feedin ? 4 : 5}" style="font-family:'DM Sans';font-weight:600;font-size:12px;">Gesamt${state.view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""}</td>
         ${selected.map((p) => {
             const cents = totals[p.meta.id];
             const grossEur = Number(cents) / 100;
@@ -400,7 +460,8 @@ function renderTable() {
                 <tr>
                     <th>${state.view === "monthly" ? "Monat" : "Datum"}</th>
                     <th class="num">Energie</th>
-                    <th class="num">EPEX Ø</th>
+                    <th class="num">EPEX60 Ø</th>
+                    <th class="num">EPEX15 Ø</th>
                     ${state.feedin ? "" : '<th class="num">H0 Ø</th>'}
                     ${headerProviderCols}
                 </tr>
@@ -423,7 +484,12 @@ function buildExportSheet(view) {
     const keys = Object.keys(buckets).sort();
 
     // Column headers
-    const header = [view === "monthly" ? "Monat" : "Datum", "Energie (kWh)", "EPEX Ø (ct/kWh)"];
+    const header = [
+        view === "monthly" ? "Monat" : "Datum",
+        "Energie (kWh)",
+        "EPEX60 Ø (ct/kWh)",
+        "EPEX15 Ø (ct/kWh)",
+    ];
     if (!state.feedin) header.push("H0 Ø (ct/kWh)", "Δ H0 (ct/kWh)");
     for (const p of selected) {
         header.push(`${p.meta.shortName} (€)`);
@@ -438,16 +504,18 @@ function buildExportSheet(view) {
         const b = buckets[k];
         const factor = view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         const energyKwh = Number(b.kwh);
-        const epexAvg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
-        const h0Diff = h0Avg !== null ? epexAvg - h0Avg : null;
-        const row = [format(parse(k, fmtKey, new Date()), fmtOut), energyKwh, epexAvg];
+        const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
+        const row = [format(parse(k, fmtKey, new Date()), fmtOut), energyKwh, epex60Avg, epex15Avg];
         if (!state.feedin) {
             row.push(h0Avg);
             row.push(h0Diff);
         }
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, includeMonthlyFee, factor);
+            const cents = tariffCost(b, p, { includeMonthlyFee, monthlyFeeFactor: factor });
             const grossEur = Number(cents) / 100;
             const avgCt = b.kwh.equals(0) ? 0 : Number(cents.dividedBy(b.kwh));
             row.push(grossEur);
@@ -465,13 +533,13 @@ function buildExportSheet(view) {
             for (const mk of Object.keys(mb)) {
                 const mb_b = mb[mk];
                 totals[p.meta.id] = totals[p.meta.id].plus(
-                    p.calculate(mb_b.priceCents, mb_b.kwh, true, monthlyFeeFactorFor(mk))
+                    tariffCost(mb_b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) })
                 );
             }
         }
     }
 
-    const totalsRow = ["Gesamt" + (view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""), null, null];
+    const totalsRow = ["Gesamt" + (view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""), null, null, null];
     if (!state.feedin) totalsRow.push(null, null);
     for (const p of selected) {
         totalsRow.push(Number(totals[p.meta.id]) / 100);
@@ -505,20 +573,21 @@ function renderChart() {
 
     ensureChartDay();
 
-    let prices, consumption, priceBox, daysCount;
+    let prices, consumption, consumption15, priceBox, daysCount;
     let priceMin, priceMax, consMax;
     if (sample) {
         prices = SAMPLE_HOURLY_PRICES;
         consumption = SAMPLE_HOURLY_CONS;
+        consumption15 = SAMPLE_QUARTER_CONS;
         priceBox = null;
         daysCount = 0;
         priceMin = Math.min(...prices, 0);
         priceMax = Math.max(...prices, 0.1);
-        consMax = Math.max(...consumption, 0.1);
+        consMax = Math.max(...consumption15, 0.1);
     } else {
         const { chartDays, axisDays } = chartDayScope();
         const r = aggregateHourly(chartDays);
-        prices = r.prices; consumption = r.consumption;
+        prices = r.prices; consumption = r.consumption; consumption15 = r.consumption15;
         priceBox = r.priceBox; daysCount = chartDays.length;
         const ab = axisBounds(axisDays);
         priceMin = Math.min(ab.priceMin, 0);
@@ -581,28 +650,27 @@ function renderChart() {
             </div>`;
     }).join("");
 
-    const polyline = consumption.map((c, i) => {
-        const x = ((i + 0.5) / 24) * 100;
+    const polyline = consumption15.map((c, q) => {
+        const x = ((q + 0.5) / SLOTS_PER_DAY) * 100;
         const y = (1 - (c / consMax) * 0.85) * 100;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
     }).join(" ");
 
-    const dots = consumption.map((c, i) => {
-        const x = ((i + 0.5) / 24) * 100;
-        const y = (1 - (c / consMax) * 0.85) * 100;
-        return `<circle cx="${x.toFixed(2)}%" cy="${y.toFixed(2)}%" r="3" fill="oklch(62% 0.18 260)" stroke="white" stroke-width="1" />`;
-    }).join("");
-
     const xLabels = [0, 4, 8, 12, 16, 20, 24].map((h) => {
         let style;
-        if (h === 0) style = "left:0; transform:none";
-        else if (h === 24) style = "left:auto; right:0; transform:none";
+        if (h === 0) style = "left:2px; transform:none";
+        else if (h === 24) style = "left:auto; right:2px; transform:none";
         else style = `left:${(h / 24) * 100}%`;
         return `<span class="chart-x-label" style="${style}">${h}h</span>`;
     }).join("");
 
     wrap.innerHTML = `
         ${sample ? `<div class="chart-placeholder">⚠ Beispieldaten — lade CSV für echte Werte</div>` : ""}
+        <div class="chart-units-row">
+            <div class="chart-unit chart-unit-left">ct/kWh</div>
+            <div class="chart-unit-spacer"></div>
+            <div class="chart-unit chart-unit-right">kWh</div>
+        </div>
         <div class="chart-row">
             <div class="chart-axis chart-axis-left">
                 ${yAxisLeft.map((v) => `<span>${v.toFixed(1)}</span>`).join("")}
@@ -614,9 +682,6 @@ function renderChart() {
                     <polyline points="${polyline}" fill="none" stroke="oklch(62% 0.18 260)" stroke-width="1.5"
                               stroke-linejoin="round" stroke-linecap="round" opacity="0.9"
                               vector-effect="non-scaling-stroke" />
-                </svg>
-                <svg class="chart-svg" style="overflow:visible">
-                    ${dots}
                 </svg>
             </div>
             <div class="chart-axis chart-axis-right">
@@ -669,18 +734,27 @@ function axisBounds(days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
         if (!usages || !prices) continue;
-        for (let h = 0; h < 24; h++) {
-            const u = usages[h];
+        for (let h = 0; h < HOURS_PER_DAY; h++) {
             const p = prices[h];
             if (p !== undefined) {
                 const pn = Number(p);
                 if (pn < priceMin) priceMin = pn;
                 if (pn > priceMax) priceMax = pn;
             }
-            if (u !== undefined) {
-                const un = Number(u);
-                if (un > consMax) consMax = un;
+            let usageHour = 0;
+            for (let q = 0; q < SLOTS_PER_HOUR; q++) {
+                const u = usages[h * SLOTS_PER_HOUR + q];
+                if (u !== undefined) usageHour += Number(u);
             }
+            if (usageHour > consMax) consMax = usageHour;
+        }
+        // Per-quarter rate (kwh × 4 → kWh/h-equivalent) can spike above the
+        // hour's mean — extend consMax so the 15-min polyline doesn't clip.
+        for (let q = 0; q < SLOTS_PER_DAY; q++) {
+            const u = usages[q];
+            if (u === undefined) continue;
+            const rate = Number(u) * SLOTS_PER_HOUR;
+            if (rate > consMax) consMax = rate;
         }
     }
     if (!Number.isFinite(priceMin)) priceMin = 0;
@@ -692,17 +766,30 @@ function axisBounds(days) {
 function aggregateHourly(days) {
     const tracker = state.tracker;
     const md = state.marketdata;
-    const pricesPerHour = Array.from({ length: 24 }, () => []);
-    const consPerHour = Array.from({ length: 24 }, () => []);
+    const pricesPerHour = Array.from({ length: HOURS_PER_DAY }, () => []);
+    const consPerHour = Array.from({ length: HOURS_PER_DAY }, () => []);
+    const consPerQuarter = Array.from({ length: SLOTS_PER_DAY }, () => []);
     for (const d of days) {
         const usages = tracker.data[d];
         const prices = md.data[d];
         if (!usages || !prices) continue;
-        for (let h = 0; h < 24; h++) {
-            const u = usages[h];
+        for (let h = 0; h < HOURS_PER_DAY; h++) {
             const p = prices[h];
-            if (u !== undefined) consPerHour[h].push(Number(u));
             if (p !== undefined) pricesPerHour[h].push(Number(p));
+            let usageHour = 0;
+            let anyPresent = false;
+            for (let q = 0; q < SLOTS_PER_HOUR; q++) {
+                const u = usages[h * SLOTS_PER_HOUR + q];
+                if (u !== undefined) {
+                    usageHour += Number(u);
+                    anyPresent = true;
+                }
+            }
+            if (anyPresent) consPerHour[h].push(usageHour);
+        }
+        for (let q = 0; q < SLOTS_PER_DAY; q++) {
+            const u = usages[q];
+            if (u !== undefined) consPerQuarter[q].push(Number(u) * SLOTS_PER_HOUR);
         }
     }
     const mean = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
@@ -733,7 +820,8 @@ function aggregateHourly(days) {
     const prices = pricesPerHour.map(mean);
     const priceBox = pricesPerHour.map(boxStats);
     const consumption = consPerHour.map(mean);
-    return { prices, priceBox, consumption, days };
+    const consumption15 = consPerQuarter.map(mean);
+    return { prices, priceBox, consumption, consumption15, days };
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────
@@ -846,6 +934,49 @@ function openDatePopup() {
 function closeDatePopup() {
     els.datePopup.classList.add("hidden");
 }
+/* Per-day markers for the date popup: intraday spread (max−min hourly EPEX
+ * price for the day) drives a heatmap shade, and any hour with a negative
+ * price flags the day with a dot. Spread is normalized to the 95th percentile
+ * across all loaded days, so the global scale stays meaningful even when the
+ * tracker spans calm and volatile months. Returns a Map<dayKey, marker>. */
+function dayMarkers() {
+    const tracker = state.tracker;
+    const md = state.marketdata;
+    const out = new Map();
+    if (!tracker || !md) return out;
+    const spreads = [];
+    for (const d of tracker.days) {
+        const prices = md.data[d];
+        if (!prices) continue;
+        let lo = Infinity, hi = -Infinity, neg = 0;
+        for (let h = 0; h < HOURS_PER_DAY; h++) {
+            const p = prices[h];
+            if (p === undefined) continue;
+            const pn = Number(p);
+            if (pn < lo) lo = pn;
+            if (pn > hi) hi = pn;
+            if (pn < 0) neg++;
+        }
+        if (lo === Infinity) continue;
+        out.set(d, { spread: hi - lo, negCount: neg });
+        spreads.push(hi - lo);
+    }
+    if (spreads.length) {
+        spreads.sort((a, b) => a - b);
+        const p95 = Math.max(spreads[Math.floor((spreads.length - 1) * 0.95)], 0.01);
+        for (const m of out.values()) m.intensity = Math.min(1, m.spread / p95);
+    }
+    return out;
+}
+function spreadColor(t) {
+    /* Pale cream → saturated warm orange. Single hue keeps the ramp readable
+     * as "more intense = bigger spread"; lightness floor of 82% leaves text
+     * legible against the existing oklch(35%) day-number color. */
+    const L = 96 - 14 * t;
+    const C = 0.02 + 0.13 * t;
+    return `oklch(${L.toFixed(1)}% ${C.toFixed(3)} 35)`;
+}
+
 function renderDatePopup() {
     const tracker = state.tracker;
     if (!tracker) {
@@ -857,6 +988,7 @@ function renderDatePopup() {
     const isDaily = state.view === "daily";
     const currentMonth = state.dateKey && state.dateKey.length >= 6 ? state.dateKey.slice(0, 6) : null;
     const currentDay = state.chartDay || (isDaily ? state.dateKey : null);
+    const markers = dayMarkers();
 
     const html = months.map((m) => {
         const days = allDays.filter((d) => d.startsWith(m));
@@ -871,7 +1003,18 @@ function renderDatePopup() {
         for (const d of days) {
             const dnum = parseInt(d.slice(6, 8), 10);
             const isCurrent = d === currentDay;
-            dayCells.push(`<button class="date-popup-day${isCurrent ? " current" : ""}" data-day="${d}">${dnum}</button>`);
+            const mk = markers.get(d);
+            const classes = ["date-popup-day"];
+            if (isCurrent) classes.push("current");
+            if (mk?.negCount) classes.push("has-negative");
+            const style = (!isCurrent && mk && mk.intensity > 0)
+                ? ` style="background:${spreadColor(mk.intensity)}"`
+                : "";
+            const tooltip = mk
+                ? `Spread ${mk.spread.toFixed(1)} ct/kWh${mk.negCount ? ` · ${mk.negCount} h < 0` : ""}`
+                : "";
+            const titleAttr = tooltip ? ` title="${tooltip}"` : "";
+            dayCells.push(`<button class="${classes.join(" ")}"${style}${titleAttr} data-day="${d}">${dnum}</button>`);
         }
         const monthAction = isDaily ? "" : `data-month="${m}"`;
         const monthBtn = isDaily
@@ -952,6 +1095,7 @@ function clearWarning() {
 
 async function handleUpload(file) {
     clearWarning();
+    fallbackReports.clear();
     const bytes = await file.arrayBuffer();
 
     const lastprofile_array = await (await fetch("./lastprofile.xls")).arrayBuffer();
@@ -990,6 +1134,7 @@ async function handleUpload(file) {
     renderTable();
     renderChart();
     syncExportBtn();
+    surfaceFallbackWarnings();
 }
 
 // ── Wire events ─────────────────────────────────────────────────────────────

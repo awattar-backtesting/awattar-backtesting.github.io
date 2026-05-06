@@ -10,8 +10,8 @@ exports[`golden snapshots > KaerntenNetz.csv aggregation is stable 1`] = `
       "priceCents": "48.1764",
     },
     "20200302": {
-      "h0NormKwh": "2473.800000",
-      "h0NormPriceCents": "7509.3867",
+      "h0NormKwh": "2075.200000",
+      "h0NormPriceCents": "5918.1755",
       "kwh": "9.187000",
       "priceCents": "26.1635",
     },
@@ -23,8 +23,8 @@ exports[`golden snapshots > KaerntenNetz.csv aggregation is stable 1`] = `
   "feedin": false,
   "monthly": {
     "202003": {
-      "h0NormKwh": "13215.800000",
-      "h0NormPriceCents": "33823.1233",
+      "h0NormKwh": "12817.200000",
+      "h0NormPriceCents": "32231.9121",
       "kwh": "28.811000",
       "priceCents": "74.3399",
     },

@@ -123,11 +123,17 @@ body {
   font-family: 'DM Mono', monospace; font-size: 11px;
   background: white; border: 1px solid oklch(94% 0.005 240); border-radius: 3px;
   padding: 3px 0; cursor: pointer; color: oklch(35% 0.02 240);
-  transition: all 0.1s; font-weight: 500;
+  transition: all 0.1s; font-weight: 500; position: relative;
 }
 .date-popup-day:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
 .date-popup-day.current { background: var(--green); color: white; border-color: var(--green); }
 .date-popup-day.empty { background: transparent; border-color: transparent; color: transparent; cursor: default; pointer-events: none; }
+.date-popup-day.has-negative::after {
+  content: ""; position: absolute; top: 1px; right: 1px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: oklch(58% 0.18 240); border: 1px solid white;
+}
+.date-popup-day.current.has-negative::after { background: white; border-color: var(--green); }
 .date-popup-empty { font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; }
 
 /* BODY */
@@ -331,8 +337,20 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
 .chart-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .chart-info { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
-.chart-wrap { flex: 1 1 auto; min-height: 180px; position: relative; user-select: none; }
-.chart-row { display: flex; gap: 0; height: 100%; }
+.chart-wrap {
+  flex: 1 1 auto; min-height: 180px; position: relative; user-select: none;
+  display: flex; flex-direction: column;
+}
+.chart-row { display: flex; gap: 0; flex: 1; min-height: 0; }
+.chart-units-row { display: flex; flex-shrink: 0; height: 11px; margin-bottom: 2px; }
+.chart-unit {
+  width: 36px; flex-shrink: 0;
+  font-size: 9px; font-family: 'DM Mono', monospace;
+  color: var(--text-muted); line-height: 1;
+}
+.chart-unit-left { text-align: right; padding-right: 6px; color: var(--green); }
+.chart-unit-right { text-align: left; padding-left: 6px; color: oklch(62% 0.18 260); }
+.chart-unit-spacer { flex: 1; }
 .chart-axis {
   width: 36px; flex-shrink: 0;
   display: flex; flex-direction: column; justify-content: space-between;
@@ -342,8 +360,8 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   font-size: 9px; font-family: 'DM Mono', monospace;
   display: block; line-height: 1;
 }
-.chart-axis-left span { color: var(--green); text-align: right; }
-.chart-axis-right span { color: oklch(62% 0.18 260); text-align: left; padding-left: 4px; }
+.chart-axis-left span { color: var(--green); text-align: right; padding-right: 6px; }
+.chart-axis-right span { color: oklch(62% 0.18 260); text-align: left; padding-left: 6px; }
 .chart-canvas { flex: 1; position: relative; }
 .chart-zero-line {
   position: absolute; left: 0; right: 0; z-index: 1;
@@ -404,11 +422,12 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tooltip-price { color: var(--green-mid); }
 .tooltip-cons { color: oklch(75% 0.1 260); }
 
-.chart-x-row { position: relative; height: 14px; margin: 4px 36px 0 36px; }
+.chart-x-row { position: relative; height: 14px; margin: 4px 36px 0 36px; flex-shrink: 0; }
 .chart-x-label { position: absolute; font-size: 9px; color: var(--text-muted); font-family: 'DM Mono', monospace; transform: translateX(-50%); }
 .chart-legend {
   display: flex; gap: 14px; align-items: center;
   font-size: 10px; color: var(--text-muted); padding-left: 36px;
+  flex-shrink: 0;
 }
 .chart-legend-item { display: flex; align-items: center; gap: 5px; }
 .chart-legend-swatch-bar { width: 12px; height: 8px; background: oklch(72% 0.12 145); border-radius: 2px; display: inline-block; }
@@ -534,6 +553,7 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
   .chart-wrap { height: 200px; }
   .chart-x-row { margin: 4px 30px 0 30px; }
   .chart-axis { width: 30px; }
+  .chart-unit { width: 30px; }
   .chart-legend { padding-left: 30px; flex-wrap: wrap; }
 
   .modal-backdrop { padding: 12px 8px; }
