@@ -90,11 +90,16 @@ function loadAwattarCache() {
     if (cache === null) return a;
     const cached = JSON.parse(cache);
     if (cached.version !== a.version) return a;
-    a.data = cached.data;
+    a.data60 = cached.data60 ?? {};
+    a.data15 = cached.data15 ?? {};
     return a;
 }
 function storeAwattarCache(a) {
-    localStorage.setItem("awattarCache", JSON.stringify({ version: a.version, data: a.data }));
+    localStorage.setItem("awattarCache", JSON.stringify({
+        version: a.version,
+        data60: a.data60,
+        data15: a.data15,
+    }));
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

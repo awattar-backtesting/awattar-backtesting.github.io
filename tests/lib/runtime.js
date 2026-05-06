@@ -9,6 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const repoRoot = resolve(here, "..", "..");
 export const samplesDir = resolve(repoRoot, "samples");
 export const cacheDir = resolve(repoRoot, "docs", "cache60");
+export const cacheDir15 = resolve(repoRoot, "docs", "cache15");
 
 let h0SheetCache = null;
 
@@ -21,9 +22,12 @@ export async function loadH0Sheet() {
     return h0SheetCache;
 }
 
-/** Fresh Marketdata instance reading from docs/cache60/. */
+/** Fresh Marketdata instance reading from docs/cache60/ and docs/cache15/. */
 export function newMarketdata() {
-    return new Marketdata(createNodeFetcher(cacheDir));
+    return new Marketdata(createNodeFetcher({
+        hourly: cacheDir,
+        "quarter-hourly": cacheDir15,
+    }));
 }
 
 /** Read a sample file from samples/ as a Buffer. */
