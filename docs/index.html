@@ -114,7 +114,13 @@ body {
   background: white; border: 1px solid var(--border); border-radius: 8px;
   box-shadow: 0 8px 24px oklch(20% 0.02 240 / 0.18);
   padding: 10px; max-height: 60vh; overflow: auto;
-  min-width: 260px; max-width: 360px;
+  /* Width bounds: openDatePopup() also caps max-width via JS using
+   * window.innerWidth (more reliable than calc(100vw) on mobile when
+   * the page has horizontal overflow). The CSS bounds here are the
+   * desktop default. */
+  min-width: 260px;
+  max-width: 360px;
+  box-sizing: border-box;
 }
 .date-popup.hidden { display: none; }
 .date-popup-month { margin-bottom: 8px; }

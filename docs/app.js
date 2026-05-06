@@ -694,6 +694,43 @@ function renderChart() {
             <span class="chart-legend-item"><span class="chart-legend-swatch-line"></span>Verbrauch (kWh)</span>
             ${showBox ? `<span class="chart-legend-item"><span class="chart-legend-swatch-stddev"></span>Box plot über ${daysCount} Tage</span>` : ""}
         </div>`;
+
+    clampBarTooltips(wrap);
+}
+
+/* Each bar's tooltip is anchored above its bar via `left: 50%; transform:
+ * translateX(-50%)`. On narrow viewports the leftmost/rightmost bars push
+ * the centered tooltip off the chart canvas. Compute a per-tooltip offset
+ * so the tooltip's center stays within [margin, canvasWidth - margin] and
+ * encode it into the inline `transform`, keeping the CSS `:hover` reveal
+ * intact. */
+function clampBarTooltips(wrap) {
+    const canvas = wrap.querySelector(".chart-canvas");
+    if (!canvas) return;
+    const tooltips = canvas.querySelectorAll(".chart-bar-wrap .chart-tooltip");
+    if (tooltips.length === 0) return;
+    const canvasWidth = canvas.getBoundingClientRect().width;
+    if (canvasWidth === 0) return;
+    const margin = 4;
+    // Batch writes, then reads, then writes — avoids layout thrashing.
+    tooltips.forEach((tip) => {
+        tip.style.display = "block";
+        tip.style.visibility = "hidden";
+    });
+    const widths = Array.from(tooltips, (tip) => tip.getBoundingClientRect().width);
+    tooltips.forEach((tip, i) => {
+        tip.style.display = "";
+        tip.style.visibility = "";
+        const half = widths[i] / 2;
+        const barCenter = canvasWidth * (i + 0.5) / HOURS_PER_DAY;
+        const minCenter = half + margin;
+        const maxCenter = canvasWidth - half - margin;
+        const clamped = (minCenter > maxCenter)
+            ? canvasWidth / 2
+            : Math.max(minCenter, Math.min(maxCenter, barCenter));
+        const shift = clamped - barCenter;
+        tip.style.transform = `translateX(calc(-50% + ${shift.toFixed(1)}px))`;
+    });
 }
 
 function formatDateKey(key) {
@@ -917,17 +954,29 @@ function openDatePopup() {
     if (!state.tracker) return;
     renderDatePopup();
     const popup = els.datePopup;
+    /* Reset stale position from a previous open so it doesn't influence
+     * width measurement, and cap max-width to the actual viewport width
+     * (more reliable than CSS calc(100vw) on mobile when the page has
+     * any horizontal overflow). */
+    popup.style.left = "";
+    popup.style.top = "";
+    popup.style.maxWidth = Math.min(360, window.innerWidth - 16) + "px";
     popup.classList.remove("hidden");
+
     const r = els.dateLabel.getBoundingClientRect();
-    // Show below the label by default; flip above if not enough room.
-    const popupHeight = Math.min(window.innerHeight * 0.6, 480);
+    const popupRect = popup.getBoundingClientRect();
+    const popupWidth = popupRect.width;
+    const popupHeight = popupRect.height;
+
     const below = r.bottom + 6;
     const top = (below + popupHeight > window.innerHeight - 8)
         ? Math.max(8, r.top - popupHeight - 6)
         : below;
-    const popupWidth = popup.getBoundingClientRect().width || 280;
+
     let left = r.left + r.width / 2 - popupWidth / 2;
-    left = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, left));
+    const maxLeft = window.innerWidth - popupWidth - 8;
+    left = (maxLeft < 8) ? 8 : Math.max(8, Math.min(maxLeft, left));
+
     popup.style.top = top + "px";
     popup.style.left = left + "px";
 }
