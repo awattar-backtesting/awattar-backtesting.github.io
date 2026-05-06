@@ -18,7 +18,7 @@ import {
 } from "./tariffs.js";
 import { Marketdata, createBrowserFetcher } from "./marketdata.js";
 import { runPipeline } from "./calc/pipeline.js";
-import { tariffCostForBucket } from "./calc/fanout.js";
+import { tariffCostForBucket, bucketPriceCentsAt } from "./calc/fanout.js";
 import { SLOTS_PER_DAY, HOURS_PER_DAY, SLOTS_PER_HOUR } from "./calc/slots.js";
 
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
@@ -383,9 +383,11 @@ function renderTable() {
         const b = buckets[k];
         const dateOut = format(parse(k, fmtKey, new Date()), fmtOut);
         const energyKwh = Number(b.kwh);
-        const epexAvg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
-        const h0Diff = h0Avg !== null ? epexAvg - h0Avg : null;
+        const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
 
         const costs = computed[k];
         const grossNumbers = selected.map((p) => Number(costs[p.meta.id]));
@@ -414,17 +416,22 @@ function renderTable() {
                 <span class="h0-diff ${h0Diff < 0 ? "diff-good" : "diff-bad"}">(${h0Diff > 0 ? "+" : ""}${fmtNum(h0Diff, 2)})</span>
               </td>`;
 
+        const epex15Cell = epex15Avg === null
+            ? `<td class="num td-price">—</td>`
+            : `<td class="num td-price">${fmtNum(epex15Avg, 2)} ct/kWh</td>`;
+
         return `<tr>
             <td class="td-month">${escapeHTML(dateOut)}</td>
             <td class="num td-energy">${fmtNum(energyKwh, 0)} kWh</td>
-            <td class="num td-price">${fmtNum(epexAvg, 2)} ct/kWh</td>
+            <td class="num td-price">${fmtNum(epex60Avg, 2)} ct/kWh</td>
+            ${epex15Cell}
             ${state.feedin ? "" : h0Cell}
             ${providerCells}
         </tr>`;
     }).join("");
 
     const totalsRow = `<tr class="totals-row">
-        <td colspan="${state.feedin ? 3 : 4}" style="font-family:'DM Sans';font-weight:600;font-size:12px;">Gesamt${state.view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""}</td>
+        <td colspan="${state.feedin ? 4 : 5}" style="font-family:'DM Sans';font-weight:600;font-size:12px;">Gesamt${state.view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""}</td>
         ${selected.map((p) => {
             const cents = totals[p.meta.id];
             const grossEur = Number(cents) / 100;
@@ -442,7 +449,8 @@ function renderTable() {
                 <tr>
                     <th>${state.view === "monthly" ? "Monat" : "Datum"}</th>
                     <th class="num">Energie</th>
-                    <th class="num">EPEX Ø</th>
+                    <th class="num">EPEX60 Ø</th>
+                    <th class="num">EPEX15 Ø</th>
                     ${state.feedin ? "" : '<th class="num">H0 Ø</th>'}
                     ${headerProviderCols}
                 </tr>
@@ -465,7 +473,12 @@ function buildExportSheet(view) {
     const keys = Object.keys(buckets).sort();
 
     // Column headers
-    const header = [view === "monthly" ? "Monat" : "Datum", "Energie (kWh)", "EPEX Ø (ct/kWh)"];
+    const header = [
+        view === "monthly" ? "Monat" : "Datum",
+        "Energie (kWh)",
+        "EPEX60 Ø (ct/kWh)",
+        "EPEX15 Ø (ct/kWh)",
+    ];
     if (!state.feedin) header.push("H0 Ø (ct/kWh)", "Δ H0 (ct/kWh)");
     for (const p of selected) {
         header.push(`${p.meta.shortName} (€)`);
@@ -480,10 +493,12 @@ function buildExportSheet(view) {
         const b = buckets[k];
         const factor = view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         const energyKwh = Number(b.kwh);
-        const epexAvg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
+        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
-        const h0Diff = h0Avg !== null ? epexAvg - h0Avg : null;
-        const row = [format(parse(k, fmtKey, new Date()), fmtOut), energyKwh, epexAvg];
+        const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
+        const row = [format(parse(k, fmtKey, new Date()), fmtOut), energyKwh, epex60Avg, epex15Avg];
         if (!state.feedin) {
             row.push(h0Avg);
             row.push(h0Diff);
@@ -513,7 +528,7 @@ function buildExportSheet(view) {
         }
     }
 
-    const totalsRow = ["Gesamt" + (view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""), null, null];
+    const totalsRow = ["Gesamt" + (view === "daily" ? " (Monatssummen inkl. Grundpreis)" : ""), null, null, null];
     if (!state.feedin) totalsRow.push(null, null);
     for (const p of selected) {
         totalsRow.push(Number(totals[p.meta.id]) / 100);

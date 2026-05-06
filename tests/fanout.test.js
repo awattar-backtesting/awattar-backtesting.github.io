@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
-import { repriceBucket, tariffCostForBucket } from "../docs/calc/fanout.js";
+import { repriceBucket, tariffCostForBucket, bucketPriceCentsAt } from "../docs/calc/fanout.js";
 import { Tarif } from "../docs/tariffs.js";
 
 /**
@@ -143,6 +143,34 @@ describe("repriceBucket", () => {
         const tarif = passthroughTarif({ id: "qh", priceSource: "quarter-hourly" });
         const md = makeMarketdata(); // neither data60 nor data15
         expect(repriceBucket(bucket, tarif, md)).toBeNull();
+    });
+});
+
+describe("bucketPriceCentsAt", () => {
+    const day = "20251201";
+    const slots = [
+        { day, slot: 0, kwh: new Decimal(2), h0Kwh: new Decimal(0), priceCents: new Decimal(20) },
+        { day, slot: 1, kwh: new Decimal(2), h0Kwh: new Decimal(0), priceCents: new Decimal(20) },
+    ];
+    const bucket = makeBucket(slots);
+
+    it("returns the precomputed hourly priceCents for source=hourly", () => {
+        const md = makeMarketdata({ data60: { [day]: new Array(24).fill(99) } });
+        // Hourly fast path: helper does not look at marketdata, returns the bucket's value.
+        expect(bucketPriceCentsAt(bucket, "hourly", md)).toBe(bucket.priceCents);
+    });
+
+    it("recomputes against prices15[slot] for source=quarter-hourly", () => {
+        const md = makeMarketdata({
+            data15: { [day]: [7, 13, ...new Array(94).fill(0)] },
+        });
+        // 2·7 + 2·13 = 40
+        expect(bucketPriceCentsAt(bucket, "quarter-hourly", md).toString()).toBe("40");
+    });
+
+    it("returns null when 15-min data is missing for any slot's day", () => {
+        const md = makeMarketdata({ data60: { [day]: new Array(24).fill(10) } });
+        expect(bucketPriceCentsAt(bucket, "quarter-hourly", md)).toBeNull();
     });
 });
 
