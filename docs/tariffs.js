@@ -7,6 +7,7 @@ export const PROVIDER_COLORS = [
     'oklch(60% 0.18 320)',  // purple
     'oklch(60% 0.18 190)',  // teal
     'oklch(60% 0.18 20)',   // red-orange
+    'oklch(70% 0.18 100)',  // yellow-green
 ];
 
 /**
@@ -232,6 +233,32 @@ export const oekostrom_spot = new Tarif(
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.plus(kwh.times(1.5)).times(1.2);
+        if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
+        return amount;
+    }
+);
+
+export const hofer_gruenstrom_spot = new Tarif(
+    {
+        id: "hofer_spot",
+        name: "Hofer Grünstrom SPOT",
+        shortName: "Hofer Grünstrom SPOT",
+        url: "https://www.hofer-gr%C3%BCnstrom.at/preisinformation-spot3.pdf?ch=9byl96of&:hp=6;69;de",
+        color: PROVIDER_COLORS[6],
+        markupPct: 0,
+        addFixedGross: 1.90,
+        baseMonthly: 4.95,
+        vat: 20,
+        // Tariff launched 2026-02-01 with quarter-hourly billing. Earlier
+        // days are backtested against the hourly auction — both because the
+        // product didn't exist yet and because Hofer's own API only serves
+        // real 15-min EPEX data from that date onward (older days come back
+        // as hourly values padded 4×, see project_hofer_data memory).
+        priceSource: { before: "hourly", from: "20260201", then: "quarter-hourly" },
+    },
+    function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
+        // Aufschlag 1.5833 ct/kWh netto × 1.2 = 1.90 ct/kWh brutto.
+        let amount = price.plus(kwh.times(1.5833)).times(1.2);
         if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
