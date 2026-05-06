@@ -17,6 +17,7 @@ import {
 } from "./tariffs.js";
 import { Marketdata, createBrowserFetcher } from "./marketdata.js";
 import { runPipeline } from "./calc/pipeline.js";
+import { tariffCostForBucket } from "./calc/fanout.js";
 import { SLOTS_PER_DAY, HOURS_PER_DAY, SLOTS_PER_HOUR } from "./calc/slots.js";
 
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot];
@@ -128,6 +129,16 @@ function makeNetzbetreiberLabel(name) {
     return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/* Per-tariff cost wrapper used at every render call site. The fan-out picks
+ * the EPEX auction (hourly vs. 15-min) declared by the tariff for each slot's
+ * date; missing 15-min data falls back to the bucket's hourly default. The
+ * surfaced fallback warning is task #27. */
+function tariffCost(bucket, tarif, opts) {
+    const cents = tariffCostForBucket(bucket, tarif, state.marketdata, opts);
+    if (cents !== null) return cents;
+    return tarif.calculate(bucket.priceCents, bucket.kwh, { ...opts, slots: bucket.slots });
+}
+
 // ── Sidebar rendering ───────────────────────────────────────────────────────
 function providerTotalEur(p) {
     const buckets = state.monthly;
@@ -135,7 +146,7 @@ function providerTotalEur(p) {
     let sum = new Decimal(0);
     for (const key of Object.keys(buckets)) {
         const b = buckets[key];
-        sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(key), slots: b.slots }));
+        sum = sum.plus(tariffCost(b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(key) }));
     }
     return sum.dividedBy(100);
 }
@@ -300,7 +311,7 @@ function renderTable() {
         const factor = state.view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         computed[k] = {};
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor, slots: b.slots });
+            const cents = tariffCost(b, p, { includeMonthlyFee, monthlyFeeFactor: factor });
             computed[k][p.meta.id] = cents;
         }
     }
@@ -320,7 +331,7 @@ function renderTable() {
             let sum = new Decimal(0);
             for (const mk of Object.keys(mb)) {
                 const b = mb[mk];
-                sum = sum.plus(p.calculate(b.priceCents, b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk), slots: b.slots }));
+                sum = sum.plus(tariffCost(b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) }));
             }
             totals[p.meta.id] = sum;
         }
@@ -453,7 +464,7 @@ function buildExportSheet(view) {
             row.push(h0Diff);
         }
         for (const p of selected) {
-            const cents = p.calculate(b.priceCents, b.kwh, { includeMonthlyFee, monthlyFeeFactor: factor, slots: b.slots });
+            const cents = tariffCost(b, p, { includeMonthlyFee, monthlyFeeFactor: factor });
             const grossEur = Number(cents) / 100;
             const avgCt = b.kwh.equals(0) ? 0 : Number(cents.dividedBy(b.kwh));
             row.push(grossEur);
@@ -471,7 +482,7 @@ function buildExportSheet(view) {
             for (const mk of Object.keys(mb)) {
                 const mb_b = mb[mk];
                 totals[p.meta.id] = totals[p.meta.id].plus(
-                    p.calculate(mb_b.priceCents, mb_b.kwh, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk), slots: mb_b.slots })
+                    tariffCost(mb_b, p, { includeMonthlyFee: true, monthlyFeeFactor: monthlyFeeFactorFor(mk) })
                 );
             }
         }
