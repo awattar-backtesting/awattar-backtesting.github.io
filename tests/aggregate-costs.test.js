@@ -132,10 +132,29 @@ describe("aggregateCosts", () => {
         const { daily, monthly } = aggregateCosts(tracker, marketdata, h0Sheet);
         expect(daily[day].slots).toHaveLength(SLOTS_PER_DAY);
         expect(monthly["202401"].slots).toHaveLength(SLOTS_PER_DAY);
-        for (const s of daily[day].slots) {
+        daily[day].slots.forEach((s, i) => {
+            expect(s.day).toBe(day);
+            expect(s.slot).toBe(i);
             expect(s.kwh.toString()).toBe("1.5");
             expect(s.priceCents.toString()).toBe("12");
+            expect(s.h0Kwh.toString()).toBe("0.01");
+        });
+    });
+
+    it("tags daily buckets with `day` and monthly buckets with sorted `days`", () => {
+        // Mix months to verify sort + per-bucket grouping.
+        const days = ["20240131", "20240115", "20240201"];
+        const h0Sheet = makeH0Sheet(3, 0.01);
+        const tracker = makeTracker(days, 1.0);
+        const marketdata = makeMarketdata(days, 5);
+
+        const { daily, monthly } = aggregateCosts(tracker, marketdata, h0Sheet);
+
+        for (const d of days) {
+            expect(daily[d].day).toBe(d);
         }
+        expect(monthly["202401"].days).toEqual(["20240115", "20240131"]);
+        expect(monthly["202402"].days).toEqual(["20240201"]);
     });
 
     it("only sums slots present in tracker.data (partial days)", () => {
