@@ -318,7 +318,9 @@ export const naturstrom_marktpreis_spot_25 = new Tarif(
         baseMonthly: -5.40,
         vat: 20,
         einspeise: true,
-        priceSource: "hourly", // TODO: verify against current Produktblatt
+        // Preisblatt 2025 (gültig ab 10.10.2025): "EPEX SPOT AT ¼-Stundenpreis
+        // × Erzeugung in der jeweiligen ¼-Stunde", Preisänderung ¼-stündlich.
+        priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
         let amount = price.minus(kwh.times(1.55));
