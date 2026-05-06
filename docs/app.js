@@ -131,12 +131,36 @@ function makeNetzbetreiberLabel(name) {
 
 /* Per-tariff cost wrapper used at every render call site. The fan-out picks
  * the EPEX auction (hourly vs. 15-min) declared by the tariff for each slot's
- * date; missing 15-min data falls back to the bucket's hourly default. The
- * surfaced fallback warning is task #27. */
+ * date; if a slot's declared source has no data we fall back to the hourly
+ * source per slot and remember the (day, source) pair so we can show one
+ * aggregated warning at the end of the upload pipeline. */
+const fallbackReports = new Set();
+
 function tariffCost(bucket, tarif, opts) {
-    const cents = tariffCostForBucket(bucket, tarif, state.marketdata, opts);
+    const onMissingSource = (day, source) => {
+        fallbackReports.add(`${day}:${source}`);
+    };
+    const cents = tariffCostForBucket(bucket, tarif, state.marketdata, { ...opts, onMissingSource });
     if (cents !== null) return cents;
+    // Hourly source itself missing — last-ditch fall back to bucket defaults.
     return tarif.calculate(bucket.priceCents, bucket.kwh, { ...opts, slots: bucket.slots });
+}
+
+function surfaceFallbackWarnings() {
+    if (fallbackReports.size === 0) return;
+    const days = Array.from(fallbackReports)
+        .map((k) => k.split(":", 1)[0])
+        .filter((d, i, a) => a.indexOf(d) === i)
+        .sort();
+    const sample = days.slice(0, 5).map(prettyDate).join(", ");
+    const more = days.length > 5 ? ` und ${days.length - 5} weitere(n)` : "";
+    displayWarning(
+        `Hinweis: Für ${sample}${more} fehlen 15-Minuten-Spotpreise — die Berechnung dieser Tage erfolgt mit dem stündlichen EPEX-Index als Fallback.`,
+    );
+}
+
+function prettyDate(yyyymmdd) {
+    return `${yyyymmdd.slice(6, 8)}.${yyyymmdd.slice(4, 6)}.${yyyymmdd.slice(0, 4)}`;
 }
 
 // ── Sidebar rendering ───────────────────────────────────────────────────────
@@ -978,6 +1002,7 @@ function clearWarning() {
 
 async function handleUpload(file) {
     clearWarning();
+    fallbackReports.clear();
     const bytes = await file.arrayBuffer();
 
     const lastprofile_array = await (await fetch("./lastprofile.xls")).arrayBuffer();
@@ -1016,6 +1041,7 @@ async function handleUpload(file) {
     renderTable();
     renderChart();
     syncExportBtn();
+    surfaceFallbackWarnings();
 }
 
 // ── Wire events ─────────────────────────────────────────────────────────────

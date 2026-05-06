@@ -115,14 +115,33 @@ describe("repriceBucket", () => {
         expect(out.priceCents.toString()).toBe("28");
     });
 
-    it("returns null when 15-min data is missing for a needed day", () => {
+    it("falls back to hourly per-slot and reports missing 15-min data via onMissingSource", () => {
+        const day = "20251201";
+        const slots = [
+            { day, slot: 0, kwh: new Decimal(1), h0Kwh: new Decimal(0), priceCents: new Decimal(10) },
+            { day, slot: 1, kwh: new Decimal(1), h0Kwh: new Decimal(0), priceCents: new Decimal(10) },
+        ];
+        const bucket = makeBucket(slots);
+        const tarif = passthroughTarif({ id: "qh", priceSource: "quarter-hourly" });
+        const md = makeMarketdata({ data60: { [day]: new Array(24).fill(10) } }); // no data15
+        const reported = [];
+        const out = repriceBucket(bucket, tarif, md, {
+            onMissingSource: (d, src) => reported.push([d, src]),
+        });
+        // Both slots fall back to hourly[0] = 10; total = 20.
+        expect(out.priceCents.toString()).toBe("20");
+        // Reported once per (day, source), even across multiple slots on the same day.
+        expect(reported).toEqual([[day, "quarter-hourly"]]);
+    });
+
+    it("returns null when even the hourly fallback has no data", () => {
         const day = "20251201";
         const slots = [
             { day, slot: 0, kwh: new Decimal(1), h0Kwh: new Decimal(0), priceCents: new Decimal(10) },
         ];
         const bucket = makeBucket(slots);
         const tarif = passthroughTarif({ id: "qh", priceSource: "quarter-hourly" });
-        const md = makeMarketdata({ data60: { [day]: new Array(24).fill(10) } });
+        const md = makeMarketdata(); // neither data60 nor data15
         expect(repriceBucket(bucket, tarif, md)).toBeNull();
     });
 });
