@@ -123,11 +123,17 @@ body {
   font-family: 'DM Mono', monospace; font-size: 11px;
   background: white; border: 1px solid oklch(94% 0.005 240); border-radius: 3px;
   padding: 3px 0; cursor: pointer; color: oklch(35% 0.02 240);
-  transition: all 0.1s; font-weight: 500;
+  transition: all 0.1s; font-weight: 500; position: relative;
 }
 .date-popup-day:hover { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
 .date-popup-day.current { background: var(--green); color: white; border-color: var(--green); }
 .date-popup-day.empty { background: transparent; border-color: transparent; color: transparent; cursor: default; pointer-events: none; }
+.date-popup-day.has-negative::after {
+  content: ""; position: absolute; top: 1px; right: 1px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: oklch(58% 0.18 240); border: 1px solid white;
+}
+.date-popup-day.current.has-negative::after { background: white; border-color: var(--green); }
 .date-popup-empty { font-size: 12px; color: var(--text-muted); padding: 8px; text-align: center; }
 
 /* BODY */

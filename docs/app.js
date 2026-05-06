@@ -928,6 +928,49 @@ function openDatePopup() {
 function closeDatePopup() {
     els.datePopup.classList.add("hidden");
 }
+/* Per-day markers for the date popup: intraday spread (max−min hourly EPEX
+ * price for the day) drives a heatmap shade, and any hour with a negative
+ * price flags the day with a dot. Spread is normalized to the 95th percentile
+ * across all loaded days, so the global scale stays meaningful even when the
+ * tracker spans calm and volatile months. Returns a Map<dayKey, marker>. */
+function dayMarkers() {
+    const tracker = state.tracker;
+    const md = state.marketdata;
+    const out = new Map();
+    if (!tracker || !md) return out;
+    const spreads = [];
+    for (const d of tracker.days) {
+        const prices = md.data[d];
+        if (!prices) continue;
+        let lo = Infinity, hi = -Infinity, neg = 0;
+        for (let h = 0; h < HOURS_PER_DAY; h++) {
+            const p = prices[h];
+            if (p === undefined) continue;
+            const pn = Number(p);
+            if (pn < lo) lo = pn;
+            if (pn > hi) hi = pn;
+            if (pn < 0) neg++;
+        }
+        if (lo === Infinity) continue;
+        out.set(d, { spread: hi - lo, negCount: neg });
+        spreads.push(hi - lo);
+    }
+    if (spreads.length) {
+        spreads.sort((a, b) => a - b);
+        const p95 = Math.max(spreads[Math.floor((spreads.length - 1) * 0.95)], 0.01);
+        for (const m of out.values()) m.intensity = Math.min(1, m.spread / p95);
+    }
+    return out;
+}
+function spreadColor(t) {
+    /* Pale cream → saturated warm orange. Single hue keeps the ramp readable
+     * as "more intense = bigger spread"; lightness floor of 82% leaves text
+     * legible against the existing oklch(35%) day-number color. */
+    const L = 96 - 14 * t;
+    const C = 0.02 + 0.13 * t;
+    return `oklch(${L.toFixed(1)}% ${C.toFixed(3)} 35)`;
+}
+
 function renderDatePopup() {
     const tracker = state.tracker;
     if (!tracker) {
@@ -939,6 +982,7 @@ function renderDatePopup() {
     const isDaily = state.view === "daily";
     const currentMonth = state.dateKey && state.dateKey.length >= 6 ? state.dateKey.slice(0, 6) : null;
     const currentDay = state.chartDay || (isDaily ? state.dateKey : null);
+    const markers = dayMarkers();
 
     const html = months.map((m) => {
         const days = allDays.filter((d) => d.startsWith(m));
@@ -953,7 +997,18 @@ function renderDatePopup() {
         for (const d of days) {
             const dnum = parseInt(d.slice(6, 8), 10);
             const isCurrent = d === currentDay;
-            dayCells.push(`<button class="date-popup-day${isCurrent ? " current" : ""}" data-day="${d}">${dnum}</button>`);
+            const mk = markers.get(d);
+            const classes = ["date-popup-day"];
+            if (isCurrent) classes.push("current");
+            if (mk?.negCount) classes.push("has-negative");
+            const style = (!isCurrent && mk && mk.intensity > 0)
+                ? ` style="background:${spreadColor(mk.intensity)}"`
+                : "";
+            const tooltip = mk
+                ? `Spread ${mk.spread.toFixed(1)} ct/kWh${mk.negCount ? ` · ${mk.negCount} h < 0` : ""}`
+                : "";
+            const titleAttr = tooltip ? ` title="${tooltip}"` : "";
+            dayCells.push(`<button class="${classes.join(" ")}"${style}${titleAttr} data-day="${d}">${dnum}</button>`);
         }
         const monthAction = isDaily ? "" : `data-month="${m}"`;
         const monthBtn = isDaily
