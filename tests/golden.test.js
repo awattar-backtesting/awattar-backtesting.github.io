@@ -11,6 +11,7 @@ import { loadH0Sheet, newMarketdata, readSample } from "./lib/runtime.js";
  *   - netzooe.xls:              binary .xls format (XLSX.read native parse)
  *   - kwg-at.xlsx:              .xlsx with provider-specific stripXls fixup
  *   - hallag.xlsx:              hourly .xlsx with date-range column (slotDurationMin: 60)
+ *   - tiwag.csv:                Hall AG 15-min CSV (TIWAG-portal single-column variant)
  */
 const goldenSamples = [
     "KaerntenNetz.csv",
@@ -20,6 +21,7 @@ const goldenSamples = [
     "netzooe.xls",
     "kwg-at.xlsx",
     "hallag.xlsx",
+    "tiwag.csv",
 ];
 
 let h0Sheet;

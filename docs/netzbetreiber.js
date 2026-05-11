@@ -440,6 +440,19 @@ export const HallAG = new Netzbetreiber({
     slotDurationMin: 60,
 });
 
+// TIWAG is an Energieversorger (energy supplier), not a Netzbetreiber.
+// Its customer portal exports a 15-min CSV whose format is independent
+// of the underlying grid operator — any Zählpunkt prefix can appear in
+// the preamble (Hall AG, TINETZ, ...). Match by export layout only.
+export const Tiwag = new Netzbetreiber({
+    name: "TIWAG",
+    descriptorUsage: "VALUE",
+    descriptorTimestamp: "DATE_FROM",
+    dateFormatString: "dd.MM.yyyy HH:mm:ss",
+    usageParser: parseGermanFloat,
+    otherFields: ["DATE_TO"],
+});
+
 export const IKB = new Netzbetreiber({
     name: "IKB",
     descriptorUsage: "!AT005100",
@@ -522,6 +535,7 @@ export const listOfNetzbetreiber = [
     StadtwerkeKlagenfurt,
     StadtwerkeKufstein,
     HallAG,
+    Tiwag,
     IKB,
     ClamStrom,
     EWWWels,

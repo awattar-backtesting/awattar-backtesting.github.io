@@ -130,6 +130,27 @@ export function stripPlain(buf, onWarning = () => {}) {
         return stringToBuffer(t);
     }
 
+    // TIWAG customer-portal CSV export. The Zählpunkt prefix in the
+    // first two lines depends on the customer's grid operator (Hall AG
+    // shown here, but any AT-prefix is possible since TIWAG is an
+    // Energieversorger, not a Netzbetreiber). Match by export layout:
+    // > AT005120000000000000000020050333A;;
+    // > AT005120000000000000000020050333A;;
+    // > Wirkenergie;;
+    // > kWh;;
+    // > DATE_FROM;DATE_TO;VALUE
+    // > 01.04.2026 00:00:00;01.04.2026 00:14:59;0,05
+    const tiwagLines = input.split("\n");
+    if (
+        tiwagLines.length >= 6
+        && tiwagLines[2].startsWith("Wirkenergie;")
+        && tiwagLines[3].startsWith("kWh;")
+        && tiwagLines[4].startsWith("DATE_FROM;DATE_TO;VALUE")
+        && !tiwagLines[4].includes("DATE_FROM2")
+    ) {
+        return stringToBuffer(tiwagLines.slice(4).join("\n"));
+    }
+
     // everything else
     return buf;
 }
