@@ -10,6 +10,7 @@ import { loadH0Sheet, newMarketdata, readSample } from "./lib/runtime.js";
  *   - wienernetze-einspeisung.csv: einspeisung (feedin) path
  *   - netzooe.xls:              binary .xls format (XLSX.read native parse)
  *   - kwg-at.xlsx:              .xlsx with provider-specific stripXls fixup
+ *   - hallag.xlsx:              hourly .xlsx with date-range column (slotDurationMin: 60)
  */
 const goldenSamples = [
     "KaerntenNetz.csv",
@@ -18,6 +19,7 @@ const goldenSamples = [
     "wienernetze-einspeisung.csv",
     "netzooe.xls",
     "kwg-at.xlsx",
+    "hallag.xlsx",
 ];
 
 let h0Sheet;

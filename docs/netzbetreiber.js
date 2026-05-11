@@ -427,6 +427,19 @@ export const StadtwerkeKufstein = new Netzbetreiber({
     preprocessDateString: (dateStr) => dateStr.split("-")[0],
 });
 
+export const HallAG = new Netzbetreiber({
+    name: "Hall AG",
+    descriptorUsage: "!AT005120",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parsePlainFloat,
+    // Same export layout as Stadtwerke Kufstein (Hall AG meter prefix
+    // "AT005120…") but at hourly granularity, so fan one entry across four
+    // quarters via slotDurationMin: 60.
+    preprocessDateString: (dateStr) => dateStr.split("-")[0],
+    slotDurationMin: 60,
+});
+
 export const IKB = new Netzbetreiber({
     name: "IKB",
     descriptorUsage: "!AT005100",
@@ -508,6 +521,7 @@ export const listOfNetzbetreiber = [
     Tinetz,
     StadtwerkeKlagenfurt,
     StadtwerkeKufstein,
+    HallAG,
     IKB,
     ClamStrom,
     EWWWels,
