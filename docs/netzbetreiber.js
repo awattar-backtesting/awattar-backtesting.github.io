@@ -1,5 +1,7 @@
 import { parse, parseISO } from "date-fns";
 
+const MS_PER_MINUTE = 60000;
+
 /**
  * Provider configuration. Construct with an options object:
  *
@@ -113,7 +115,6 @@ export class Netzbetreiber {
         }
         const parsedUsage = this.usageParser(valueUsage);
 
-        const MS_PER_MINUTE = 60000;
         if (this.fixupTimestamp) {
             /* most Netzbetreiber specify the start date, for some it's ambigious and only obvious by looking at the first and last entry of a single day export, e.g.
              * > Messzeitpunkt;Gemessener Verbrauch (kWh);Ersatzwert;

@@ -25,6 +25,8 @@ import { SLOTS_PER_DAY, HOURS_PER_DAY, SLOTS_PER_HOUR } from "./calc/slots.js";
 const CONSUMPTION_PROVIDERS = [awattar_neu, smartcontrol_neu, steirerstrom, spotty_direkt, naturstrom_spot_stunde_ii, oekostrom_spot, hofer_gruenstrom_spot];
 const FEEDIN_PROVIDERS = [smartcontrol_sunny, awattar_sunny_spot_60, naturstrom_marktpreis_spot_25, wels_strom_sonnenstrom_spot, oekostrom_sun_spot];
 
+const EPEX15_SOURCE = "quarter-hourly";
+
 const SAMPLE_HOURLY_PRICES = Array.from({ length: 24 }, (_, h) => {
     const base = 8 + 4 * Math.sin((h - 6) * Math.PI / 12);
     const noise = (Math.sin(h * 17.3) - 0.5) * 6;
@@ -395,7 +397,7 @@ function renderTable() {
         const dateOut = format(parse(k, fmtKey, new Date()), fmtOut);
         const energyKwh = Number(b.kwh);
         const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
-        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const p15Cents = bucketPriceCentsAt(b, EPEX15_SOURCE, state.marketdata);
         const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
         const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
@@ -505,7 +507,7 @@ function buildExportSheet(view) {
         const factor = view === "monthly" ? monthlyFeeFactorFor(k) : 1;
         const energyKwh = Number(b.kwh);
         const epex60Avg = b.kwh.equals(0) ? 0 : Number(b.priceCents.dividedBy(b.kwh));
-        const p15Cents = bucketPriceCentsAt(b, "quarter-hourly", state.marketdata);
+        const p15Cents = bucketPriceCentsAt(b, EPEX15_SOURCE, state.marketdata);
         const epex15Avg = (p15Cents === null || b.kwh.equals(0)) ? null : Number(p15Cents.dividedBy(b.kwh));
         const h0Avg = b.h0NormKwh && !b.h0NormKwh.equals(0) ? Number(b.h0NormPriceCents.dividedBy(b.h0NormKwh)) : null;
         const h0Diff = h0Avg !== null ? epex60Avg - h0Avg : null;
