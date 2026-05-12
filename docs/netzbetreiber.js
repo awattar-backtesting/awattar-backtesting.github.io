@@ -357,12 +357,14 @@ export const StromnetzGraz = new Netzbetreiber({
     otherFields: ["Zaehlerstand Einheitstarif", "Zaehlerstand Hochtarif", "Zaehlerstand Niedertarif", "Verbrauch Hochtarif", "Verbrauch Niedertarif"],
 });
 
+// Newer exports use German decimal commas (e.g. "0,045"); parsePlainFloat
+// would silently truncate to 0. parseGermanFloat handles both dots and commas.
 export const StromnetzGrazv2 = new Netzbetreiber({
     name: "StromnetzGraz V2",
     descriptorUsage: "Verbrauch Gesamt - 1.8.0",
     descriptorTimestamp: "Ablesezeitpunkt",
     dateFormatString: "parseISO",
-    usageParser: parsePlainFloat,
+    usageParser: parseGermanFloat,
     otherFields: ["Zaehlerstand Gesamt - 1.8.0", "Zaehlerstand Hochtarif - 1.8.1", "Zaehlerstand Niedertarif - 1.8.2", "Verbrauch Hochtarif - 1.8.1", "Verbrauch Niedertarif - 1.8.2"],
 });
 

@@ -12,6 +12,7 @@ import { loadH0Sheet, newMarketdata, readSample } from "./lib/runtime.js";
  *   - kwg-at.xlsx:              .xlsx with provider-specific stripXls fixup
  *   - hallag.xlsx:              hourly .xlsx with date-range column (slotDurationMin: 60)
  *   - tiwag.csv:                Hall AG 15-min CSV (TIWAG-portal single-column variant)
+ *   - stromnetz.graz.issue78-202604.csv: StromnetzGraz V2 with German decimal commas
  */
 const goldenSamples = [
     "KaerntenNetz.csv",
@@ -22,6 +23,7 @@ const goldenSamples = [
     "kwg-at.xlsx",
     "hallag.xlsx",
     "tiwag.csv",
+    "stromnetz.graz.issue78-202604.csv",
 ];
 
 let h0Sheet;
