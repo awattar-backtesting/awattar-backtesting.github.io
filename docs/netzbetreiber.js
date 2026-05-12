@@ -325,9 +325,11 @@ export const SalzburgNetz = new Netzbetreiber({
     otherFields: ["Status"],
 });
 
+// Matches "Restverbrauch (kWh)" (older portal export) and "Verbrauch (kWh)"
+// (newer export that also adds a trailing "Zeitumstellung" column).
 export const SalzburgNetzv4 = new Netzbetreiber({
     name: "SalzburgNetz V4",
-    descriptorUsage: "!Restverbrauch",
+    descriptorUsage: "!kWh)",
     descriptorTimestamp: "Datum",
     dateFormatString: "dd.MM.yyyy HH:mm:ss",
     usageParser: parseGermanFloat,
