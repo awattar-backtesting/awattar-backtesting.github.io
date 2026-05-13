@@ -1,5 +1,6 @@
-import { parse } from "date-fns";
+import { format, parse } from "date-fns";
 import Decimal from "decimal.js";
+import { HOURS_PER_DAY, SLOTS_PER_DAY, slotOfTimestamp } from "./calc/slots.js";
 import { QUARTER_HOURLY_AUCTION_GO_LIVE } from "./tariffs.js";
 
 /**
@@ -58,7 +59,61 @@ export class Marketdata {
             const unixStamp = date.getTime();
             const jsonText = await this.fetcher(unixStamp, source);
             const d = JSON.parse(jsonText);
-            target[fullday] = d.data.map(slot => new Decimal(slot.marketprice).dividedBy(10).toFixed(3));
+            /*
+             * Align the array to local-time indices: callers look up
+             * `prices[localHour]` or `prices[localSlot]` where the slot
+             * indices come from the consumption tracker (also keyed on
+             * local time). The upstream cache lists entries dense in UTC,
+             * which on DST days does not match local indexing:
+             *
+             *   spring forward (23h day): 24 hourly / 92 quarter-hourly
+             *       upstream entries, but local hours 02:xx do not exist
+             *       — entries map to local slots [0..7, 12..95] and a
+             *       trailing entry actually belongs to the next day.
+             *
+             *   fall back (25h day):     25 hourly / 100 quarter-hourly
+             *       upstream entries; local slots 8..11 occur twice
+             *       (first +02:00, then +01:00).
+             *
+             * Build a fixed-length array indexed by the local slot of
+             * each entry's start_timestamp and drop spillover into
+             * adjacent days. For fall-back duplicates, keep the first
+             * occurrence; the consumption tracker sums both wall-clock
+             * 02:00 quarters into one slot regardless.
+             */
+            const len = source === "quarter-hourly" ? SLOTS_PER_DAY : HOURS_PER_DAY;
+            const result = new Array(len);
+            for (const slot of d.data) {
+                const ts = new Date(slot.start_timestamp);
+                if (format(ts, "yyyyMMdd") !== fullday) continue;
+                const idx = source === "quarter-hourly"
+                    ? slotOfTimestamp(ts)
+                    : ts.getHours();
+                if (result[idx] !== undefined) continue;
+                result[idx] = new Decimal(slot.marketprice).dividedBy(10).toFixed(3);
+            }
+            /*
+             * Fill remaining gaps with the nearest available price so
+             * callers can always index by local hour/slot without an
+             * undefined check:
+             *
+             *   spring forward: the 02:00 hour (slots 8..11) genuinely
+             *       does not exist locally and the tracker never produces
+             *       consumption there, so any fill value is unobservable.
+             *   fall back: upstream returns a fixed 24-entry hourly
+             *       window which truncates the local day's 25th hour
+             *       (23:00). We forward-fill from 22:00 — an approximation
+             *       that matches the old dense-array behavior at idx 23
+             *       and is the best we can do without re-fetching with a
+             *       wider end= parameter.
+             */
+            for (let i = 1; i < len; i++) {
+                if (result[i] === undefined) result[i] = result[i - 1];
+            }
+            for (let i = len - 2; i >= 0; i--) {
+                if (result[i] === undefined) result[i] = result[i + 1];
+            }
+            target[fullday] = result;
         } catch (err) {
             delete target[fullday];
             throw err;

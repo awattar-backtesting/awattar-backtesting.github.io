@@ -542,9 +542,9 @@ exports[`golden snapshots > NetzNOE.csv aggregation is stable 1`] = `
     },
     "20230326": {
       "h0NormKwh": "10883.900000",
-      "h0NormPriceCents": "87629.8108",
+      "h0NormPriceCents": "87209.7268",
       "kwh": "13.974000",
-      "priceCents": "95.2924",
+      "priceCents": "98.8256",
     },
     "20230327": {
       "h0NormKwh": "10783.300000",
@@ -741,9 +741,9 @@ exports[`golden snapshots > NetzNOE.csv aggregation is stable 1`] = `
     },
     "202303": {
       "h0NormKwh": "329984.300000",
-      "h0NormPriceCents": "3873564.9591",
+      "h0NormPriceCents": "3873144.8751",
       "kwh": "404.979000",
-      "priceCents": "3979.7165",
+      "priceCents": "3983.2498",
     },
     "202304": {
       "h0NormKwh": "89105.700000",
@@ -1376,9 +1376,9 @@ exports[`golden snapshots > netzooe.xls aggregation is stable 1`] = `
     },
     "20230326": {
       "h0NormKwh": "10883.900000",
-      "h0NormPriceCents": "87629.8108",
+      "h0NormPriceCents": "87209.7268",
       "kwh": "37.977000",
-      "priceCents": "267.5175",
+      "priceCents": "263.7433",
     },
     "20230327": {
       "h0NormKwh": "10783.300000",
@@ -1448,9 +1448,9 @@ exports[`golden snapshots > netzooe.xls aggregation is stable 1`] = `
   "monthly": {
     "202303": {
       "h0NormKwh": "329984.300000",
-      "h0NormPriceCents": "3873564.9591",
+      "h0NormPriceCents": "3873144.8751",
       "kwh": "844.265000",
-      "priceCents": "9999.1750",
+      "priceCents": "9995.4008",
     },
   },
   "netzbetreiber": "NetzOÖ",
@@ -2885,9 +2885,9 @@ exports[`golden snapshots > tinetz.csv aggregation is stable 1`] = `
     },
     "20231029": {
       "h0NormKwh": "11079.400000",
-      "h0NormPriceCents": "39046.8589",
+      "h0NormPriceCents": "40340.5640",
       "kwh": "0.325000",
-      "priceCents": "1.0871",
+      "priceCents": "1.1475",
     },
     "20231030": {
       "h0NormKwh": "10783.300000",
@@ -3300,9 +3300,9 @@ exports[`golden snapshots > tinetz.csv aggregation is stable 1`] = `
     },
     "202310": {
       "h0NormKwh": "340849.200000",
-      "h0NormPriceCents": "3542774.6691",
+      "h0NormPriceCents": "3544068.3742",
       "kwh": "194.860000",
-      "priceCents": "2115.3081",
+      "priceCents": "2115.3686",
     },
     "202311": {
       "h0NormKwh": "230443.200000",
