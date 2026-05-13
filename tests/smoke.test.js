@@ -1,9 +1,21 @@
 import { readdirSync } from "node:fs";
 import { describe, it, expect, beforeAll } from "vitest";
 import { runPipeline } from "../docs/calc/pipeline.js";
+import { repriceBucket } from "../docs/calc/fanout.js";
+import { Tarif } from "../docs/tariffs.js";
 import { loadH0Sheet, newMarketdata, readSample, samplesDir } from "./lib/runtime.js";
 
 const sampleNames = readdirSync(samplesDir).filter(n => !n.startsWith("."));
+
+/* Passthrough tariff that bills against the 15-min auction whenever the
+ * day is post-go-live (Tarif.priceSourceFor clamps pre-go-live days to
+ * hourly). Running this against every sample's per-day buckets exercises
+ * the quarter-hourly slot indexing in repriceBucket, which runPipeline
+ * itself does not — that's what regressed in #78. */
+const passthroughQuarterHourly = new Tarif(
+    { id: "smoke_qh", priceSource: "quarter-hourly" },
+    function (price) { return price; },
+);
 
 /**
  * Samples that currently fail — either pre-existing bugs unrelated to
@@ -57,6 +69,8 @@ describe("smoke: every sample feeds runPipeline cleanly", () => {
         expect(result.tracker.days.size).toBeGreaterThan(0);
         for (const day of result.tracker.days) {
             expect(result.daily[day]).toBeDefined();
+            const repriced = repriceBucket(result.daily[day], passthroughQuarterHourly, result.marketdata);
+            expect(repriced, `repriceBucket returned null for ${name} day ${day}`).not.toBeNull();
         }
     });
 });
