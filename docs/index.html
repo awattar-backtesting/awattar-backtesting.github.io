@@ -596,7 +596,13 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
     }
 }
 </script>
-<script type="module" src="app.js"></script>
+<!-- ?v=DEV is rewritten to ?v=<short-sha> at deploy time by
+     .github/workflows/pages.yml so Firefox (which holds onto cached ES
+     modules more aggressively than Chrome) re-fetches app.js on every
+     push instead of waiting out the GitHub Pages max-age=600.
+     Transitive imports inherit the new entry's freshness once they
+     revalidate. Leaving the literal DEV in dev mode bypasses caching. -->
+<script type="module" src="app.js?v=DEV"></script>
 </head>
 <body>
 <div class="app">

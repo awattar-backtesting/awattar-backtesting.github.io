@@ -1,0 +1,39 @@
+name: deploy pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow only one concurrent deploy; skip queued runs in favor of the latest.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Rewrite the ?v=DEV cache-bust marker in index.html to the short
+      # commit SHA so every deploy invalidates Firefox's module cache for
+      # app.js without a manual bump. Transitive imports revalidate on
+      # their own max-age cycle (10 min on GitHub Pages).
+      - name: stamp version into index.html
+        run: sed -i "s|?v=DEV|?v=${GITHUB_SHA:0:7}|" docs/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
