@@ -8,6 +8,15 @@ jobs:
   commit:
     runs-on: ubuntu-latest
 
+    # contents: write to push the cache commit; actions: write so the final
+    # step can dispatch pages.yml. A push made with the automatic GITHUB_TOKEN
+    # never triggers another workflow's `on: push`, so without this explicit
+    # dispatch the daily cache bumps would land on main but never redeploy
+    # GitHub Pages — which is exactly how the live site fell weeks behind.
+    permissions:
+      contents: write
+      actions: write
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -28,3 +37,10 @@ jobs:
         git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/awattar-backtesting/awattar-backtesting.github.io.git main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Only reached when the push above succeeded (i.e. there was a new commit),
+    # so we redeploy exactly when the cache actually changed.
+    - name: deploy pages
+      run: gh workflow run pages.yml --ref main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
