@@ -180,19 +180,20 @@ export const steirerstrom = new Tarif(
 export const spotty_direkt = new Tarif(
     {
         id: "spotty",
-        name: "Spotty Direkt",
-        shortName: "Spotty Direkt",
-        url: "https://web.archive.org/web/20240212135551/https://static1.squarespace.com/static/5a5381aff9a61ed1f688abc6/t/65c315875cde300de6287a2a/1707283847731/Spotty+Direkt+-+Smart.pdf",
+        name: "Spotty Smart Active ab 2025/10",
+        shortName: "Spotty Smart Active",
+        url: "https://static1.squarespace.com/static/5a5381aff9a61ed1f688abc6/t/68dfbb3ae6dd305b34f61db6/1759492922342/Preisblatt_Smart+Active_30092025.pdf",
         color: PROVIDER_COLORS[3],
         markupPct: 0,
-        addFixedGross: 2.15,
+        addFixedGross: 1.79,
         baseMonthly: 2.40,
         vat: 20,
         priceSource: { before: "hourly", from: "20251001", then: "quarter-hourly" },
     },
     function (price, kwh, { includeMonthlyFee = false, monthlyFeeFactor = 1 } = {}) {
-        // +1.49ct/kWh +0.3ct/kWh (Stromnachweis) exkl. 20% USt.
-        let amount = price.plus(kwh.times(1.49 + 0.3)).times(1.2);
+        // Preisblatt Smart Active 30.09.2025 (gültig ab 01.10.2025):
+        // Service-Fee 1,79 ct/kWh brutto, kein Stromherkunftsnachweis.
+        let amount = price.times(1.2).plus(kwh.times(1.79));
         if (includeMonthlyFee) amount = amount.plus(this.grundgebuehr_ct);
         return amount;
     }
