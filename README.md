@@ -12,8 +12,10 @@ Export tariffs are automatically detected if the data is provided accordingly by
 ## Netz OÖ
 Change the line
 > "Date";"kWh";"kW";"Status";
+
 to
 > "Date";"Feed-in kWh";"kW";"Status";
+
 to use the feed-in data.
 
 # Tests
