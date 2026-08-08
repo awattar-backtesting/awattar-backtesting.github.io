@@ -10,11 +10,9 @@ Therefore you either run your own webserver or just start chrome with disabled w
 Export tariffs are automatically detected if the data is provided accordingly by the network operator.
 
 ## Netz OÖ
-Change the line
-> "Date";"kWh";"kW";"Status";
-to
-> "Date";"Feed-in kWh";"kW";"Status";
-to use the feed-in data.
+Current feed-in CSV exports (`Datum`; `kWh`; `kW`; `Status`) are detected
+automatically. Legacy exports can still be marked explicitly by renaming the
+`kWh` column to `Einspeisung kWh`.
 
 # Tests
 

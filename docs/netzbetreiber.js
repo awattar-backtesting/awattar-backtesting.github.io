@@ -17,6 +17,7 @@ const MS_PER_MINUTE = 60000;
  *     slotDurationMin,                  // 15 (default) | 60; KWG-style hourly providers set 60
  *                                       //   so the tracker can fan one entry across four quarters
  *     preprocessDateString,             // identity | (string) => string
+ *     entryPredicate,                   // null | (entry) => boolean; extra format discriminator
  *   })
  */
 export class Netzbetreiber {
@@ -34,6 +35,7 @@ export class Netzbetreiber {
         endDescriptorTimestamp = null,
         slotDurationMin = 15,
         preprocessDateString = (date) => date,
+        entryPredicate = null,
     }) {
         Object.assign(this, {
             name,
@@ -49,6 +51,7 @@ export class Netzbetreiber {
             endDescriptorTimestamp,
             slotDurationMin,
             preprocessDateString,
+            entryPredicate,
         });
     }
 
@@ -70,6 +73,9 @@ export class Netzbetreiber {
     }
 
     probe(entry) {
+        if (this.entryPredicate !== null && !this.entryPredicate(entry)) {
+            return false;
+        }
         if (this.matchUsage(entry) === null) {
             return false;
         }
@@ -234,6 +240,23 @@ export const NetzOOEEinspeiser = new Netzbetreiber({
     dateFormatString: "dd.MM.yyyy HH:mm",
     usageParser: parseGermanFloat,
     otherFields: ["kW", "Status"],
+    feedin: true,
+});
+
+// Current Netz OÖ feed-in CSV exports use the ordinary "kWh" header, so
+// unlike older exports they carry no direction in a column name. They can be
+// distinguished from the legacy consumption XLS export by the VALID status and
+// its German-comma energy values.
+export const NetzOOEEinspeiserCsv = new Netzbetreiber({
+    name: "NetzOÖ",
+    descriptorUsage: "kWh",
+    descriptorTimestamp: "Datum",
+    dateFormatString: "dd.MM.yyyy HH:mm",
+    usageParser: parseGermanFloat,
+    otherFields: ["kW", "Status"],
+    entryPredicate: (entry) => entry.Status === "VALID"
+        && typeof entry.kWh === "string"
+        && entry.kWh.includes(","),
     feedin: true,
 });
 
@@ -517,6 +540,7 @@ export const listOfNetzbetreiber = [
     NetzNOEVerbrauch,
     NetzNOEVerbrauchv2,
     NetzNOEVerbrauchv3,
+    NetzOOEEinspeiserCsv,
     NetzOOE,
     NetzOOEEinspeiser,
     NetzBurgenland,

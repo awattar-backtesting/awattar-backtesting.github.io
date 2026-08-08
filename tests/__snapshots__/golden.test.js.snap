@@ -1457,6 +1457,67 @@ exports[`golden snapshots > netzooe.xls aggregation is stable 1`] = `
 }
 `;
 
+exports[`golden snapshots > netzooe-einspeisung.csv aggregation is stable 1`] = `
+{
+  "daily": {
+    "20260801": {
+      "h0NormKwh": "11651.200000",
+      "h0NormPriceCents": "143483.9339",
+      "kwh": "35.830000",
+      "priceCents": "376.9357",
+    },
+    "20260802": {
+      "h0NormKwh": "11416.000000",
+      "h0NormPriceCents": "113252.6828",
+      "kwh": "60.156000",
+      "priceCents": "316.7547",
+    },
+    "20260803": {
+      "h0NormKwh": "10783.200000",
+      "h0NormPriceCents": "164847.9067",
+      "kwh": "67.990000",
+      "priceCents": "834.8401",
+    },
+    "20260804": {
+      "h0NormKwh": "11090.600000",
+      "h0NormPriceCents": "176490.8204",
+      "kwh": "71.126000",
+      "priceCents": "911.1067",
+    },
+    "20260805": {
+      "h0NormKwh": "10928.300000",
+      "h0NormPriceCents": "175556.1601",
+      "kwh": "67.749000",
+      "priceCents": "819.6513",
+    },
+    "20260806": {
+      "h0NormKwh": "10953.900000",
+      "h0NormPriceCents": "192080.7434",
+      "kwh": "36.734000",
+      "priceCents": "535.8252",
+    },
+  },
+  "days": [
+    "20260801",
+    "20260802",
+    "20260803",
+    "20260804",
+    "20260805",
+    "20260806",
+  ],
+  "feedin": true,
+  "monthly": {
+    "202608": {
+      "h0NormKwh": "66823.200000",
+      "h0NormPriceCents": "965712.2473",
+      "kwh": "339.585000",
+      "priceCents": "3795.1138",
+    },
+  },
+  "netzbetreiber": "NetzOÖ",
+}
+`;
+
 exports[`golden snapshots > stromnetz.graz.issue78-202604.csv aggregation is stable 1`] = `
 {
   "daily": {
