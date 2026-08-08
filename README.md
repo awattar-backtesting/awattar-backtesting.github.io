@@ -10,10 +10,10 @@ Therefore you either run your own webserver or just start chrome with disabled w
 Export tariffs are automatically detected if the data is provided accordingly by the network operator.
 
 ## Netz OÖ
-Current feed-in CSV exports (`Datum`; `kWh`; `kW`; `Status`) are detected
-automatically. If an export is classified incorrectly, use the **Bezug** /
-**Feedin** switch after uploading it. Legacy exports can still be marked
-explicitly by renaming the `kWh` column to `Einspeisung kWh`.
+CSV exports (`Datum`; `kWh`; `kW`; `Status`) are read as consumption. To
+compare them with export tariffs, use the **Bezug** / **Feedin** switch after
+uploading. Legacy exports can be detected as feed-in data by renaming the
+`kWh` column to `Einspeisung kWh`.
 
 # Tests
 

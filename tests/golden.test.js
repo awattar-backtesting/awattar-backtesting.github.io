@@ -8,7 +8,6 @@ import { loadH0Sheet, newMarketdata, readSample } from "./lib/runtime.js";
  *   - NetzNOE.csv:              plain CSV passthrough
  *   - tinetz.csv:               TINETZ preamble + date-format normalization
  *   - wienernetze-einspeisung.csv: einspeisung (feedin) path
- *   - netzooe-einspeisung.csv:  Netz OÖ feed-in CSV format detection
  *   - netzooe.xls:              binary .xls format (XLSX.read native parse)
  *   - kwg-at.xlsx:              .xlsx with provider-specific stripXls fixup
  *   - hallag.xlsx:              hourly .xlsx with date-range column (slotDurationMin: 60)
@@ -20,7 +19,6 @@ const goldenSamples = [
     "NetzNOE.csv",
     "tinetz.csv",
     "wienernetze-einspeisung.csv",
-    "netzooe-einspeisung.csv",
     "netzooe.xls",
     "kwg-at.xlsx",
     "hallag.xlsx",
