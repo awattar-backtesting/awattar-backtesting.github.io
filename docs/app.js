@@ -96,6 +96,8 @@ const els = {
     chartArea: $("chartArea"),
     chartResizeHandle: $("chartResizeHandle"),
     exportBtn: $("exportBtn"),
+    directionToggle: $("directionToggle"),
+    directionBtns: document.querySelectorAll(".direction-btn"),
 };
 
 // ── Marketdata cache (preserved from original) ──────────────────────────────
@@ -1115,6 +1117,40 @@ function syncSectionToggles() {
     els.customForm.style.display = state.sections.custom ? "block" : "none";
 }
 
+function setEnergyDirection(feedin) {
+    if (!state.tracker || feedin === state.feedin) return;
+
+    // The meter values stay the same; only the compared tariffs and the
+    // presentation differ. Keep user-created tariffs available in either mode.
+    const customProviders = state.providers.filter((p) => p.meta.isCustom);
+    state.feedin = feedin;
+    state.providers = (feedin ? FEEDIN_PROVIDERS : CONSUMPTION_PROVIDERS)
+        .slice()
+        .concat(customProviders);
+    state.selectedIds = new Set([
+        ...pickDefaultSelection(),
+        ...customProviders.map((p) => p.meta.id),
+    ]);
+
+    fallbackReports.clear();
+    clearWarning();
+    syncDirectionToggle();
+    renderSidebar();
+    renderTable();
+    renderChart();
+    syncExportBtn();
+    surfaceFallbackWarnings();
+}
+
+function syncDirectionToggle() {
+    els.directionToggle.hidden = !state.tracker;
+    els.directionBtns.forEach((button) => {
+        const active = (button.dataset.feedin === "true") === state.feedin;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+    });
+}
+
 function setView(view) {
     if (view === state.view) return;
     state.view = view;
@@ -1180,6 +1216,7 @@ async function handleUpload(file) {
     els.uploadBtn.classList.add("upload-active");
     els.uploadBtnLabel.textContent = "Andere Datei laden";
 
+    syncDirectionToggle();
     renderDateNav();
     renderSidebar();
     renderTable();
@@ -1225,7 +1262,11 @@ function init() {
         if (file) handleUpload(file);
     });
 
-    // View toggle
+    // Direction / view toggles
+    els.directionBtns.forEach((button) => {
+        button.addEventListener("click", () => setEnergyDirection(button.dataset.feedin === "true"));
+    });
+    syncDirectionToggle();
     document.querySelectorAll(".view-btn").forEach((b) => {
         b.addEventListener("click", () => setView(b.dataset.view));
     });

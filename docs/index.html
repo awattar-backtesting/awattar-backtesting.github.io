@@ -266,7 +266,7 @@ body {
 .section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
 .section-title { font-size: 13px; font-weight: 600; color: oklch(30% 0.02 240); }
 .section-sub { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
-.view-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.view-toggle, .direction-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
 .section-actions { display: flex; align-items: center; gap: 8px; }
 .export-btn {
   display: flex; align-items: center; gap: 6px;
@@ -278,8 +278,8 @@ body {
 .export-btn:hover:not(:disabled) { background: oklch(96% 0.006 240); border-color: oklch(80% 0.02 240); }
 .export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .export-btn svg { width: 14px; height: 14px; }
-.view-btn { padding: 5px 12px; font-size: 12px; font-weight: 500; border: none; background: white; color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
-.view-btn.active { background: var(--navy); color: white; }
+.view-btn, .direction-btn { padding: 5px 12px; font-size: 12px; font-weight: 500; border: none; background: white; color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.view-btn.active, .direction-btn.active { background: var(--navy); color: white; }
 
 table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
 .compare thead th {
@@ -706,6 +706,10 @@ table.compare { width: 100%; border-collapse: collapse; font-size: 13px; }
                         <span class="section-sub" id="tableSub">inkl. 20% MwSt.</span>
                     </div>
                     <div class="section-actions">
+                        <div class="direction-toggle" id="directionToggle" role="group" aria-label="Datenrichtung" hidden>
+                            <button class="direction-btn" type="button" data-feedin="false" aria-pressed="true">Bezug</button>
+                            <button class="direction-btn" type="button" data-feedin="true" aria-pressed="false">Feedin</button>
+                        </div>
                         <button class="export-btn" id="exportBtn" title="Excel-Export" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                             <span>Excel</span>

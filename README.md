@@ -11,8 +11,9 @@ Export tariffs are automatically detected if the data is provided accordingly by
 
 ## Netz OÖ
 Current feed-in CSV exports (`Datum`; `kWh`; `kW`; `Status`) are detected
-automatically. Legacy exports can still be marked explicitly by renaming the
-`kWh` column to `Einspeisung kWh`.
+automatically. If an export is classified incorrectly, use the **Bezug** /
+**Feedin** switch after uploading it. Legacy exports can still be marked
+explicitly by renaming the `kWh` column to `Einspeisung kWh`.
 
 # Tests
 
