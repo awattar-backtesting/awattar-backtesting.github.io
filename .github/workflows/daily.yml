@@ -2,7 +2,7 @@ name: bump api cache daily
 
 on:
   schedule:
-    - cron: '3 11 * * *'
+    - cron: '3 16 * * *'
 
 jobs:
   commit:
