@@ -224,16 +224,18 @@ function pickDefaultSelection() {
 function renderSidebar() {
     const wrap = els.providersList;
     const totals = state.monthly ? state.providers.map(providerTotalEur) : null;
-    let cheapestIdx = -1, dearestIdx = -1;
+    let bestIdx = -1, worstIdx = -1;
     if (totals && totals.length > 1) {
-        let cheapest = null, dearest = null;
+        let best = null, worst = null;
         totals.forEach((t, i) => {
             if (t === null) return;
             const v = Number(t);
-            if (cheapest === null || v < cheapest) { cheapest = v; cheapestIdx = i; }
-            if (dearest === null || v > dearest) { dearest = v; dearestIdx = i; }
+            const isBetter = state.feedin ? v > best : v < best;
+            const isWorse = state.feedin ? v < worst : v > worst;
+            if (best === null || isBetter) { best = v; bestIdx = i; }
+            if (worst === null || isWorse) { worst = v; worstIdx = i; }
         });
-        if (cheapestIdx === dearestIdx) dearestIdx = -1;
+        if (bestIdx === worstIdx) worstIdx = -1;
     }
     const items = state.providers.map((p, i) => {
         const m = p.meta;
@@ -251,7 +253,7 @@ function renderSidebar() {
         let totalHTML = "";
         if (totals) {
             const t = totals[i];
-            const cls = i === cheapestIdx ? " best" : (i === dearestIdx ? " worst" : "");
+            const cls = i === bestIdx ? " best" : (i === worstIdx ? " worst" : "");
             totalHTML = `<div class="provider-total${cls}">${t === null ? "—" : `${t.toFixed(0)} €`}</div>`;
         }
         return `
@@ -406,7 +408,7 @@ function renderTable() {
 
         const costs = computed[k];
         const grossNumbers = selected.map((p) => Number(costs[p.meta.id]));
-        const best = Math.min(...grossNumbers);
+        const best = state.feedin ? Math.max(...grossNumbers) : Math.min(...grossNumbers);
 
         const providerCells = selected.map((p, i) => {
             const cents = costs[p.meta.id];
