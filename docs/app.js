@@ -697,7 +697,7 @@ function renderChart() {
         <div class="chart-x-row">${xLabels}</div>
         <div class="chart-legend">
             <span class="chart-legend-item"><span class="chart-legend-swatch-bar"></span>EPEX SPOT (ct/kWh)</span>
-            <span class="chart-legend-item"><span class="chart-legend-swatch-line"></span>Verbrauch (kWh)</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch-line"></span>${state.feedin ? "Einspeisung" : "Verbrauch"} (kWh)</span>
             ${showBox ? `<span class="chart-legend-item"><span class="chart-legend-swatch-stddev"></span>Box plot über ${daysCount} Tage</span>` : ""}
         </div>`;
 
