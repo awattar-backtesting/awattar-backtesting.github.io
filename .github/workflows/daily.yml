@@ -1,8 +1,8 @@
-name: bump api cache daily
+name: bump api cache
 
 on:
   schedule:
-    - cron: '3 17 * * *'
+    - cron: '3 5,11,17,23 * * *' # every six hours
 
 jobs:
   commit:
@@ -11,7 +11,7 @@ jobs:
     # contents: write to push the cache commit; actions: write so the final
     # step can dispatch pages.yml. A push made with the automatic GITHUB_TOKEN
     # never triggers another workflow's `on: push`, so without this explicit
-    # dispatch the daily cache bumps would land on main but never redeploy
+    # dispatch the scheduled cache bumps would land on main but never redeploy
     # GitHub Pages — which is exactly how the live site fell weeks behind.
     permissions:
       contents: write
@@ -26,6 +26,7 @@ jobs:
     - name: install pytz
       run: sudo pip3 install pytz
     - name: bump API cache
+      id: cache_bump
       run: |
         uptime
         python3 --version 
@@ -33,14 +34,19 @@ jobs:
         git config --global user.name "API cache bump bot"
         git config --global user.email "lewurm+bot@gmail.com"
         git add docs/cache60 docs/cache15
+        if git diff --cached --quiet; then
+          echo "No new cache entries; skipping commit and deployment."
+          exit 0
+        fi
         git commit -m "api cache: update"
         git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/awattar-backtesting/awattar-backtesting.github.io.git main
+        echo "changed=true" >> "$GITHUB_OUTPUT"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # Only reached when the push above succeeded (i.e. there was a new commit),
-    # so we redeploy exactly when the cache actually changed.
+    # Redeploy only after a cache update was successfully pushed.
     - name: deploy pages
+      if: steps.cache_bump.outputs.changed == 'true'
       run: gh workflow run pages.yml --ref main
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
